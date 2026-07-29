@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f4f6f8" />
     <title>Flight Archive</title>
-    <link rel="stylesheet" href="./styles.css?v=20260729-satellite" />
+    <link rel="stylesheet" href="./styles.css?v=20260729-settings" />
   </head>
   <body>
     <div class="app-shell" id="appShell">
@@ -66,29 +66,29 @@
           <p data-i18n="mapHelp">拖拽旋转，滚轮缩放；点击航线或机场查看详情。</p>
         </section>
 
-        <section class="language-control">
-          <span class="section-label" data-i18n="language">语言</span>
-          <div class="segmented-control">
-            <button class="active" id="langZh">中文</button>
-            <button id="langEn">EN</button>
-          </div>
-        </section>
-
         <div class="sidebar-spacer"></div>
 
-        <div class="sidebar-summary">
-          <div><strong>18</strong><span data-i18n="segments">航段</span></div>
-          <div><strong>31,820</strong><span data-i18n="kilometers">公里</span></div>
-        </div>
-
-        <div class="sidebar-actions">
-          <button class="subtle-button" id="importButton">
-            <svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M5 19h14"/></svg>
-            <span data-i18n="import">批量导入</span>
-          </button>
-          <button class="primary-button" id="addButton">
-            <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-            <span data-i18n="addFlight">添加飞行</span>
+        <div class="settings-area">
+          <div class="settings-panel" id="settingsPanel" aria-hidden="true">
+            <div class="settings-head">
+              <strong data-i18n="settings">设置</strong>
+              <button id="settingsClose" aria-label="关闭设置">
+                <svg viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17"/></svg>
+              </button>
+            </div>
+            <span class="settings-label" data-i18n="language">语言</span>
+            <div class="segmented-control">
+              <button class="active" id="langZh">中文</button>
+              <button id="langEn">EN</button>
+            </div>
+            <div class="author-contact">
+              <span data-i18n="authorEmail">作者邮箱</span>
+              <strong data-i18n="emailNotPublic">邮箱未公开</strong>
+            </div>
+          </div>
+          <button class="settings-button" id="settingsButton" aria-expanded="false">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.8 1.8 0 0 0 .36 1.98l.06.06-2.78 2.78-.06-.06A1.8 1.8 0 0 0 15 19.4a1.8 1.8 0 0 0-1.08 1.65V21H10v-.08A1.8 1.8 0 0 0 8.95 19.3a1.8 1.8 0 0 0-1.98.36l-.06.06-2.78-2.78.06-.06A1.8 1.8 0 0 0 4.6 15a1.8 1.8 0 0 0-1.65-1.08H3V10h.08A1.8 1.8 0 0 0 4.7 8.95a1.8 1.8 0 0 0-.36-1.98l-.06-.06 2.78-2.78.06.06A1.8 1.8 0 0 0 9 4.6a1.8 1.8 0 0 0 1.08-1.65V3H14v.08A1.8 1.8 0 0 0 15.05 4.7a1.8 1.8 0 0 0 1.98-.36l.06-.06 2.78 2.78-.06.06A1.8 1.8 0 0 0 19.4 9a1.8 1.8 0 0 0 1.65 1.08H21V14h-.08A1.8 1.8 0 0 0 19.4 15Z"/></svg>
+            <span data-i18n="settings">设置</span>
           </button>
         </div>
       </aside>
@@ -97,11 +97,12 @@
         <section class="view atlas-view active" id="atlasView">
           <canvas id="globeCanvas" aria-label="可拖拽的世界飞行航迹地球"></canvas>
           <div class="globe-style-switch" aria-label="地球风格">
-            <span data-i18n="mapStyle">地球风格</span>
-            <div class="segmented-control">
-              <button class="active" id="styleLight" data-i18n="styleLight">浅色</button>
-              <button id="styleOrbit" data-i18n="styleOrbit">星空</button>
-            </div>
+            <button class="active" id="styleLight" aria-label="浅色地球">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.5"/><path d="M4.8 10.5h14.4M7.3 6.8c2.8 2.1 6.6 2.1 9.4 0M7.3 17.2c2.8-2.1 6.6-2.1 9.4 0"/></svg>
+            </button>
+            <button id="styleOrbit" aria-label="星空地球">
+              <svg viewBox="0 0 24 24"><path d="M16.8 16.5A7.5 7.5 0 0 1 8.1 5.1a7.5 7.5 0 1 0 8.7 11.4Z"/><path d="m17.5 4 .45 1.05L19 5.5l-1.05.45L17.5 7l-.45-1.05L16 5.5l1.05-.45L17.5 4Z"/></svg>
+            </button>
           </div>
           <div class="globe-loading" id="globeLoading"><span></span>正在载入地理数据</div>
           <div class="hover-tooltip" id="hoverTooltip"></div>
@@ -121,10 +122,16 @@
               <h1 data-i18n="recordsTitle">飞行记录</h1>
               <p data-i18n="recordsDesc">按日期倒序展示已保存的航段。</p>
             </div>
-            <button class="primary-button page-add" data-open-add>
-              <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-              <span data-i18n="addFlight">添加飞行</span>
-            </button>
+            <div class="record-actions">
+              <button class="subtle-button" id="importButton">
+                <svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M5 19h14"/></svg>
+                <span data-i18n="import">批量导入</span>
+              </button>
+              <button class="primary-button page-add" data-open-add>
+                <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+                <span data-i18n="addFlight">添加飞行</span>
+              </button>
+            </div>
           </header>
 
           <div class="filter-bar">
@@ -277,6 +284,6 @@
     </div>
 
     <div class="toast" id="toast"><span>✓</span><div><strong>操作已完成</strong><small>记录已更新</small></div></div>
-    <script src="./app.js?v=20260729-satellite"></script>
+    <script src="./app.js?v=20260729-settings"></script>
   </body>
 </html>

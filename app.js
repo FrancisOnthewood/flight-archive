@@ -73,6 +73,7 @@ const translations = {
     relatedFlights: "相关飞行记录", recordedSegments: "已记录航段", coordinates: "地理坐标",
     connections: "连接航线", recentRecords: "最近记录", times: "次", noRecords: "没有符合当前条件的飞行记录。",
     segments: "航段", kilometers: "公里", aircraft: "机型", cabin: "舱位", seat: "座位", terminals: "航站楼",
+    settings: "设置", authorEmail: "作者邮箱", emailNotPublic: "邮箱未公开",
     totalDistance: "累计里程", totalTime: "累计飞行时间", totalFare: "累计票价", totalSegments: "记录航段",
     routeFrequency: "航线次数", aircraftDistribution: "机型分布", airportVisits: "机场访问次数", countriesRegions: "国家与地区"
   },
@@ -90,6 +91,7 @@ const translations = {
     relatedFlights: "Related records", recordedSegments: "Recorded segments", coordinates: "Coordinates",
     connections: "Connected routes", recentRecords: "Recent records", times: "flights", noRecords: "No flight records match the current filters.",
     segments: "Segments", kilometers: "Kilometers", aircraft: "Aircraft", cabin: "Cabin", seat: "Seat", terminals: "Terminals",
+    settings: "Settings", authorEmail: "Author email", emailNotPublic: "Email not public",
     totalDistance: "Total distance", totalTime: "Flight time", totalFare: "Total fare", totalSegments: "Recorded segments",
     routeFrequency: "Route frequency", aircraftDistribution: "Aircraft distribution", airportVisits: "Airport visits", countriesRegions: "Countries & regions"
   }
@@ -257,8 +259,16 @@ function closeDrawer() {
   drawGlobe();
 }
 
+function setSettingsOpen(open) {
+  document.getElementById("settingsPanel").classList.toggle("open",open);
+  document.getElementById("settingsPanel").setAttribute("aria-hidden",String(!open));
+  document.getElementById("settingsButton").classList.toggle("active",open);
+  document.getElementById("settingsButton").setAttribute("aria-expanded",String(open));
+}
+
 function setView(view) {
   state.activeView = view;
+  setSettingsOpen(false);
   document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
   document.querySelectorAll(".nav-item").forEach(n => n.classList.toggle("active", n.dataset.view === view));
   document.getElementById(`${view}View`)?.classList.add("active");
@@ -383,7 +393,7 @@ function drawLand() {
         ctx.beginPath();
         segment.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
         ctx.closePath();ctx.fillStyle=baseColor;ctx.fill();
-        if(visited){ctx.fillStyle="rgba(232,151,76,.34)";ctx.fill();}
+        if(visited){ctx.fillStyle="rgba(255,112,20,.52)";ctx.fill();}
         ctx.stroke();
       });
     });
@@ -398,7 +408,7 @@ const cityLights=[
 ];
 function drawBackground() {
   const orbit=state.globeStyle==="orbit";
-  ctx.fillStyle=orbit?"#02070b":"#dedfdf";ctx.fillRect(0,0,cw,ch);
+  ctx.fillStyle=orbit?"#02070b":"#081d35";ctx.fillRect(0,0,cw,ch);
   if(orbit){
     const shiftX=rotation.lon/360*cw,shiftY=rotation.lat/180*ch*.18;
     stars.forEach((star,index)=>{
@@ -423,26 +433,9 @@ function solarPosition(date=new Date()) {
   lon=((lon+540)%360)-180;
   return {lat:declination*180/Math.PI,lon};
 }
-function drawNightLayer() {
+function drawNightLights() {
   if(state.globeStyle!=="orbit")return;
-  const sun=solarPosition(),sunPoint=project(sun.lat,sun.lon);
-  let dx=(sunPoint.x-centerX)/globeR,dy=(sunPoint.y-centerY)/globeR;
-  const length=Math.hypot(dx,dy)||1;dx/=length;dy/=length;
-  const startX=centerX-dx*globeR,startY=centerY-dy*globeR;
-  const endX=centerX+dx*globeR,endY=centerY+dy*globeR;
-  const terminator=Math.max(.12,Math.min(.88,.5-sunPoint.z*.38));
-  const shade=ctx.createLinearGradient(startX,startY,endX,endY);
-  shade.addColorStop(0,"rgba(0,3,7,.84)");
-  shade.addColorStop(Math.max(0,terminator-.09),"rgba(1,6,11,.72)");
-  shade.addColorStop(Math.min(1,terminator+.09),"rgba(1,7,12,.04)");
-  shade.addColorStop(1,"rgba(1,7,12,0)");
-  ctx.fillStyle=shade;ctx.fillRect(centerX-globeR,centerY-globeR,globeR*2,globeR*2);
-  const dusk=ctx.createLinearGradient(startX,startY,endX,endY);
-  dusk.addColorStop(Math.max(0,terminator-.025),"rgba(226,137,72,0)");
-  dusk.addColorStop(terminator,"rgba(226,137,72,.12)");
-  dusk.addColorStop(Math.min(1,terminator+.035),"rgba(226,137,72,0)");
-  ctx.fillStyle=dusk;ctx.fillRect(centerX-globeR,centerY-globeR,globeR*2,globeR*2);
-  const sunVector=geoVec(sun.lat,sun.lon);
+  const sun=solarPosition(),sunVector=geoVec(sun.lat,sun.lon);
   cityLights.forEach(city=>{
     const p=project(city.lat,city.lon);
     const cityVector=geoVec(city.lat,city.lon);
@@ -510,7 +503,7 @@ function drawGlobe(time=performance.now()) {
     ctx.fillStyle=ocean;
   }
   ctx.fillRect(centerX-globeR,centerY-globeR,globeR*2,globeR*2);
-  drawLand();drawNightLayer();
+  drawLand();drawNightLights();
   if(state.mapMode==="route")drawRoutes();else routeHitAreas=[];
   drawAirports();
   ctx.restore();
@@ -577,6 +570,11 @@ function animate(time){
 document.querySelectorAll(".nav-item").forEach(el=>el.addEventListener("click",()=>setView(el.dataset.view)));
 document.querySelectorAll("[data-view-link]").forEach(el=>el.addEventListener("click",e=>{e.preventDefault();setView(el.dataset.viewLink);}));
 document.getElementById("collapseButton").addEventListener("click",()=>{document.getElementById("appShell").classList.toggle("sidebar-collapsed");setTimeout(resizeGlobe,260);});
+document.getElementById("settingsButton").addEventListener("click",()=>{
+  setSettingsOpen(!document.getElementById("settingsPanel").classList.contains("open"));
+});
+document.getElementById("settingsClose").addEventListener("click",()=>setSettingsOpen(false));
+document.addEventListener("click",e=>{if(!e.target.closest(".settings-area"))setSettingsOpen(false);});
 document.getElementById("routeMode").addEventListener("click",()=>{
   state.mapMode="route";document.getElementById("routeMode").classList.add("active");document.getElementById("airportMode").classList.remove("active");closeDrawer();drawGlobe();
 });
@@ -594,13 +592,12 @@ document.getElementById("langEn").addEventListener("click",()=>applyLanguage("en
 document.getElementById("drawerClose").addEventListener("click",closeDrawer);
 document.getElementById("recordSearch").addEventListener("input",renderFlights);
 document.querySelectorAll(".filter-chip").forEach(el=>el.addEventListener("click",()=>{document.querySelectorAll(".filter-chip").forEach(c=>c.classList.remove("active"));el.classList.add("active");state.filter=el.dataset.filter;renderFlights();}));
-document.getElementById("addButton").addEventListener("click",()=>openModal("addModal"));
 document.querySelectorAll("[data-open-add]").forEach(el=>el.addEventListener("click",()=>openModal("addModal")));
 document.getElementById("importButton").addEventListener("click",()=>openModal("importModal"));
 document.getElementById("editFlightButton").addEventListener("click",()=>{closeModals();document.getElementById("addTitle").textContent="编辑飞行记录";openModal("addModal");});
 document.querySelectorAll("[data-close-modal]").forEach(el=>el.addEventListener("click",closeModals));
 document.querySelectorAll(".modal-backdrop").forEach(el=>el.addEventListener("click",e=>{if(e.target===el)closeModals();}));
-document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeModals();closeDrawer();}});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeModals();closeDrawer();setSettingsOpen(false);}});
 document.getElementById("flightForm").addEventListener("submit",e=>{e.preventDefault();closeModals();showToast("记录已保存","飞行记录已更新");});
 document.querySelector(".drop-zone input").addEventListener("change",e=>{if(e.target.files[0]){closeModals();showToast("文件已读取","正在校验导入字段");}});
 window.addEventListener("resize",resizeGlobe);
