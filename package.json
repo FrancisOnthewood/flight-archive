@@ -1,0 +1,15 @@
+{
+  "name": "flight-atlas-journal",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "prebuild": "node scripts/prepare-static.mjs",
+    "build": "next build",
+    "dev": "next dev"
+  },
+  "dependencies": {
+    "next": "15.4.4",
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
+  }
+}

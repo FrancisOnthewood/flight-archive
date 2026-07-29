@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#07111f" />
+    <title>航迹 · Flight Atlas</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <a class="brand" href="#" aria-label="航迹首页">
+          <span class="brand-mark">
+            <svg viewBox="0 0 28 28" aria-hidden="true">
+              <path d="M5 18.2c5.2-1 9.1-4.6 12.7-10.9.5-.8 1.6-1.1 2.4-.5.8.6 1 1.7.4 2.5-3.6 5.1-7.5 8.7-12.1 10.4l6 2.1-1.3 1.6-8.4-1.7L2.2 18l1.2-1 1.6 1.2Z"/>
+            </svg>
+          </span>
+          <span>
+            <strong>航迹</strong>
+            <small>FLIGHT ATLAS</small>
+          </span>
+        </a>
+
+        <nav class="main-nav" aria-label="主导航">
+          <button class="nav-item active" data-view="atlas">
+            <span class="nav-icon">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.7 10h16.6M3.7 14h16.6M12 3.5c2.1 2.2 3.2 5 3.2 8.5s-1.1 6.3-3.2 8.5M12 3.5C9.9 5.7 8.8 8.5 8.8 12s1.1 6.3 3.2 8.5"/></svg>
+            </span>
+            我的航迹
+          </button>
+          <button class="nav-item" data-view="records">
+            <span class="nav-icon">
+              <svg viewBox="0 0 24 24"><path d="M7 3.5h10l2 2v15H5v-15l2-2Z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
+            </span>
+            飞行记录
+            <span class="nav-badge">18</span>
+          </button>
+          <button class="nav-item" data-view="stats">
+            <span class="nav-icon">
+              <svg viewBox="0 0 24 24"><path d="M4 19V9m5 10V5m5 14v-7m5 7V3"/></svg>
+            </span>
+            数据统计
+          </button>
+          <button class="nav-item" data-view="memories">
+            <span class="nav-icon">
+              <svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="m5.5 17 4.3-4.2 2.7 2.4 2.4-2 3.6 3.8"/></svg>
+            </span>
+            旅途相册
+          </button>
+        </nav>
+
+        <div class="sidebar-spacer"></div>
+
+        <section class="year-progress">
+          <div class="progress-title">
+            <span>2026 年度航程</span>
+            <span>68%</span>
+          </div>
+          <div class="progress-track"><span></span></div>
+          <p>31,820 / 46,800 km</p>
+        </section>
+
+        <button class="profile">
+          <span class="avatar">LH</span>
+          <span>
+            <strong>Li Haozhe</strong>
+            <small>飞行探索者</small>
+          </span>
+          <svg viewBox="0 0 20 20"><path d="m7 5 5 5-5 5"/></svg>
+        </button>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar">
+          <div class="mobile-brand">航迹</div>
+          <div class="top-actions">
+            <button class="icon-button" id="searchButton" aria-label="搜索">
+              <svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4 4"/></svg>
+            </button>
+            <button class="icon-button" aria-label="通知">
+              <svg viewBox="0 0 24 24"><path d="M6.5 9.5a5.5 5.5 0 0 1 11 0v4l2 3h-15l2-3v-4Z"/><path d="M9.5 19h5"/></svg>
+              <span class="notification-dot"></span>
+            </button>
+            <button class="secondary-button" id="importButton">
+              <svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M5 19h14"/></svg>
+              批量导入
+            </button>
+            <button class="primary-button" id="addButton">
+              <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+              添加飞行
+            </button>
+          </div>
+        </header>
+
+        <section class="view active" id="atlasView">
+          <div class="hero-copy">
+            <div>
+              <p class="eyebrow"><span></span> 你的天空足迹</p>
+              <h1>世界很大，<br />每一程都有回响。</h1>
+            </div>
+            <div class="hero-meta">
+              <div><strong>18</strong><span>次飞行</span></div>
+              <i></i>
+              <div><strong>31,820</strong><span>总里程 · km</span></div>
+              <i></i>
+              <div><strong>47h 26m</strong><span>云端时间</span></div>
+            </div>
+          </div>
+
+          <div class="atlas-layout">
+            <section class="globe-panel" aria-label="交互式航迹地球">
+              <canvas id="globeCanvas"></canvas>
+              <div class="globe-shade"></div>
+              <div class="globe-toolbar">
+                <button class="active" id="routeMode">航线</button>
+                <button id="airportMode">机场</button>
+              </div>
+              <div class="globe-hint">
+                <svg viewBox="0 0 24 24"><path d="M8 11V6.5a1.5 1.5 0 0 1 3 0V10m0-4.5a1.5 1.5 0 0 1 3 0V10m0-3a1.5 1.5 0 0 1 3 0v4m0-2a1.5 1.5 0 0 1 3 0v5c0 4-2.8 7-7 7h-1.5c-2.2 0-3.6-.8-4.8-2.4L4 15a1.6 1.6 0 0 1 2.3-2.2L8 14.2V11Z"/></svg>
+                拖拽旋转 · 点击航线查看记录
+              </div>
+              <div class="globe-legend">
+                <span>飞行频次</span>
+                <i class="low"></i><i class="mid"></i><i class="high"></i>
+                <span>低</span><span>高</span>
+              </div>
+              <div class="route-tooltip" id="routeTooltip"></div>
+            </section>
+
+            <aside class="route-panel">
+              <div class="panel-heading">
+                <div>
+                  <p>精选航线</p>
+                  <h2 id="selectedRouteTitle">上海 <span>⇄</span> 香港</h2>
+                </div>
+                <button class="ghost-icon" aria-label="更多"><span></span><span></span><span></span></button>
+              </div>
+              <div class="route-summary">
+                <span><b id="selectedRouteCount">6</b> 次飞行</span>
+                <span><b id="selectedRouteDistance">1,256</b> km / 单程</span>
+              </div>
+              <div class="record-list" id="routeRecordList"></div>
+              <button class="all-records-button" id="allRouteRecords">查看这条航线的全部记录 <span>→</span></button>
+            </aside>
+          </div>
+
+          <section class="insights-row">
+            <article class="insight-card coral">
+              <div class="insight-icon">
+                <svg viewBox="0 0 24 24"><path d="M3 12h18M7 8l-4 4 4 4M17 8l4 4-4 4"/></svg>
+              </div>
+              <div><span>最常飞航线</span><strong>上海 ⇄ 香港</strong><small>共 6 次飞行</small></div>
+              <button data-route-id="sha-hkg">查看</button>
+            </article>
+            <article class="insight-card">
+              <div class="insight-icon blue">
+                <svg viewBox="0 0 24 24"><path d="m4 16 16-8-5.5 12-2.8-6.2L4 16Z"/><path d="m11.7 13.8 4.7-3.4"/></svg>
+              </div>
+              <div><span>最远单次飞行</span><strong>上海 → 旧金山</strong><small>9,880 km · 11h 32m</small></div>
+              <button data-route-id="sha-sfo">查看</button>
+            </article>
+            <article class="insight-card">
+              <div class="insight-icon mint">
+                <svg viewBox="0 0 24 24"><path d="M4 18h16M6 18V9l6-4 6 4v9M9 18v-5h6v5"/></svg>
+              </div>
+              <div><span>探索过</span><strong>9 座城市</strong><small>横跨 5 个国家与地区</small></div>
+              <button data-view-link="stats">统计</button>
+            </article>
+          </section>
+        </section>
+
+        <section class="view" id="recordsView">
+          <div class="page-heading">
+            <div>
+              <p class="eyebrow"><span></span> 逐程收藏</p>
+              <h1>飞行记录</h1>
+              <p>18 段旅程，每一次起落都有迹可循。</p>
+            </div>
+            <div class="view-toggle">
+              <button class="active" aria-label="卡片视图"><svg viewBox="0 0 20 20"><rect x="3" y="3" width="5" height="5"/><rect x="12" y="3" width="5" height="5"/><rect x="3" y="12" width="5" height="5"/><rect x="12" y="12" width="5" height="5"/></svg></button>
+              <button aria-label="列表视图"><svg viewBox="0 0 20 20"><path d="M4 5h12M4 10h12M4 15h12"/></svg></button>
+            </div>
+          </div>
+          <div class="filter-bar">
+            <label class="search-field">
+              <svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4 4"/></svg>
+              <input id="recordSearch" placeholder="搜索航班号、城市或机场…" />
+            </label>
+            <button class="filter-chip active" data-filter="all">全部</button>
+            <button class="filter-chip" data-filter="2026">2026</button>
+            <button class="filter-chip" data-filter="international">国际 / 地区</button>
+            <button class="filter-chip" data-filter="domestic">国内</button>
+          </div>
+          <div class="flight-grid" id="flightGrid"></div>
+        </section>
+
+        <section class="view" id="statsView">
+          <div class="page-heading stats-heading">
+            <div>
+              <p class="eyebrow"><span></span> 飞行数据档案</p>
+              <h1>这一年，飞得更远。</h1>
+              <p>数据更新于 2026 年 7 月 29 日</p>
+            </div>
+            <button class="secondary-button">
+              <svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M5 19h14"/></svg>
+              导出年度报告
+            </button>
+          </div>
+          <div class="stats-kpis">
+            <article><span>总飞行里程</span><strong>31,820 <small>km</small></strong><em>≈ 绕地球 0.79 圈</em></article>
+            <article><span>云端总时间</span><strong>47 <small>小时</small> 26 <small>分</small></strong><em>比去年增长 18%</em></article>
+            <article><span>飞行总支出</span><strong>¥ 26,840</strong><em>平均 ¥1,491 / 程</em></article>
+            <article><span>飞行次数</span><strong>18 <small>程</small></strong><em>10 次去程 · 8 次返程</em></article>
+          </div>
+          <div class="stats-grid">
+            <article class="chart-card route-ranking">
+              <div class="card-title"><div><span>航线排行</span><h3>最常飞的航线</h3></div><button>全部航线</button></div>
+              <div id="routeRanking"></div>
+            </article>
+            <article class="chart-card aircraft-card">
+              <div class="card-title"><div><span>机型分布</span><h3>坐过的机型</h3></div><strong>7 种</strong></div>
+              <div class="donut-wrap">
+                <div class="donut"><div><strong>18</strong><span>总航段</span></div></div>
+                <div class="donut-legend">
+                  <p><i style="--c:#ff775f"></i>Airbus A320neo <b>6</b></p>
+                  <p><i style="--c:#67a4ff"></i>Boeing 787-9 <b>4</b></p>
+                  <p><i style="--c:#56d4b2"></i>Airbus A350-900 <b>3</b></p>
+                  <p><i style="--c:#7c7fa1"></i>其他机型 <b>5</b></p>
+                </div>
+              </div>
+            </article>
+            <article class="chart-card airport-card">
+              <div class="card-title"><div><span>机场足迹</span><h3>最常到访机场</h3></div><strong>12 座</strong></div>
+              <div class="airport-bars" id="airportBars"></div>
+            </article>
+            <article class="chart-card passport-card">
+              <div class="passport-top">
+                <span class="passport-stamp">9<small>城市</small></span>
+                <span class="passport-stamp">5<small>国家与地区</small></span>
+              </div>
+              <div class="countries">
+                <span>🇨🇳 中国 <b>12</b></span>
+                <span>🇭🇰 中国香港 <b>6</b></span>
+                <span>🇯🇵 日本 <b>2</b></span>
+                <span>🇸🇬 新加坡 <b>2</b></span>
+                <span>🇺🇸 美国 <b>1</b></span>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="view" id="memoriesView">
+          <div class="page-heading">
+            <div>
+              <p class="eyebrow"><span></span> 云端记忆</p>
+              <h1>旅途相册</h1>
+              <p>把舷窗外的光，留在每一段航程里。</p>
+            </div>
+          </div>
+          <div class="memory-grid">
+            <article class="memory-card sunset"><span>2026.06.18 · MU721</span><h3>穿越云海的日落</h3><p>上海 → 香港</p></article>
+            <article class="memory-card wing"><span>2026.03.09 · CX368</span><h3>三万英尺的蓝</h3><p>香港 → 上海</p></article>
+            <article class="memory-card night"><span>2025.12.24 · SQ827</span><h3>圣诞夜航</h3><p>上海 → 新加坡</p></article>
+            <button class="add-memory"><span>+</span>添加旅途照片</button>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div class="modal-backdrop" id="detailModal">
+      <section class="modal detail-modal" role="dialog" aria-modal="true" aria-labelledby="detailTitle">
+        <button class="modal-close" data-close-modal aria-label="关闭">×</button>
+        <div class="detail-cover">
+          <span id="detailAirline">中国东方航空</span>
+          <strong id="detailFlightNo">MU 721</strong>
+          <small id="detailDate">2026年6月18日 · 周四</small>
+        </div>
+        <div class="modal-body">
+          <div class="detail-route">
+            <div><strong id="detailFromCode">PVG</strong><span id="detailFromCity">上海</span><small id="detailDeparture">08:20 · T1</small></div>
+            <div class="detail-flight-line"><span id="detailDuration">2h 35m</span><i><b></b></i><small id="detailDistance">1,256 km</small></div>
+            <div class="align-right"><strong id="detailToCode">HKG</strong><span id="detailToCity">香港</span><small id="detailArrival">10:55 · T1</small></div>
+          </div>
+          <div class="detail-info-grid" id="detailInfoGrid"></div>
+          <div class="detail-note">
+            <span>旅途记忆</span>
+            <p id="detailNote">天气很好，起飞后很快看见了整片云海。靠窗座位的视野很棒。</p>
+          </div>
+          <div class="modal-footer">
+            <button class="danger-text">删除记录</button>
+            <button class="secondary-button" id="editFlightButton">编辑记录</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="modal-backdrop" id="addModal">
+      <section class="modal form-modal" role="dialog" aria-modal="true" aria-labelledby="addTitle">
+        <button class="modal-close" data-close-modal aria-label="关闭">×</button>
+        <div class="modal-header">
+          <p class="eyebrow"><span></span> NEW JOURNEY</p>
+          <h2 id="addTitle">添加一段飞行</h2>
+          <p>填写核心信息，其余字段可以稍后补充。</p>
+        </div>
+        <form id="flightForm">
+          <div class="smart-lookup">
+            <div>
+              <strong>智能匹配航班</strong>
+              <span>输入日期、航班号后自动补全机型、航站楼与计划时间</span>
+            </div>
+            <label class="switch"><input type="checkbox" checked /><span></span></label>
+          </div>
+          <div class="form-grid">
+            <label><span>航班日期</span><input type="date" value="2026-07-29" required /></label>
+            <label><span>航班号</span><input placeholder="如 MU721" required /></label>
+            <label><span>出发机场</span><input placeholder="PVG / 上海浦东" required /></label>
+            <label><span>到达机场</span><input placeholder="HKG / 香港国际" required /></label>
+            <label><span>航空公司</span><input placeholder="自动识别或手动填写" /></label>
+            <label><span>机型</span><input placeholder="如 Airbus A320neo" /></label>
+            <label><span>起飞时间</span><input type="time" /></label>
+            <label><span>到达时间</span><input type="time" /></label>
+            <label><span>座位号</span><input placeholder="如 34A" /></label>
+            <label><span>舱位</span><select><option>经济舱</option><option>超级经济舱</option><option>商务舱</option><option>头等舱</option></select></label>
+            <label><span>票价</span><input type="number" placeholder="¥" /></label>
+            <label><span>预订渠道</span><input placeholder="如 航司官网" /></label>
+          </div>
+          <label class="full-field"><span>旅途备注</span><textarea placeholder="记录餐食、服务、窗外风景或这段旅程的故事…"></textarea></label>
+          <label class="photo-upload">
+            <input type="file" accept="image/*" multiple />
+            <span>＋</span>
+            <strong>添加照片或登机牌</strong>
+            <small>支持 JPG、PNG，单张不超过 10 MB</small>
+          </label>
+          <div class="modal-footer">
+            <button type="button" class="secondary-button" data-close-modal>取消</button>
+            <button type="submit" class="primary-button">保存飞行记录</button>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <div class="modal-backdrop" id="importModal">
+      <section class="modal import-modal" role="dialog" aria-modal="true" aria-labelledby="importTitle">
+        <button class="modal-close" data-close-modal aria-label="关闭">×</button>
+        <div class="modal-header">
+          <p class="eyebrow"><span></span> BULK IMPORT</p>
+          <h2 id="importTitle">从 Excel 批量导入</h2>
+          <p>下载模板、填入数据，再把整段飞行历史带回来。</p>
+        </div>
+        <div class="import-steps">
+          <div><span>01</span><strong>下载模板</strong><small>使用标准字段，减少校验错误</small><button>下载 .xlsx 模板</button></div>
+          <div><span>02</span><strong>填写航班</strong><small>支持机场三字码与中文名称</small></div>
+          <div><span>03</span><strong>上传校验</strong><small>确认无误后一键写入</small></div>
+        </div>
+        <label class="drop-zone">
+          <input type="file" accept=".xlsx,.xls,.csv" />
+          <svg viewBox="0 0 24 24"><path d="M12 16V5m0 0 4 4m-4-4L8 9"/><path d="M5 15v4h14v-4"/></svg>
+          <strong>拖拽 Excel 到这里，或点击选择文件</strong>
+          <span>.xlsx / .xls / .csv · 最大 20 MB</span>
+        </label>
+        <div class="import-note"><strong>可识别 20+ 字段</strong><span>航司、航班号、日期、机场、航站楼、机型、座位、舱位、票价、里程等</span></div>
+      </section>
+    </div>
+
+    <div class="toast" id="toast"><span>✓</span><p><strong>记录已保存</strong><small>新的航迹已经点亮</small></p></div>
+    <script src="./app.js"></script>
+  </body>
+</html>
