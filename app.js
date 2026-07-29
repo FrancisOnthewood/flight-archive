@@ -1,4 +1,4 @@
-const airports = {
+const fallbackAirports = {
   PVG: { code: "PVG", city: "上海", name: "上海浦东国际机场", country: "中国", lat: 31.1443, lon: 121.8083 },
   SHA: { code: "SHA", city: "上海", name: "上海虹桥国际机场", country: "中国", lat: 31.1979, lon: 121.3363 },
   HKG: { code: "HKG", city: "香港", name: "香港国际机场", country: "中国香港", lat: 22.308, lon: 113.9185 },
@@ -20,10 +20,20 @@ const airlineIcons = {
   SQ: "icons/singapore airlines.png",
   CA: "icons/Air_China.png",
   CZ: "icons/china southern airlines.png",
-  HO: "icons/juneyao-airlines.png"
+  HO: "icons/juneyao-airlines.png",
+  MF: "icons/Xiamen airlines.png",
+  JQ: "icons/Jetstar.png",
+  OD: "icons/batik air.png",
+  AK: "icons/AirAsia.png",
+  BI: "icons/royal brunei.png",
+  NS: "icons/hebei airlines.png",
+  EK: "icons/Emirates.png",
+  VY: "icons/Vueling.webp",
+  ZH: "icons/Shenzhen airlines.png",
+  HU: "icons/Hainan-Airlines.png"
 };
 
-const flights = [
+const fallbackFlights = [
   { id: 1, routeId: "sha-hkg", from: "PVG", to: "HKG", date: "2026-06-18", airline: "China Eastern Airlines", airlineShort: "MU", flightNo: "MU721", aircraft: "Airbus A320neo", depart: "08:20", arrive: "10:55", duration: "2h 35m", distance: 1256, terminalFrom: "T1", terminalTo: "T1", seat: "34A", cabin: "经济舱", fare: 1680, booking: "航司官网", gate: "H12", status: "准点", note: "天气良好，巡航阶段平稳。", scope: "international" },
   { id: 2, routeId: "sha-hkg", from: "HKG", to: "PVG", date: "2026-03-09", airline: "Cathay Pacific", airlineShort: "CX", flightNo: "CX368", aircraft: "Airbus A330-300", depart: "09:15", arrive: "11:45", duration: "2h 30m", distance: 1256, terminalFrom: "T1", terminalTo: "T2", seat: "42K", cabin: "经济舱", fare: 1840, booking: "携程", gate: "28", status: "准点", note: "上午航班，实际到达时间与计划一致。", scope: "international" },
   { id: 3, routeId: "sha-hkg", from: "PVG", to: "HKG", date: "2025-11-14", airline: "Hong Kong Airlines", airlineShort: "HX", flightNo: "HX237", aircraft: "Airbus A320", depart: "11:55", arrive: "14:40", duration: "2h 45m", distance: 1256, terminalFrom: "T2", terminalTo: "T1", seat: "21F", cabin: "经济舱", fare: 1320, booking: "飞猪", gate: "D75", status: "延误 15m", note: "实际起飞时间较计划晚 15 分钟。", scope: "international" },
@@ -38,7 +48,7 @@ const flights = [
   { id: 12, routeId: "sha-kix", from: "PVG", to: "KIX", date: "2024-10-03", airline: "Juneyao Air", airlineShort: "HO", flightNo: "HO1337", aircraft: "Boeing 787-9", depart: "16:40", arrive: "20:05", duration: "2h 25m", distance: 1307, terminalFrom: "T2", terminalTo: "T1", seat: "32L", cabin: "经济舱", fare: 2350, booking: "航司官网", gate: "D80", status: "准点", note: "晚间抵达关西机场。", scope: "international" }
 ];
 
-const routes = [
+const fallbackRoutes = [
   { id: "sha-hkg", from: "PVG", to: "HKG", count: 6, distance: 1256 },
   { id: "sha-pek", from: "SHA", to: "PEK", count: 4, distance: 1075 },
   { id: "sha-sin", from: "PVG", to: "SIN", count: 2, distance: 3807 },
@@ -48,6 +58,11 @@ const routes = [
   { id: "sha-ctu", from: "PVG", to: "CTU", count: 1, distance: 1702 },
   { id: "sha-kix", from: "PVG", to: "KIX", count: 1, distance: 1307 }
 ];
+
+const archiveData = window.FLIGHT_ARCHIVE_DATA || {};
+const airports = archiveData.airports || fallbackAirports;
+const flights = archiveData.flights || fallbackFlights;
+const routes = archiveData.routes || fallbackRoutes;
 
 const fallbackLand = [
   [[-168,71],[-140,70],[-125,58],[-110,53],[-98,50],[-82,52],[-62,47],[-55,37],[-75,24],[-92,18],[-105,22],[-118,32],[-132,50],[-160,58]],
@@ -72,10 +87,13 @@ const translations = {
     route: "航线", airport: "机场", flightsRecorded: "累计航段", oneWayDistance: "单程距离",
     relatedFlights: "相关飞行记录", recordedSegments: "已记录航段", coordinates: "地理坐标",
     connections: "连接航线", recentRecords: "最近记录", times: "次", noRecords: "没有符合当前条件的飞行记录。",
-    segments: "航段", kilometers: "公里", aircraft: "机型", cabin: "舱位", seat: "座位", terminals: "航站楼",
+    segments: "航段", kilometers: "公里", aircraft: "机型", registration: "注册号", cabin: "舱位", seat: "座位", terminals: "航站楼",
     settings: "设置", authorEmail: "作者邮箱", emailNotPublic: "邮箱未公开",
     totalDistance: "累计里程", totalTime: "累计飞行时间", totalFare: "累计票价", totalSegments: "记录航段",
-    routeFrequency: "航线次数", aircraftDistribution: "机型分布", airportVisits: "机场访问次数", countriesRegions: "国家与地区"
+    routeFrequency: "航线次数", aircraftDistribution: "机型分布", airportVisits: "机场访问次数", countriesRegions: "国家与地区",
+    earthEquivalent: "约为地球周长的", knownFareRecords: "条记录包含票价", coversAirports: "覆盖机场",
+    hours: "小时", minutes: "分", routesUnit: "条", typesUnit: "种", airportsUnit: "座", countriesUnit: "个",
+    otherAircraft: "其他机型"
   },
   en: {
     navMap: "Flight Map", navRecords: "Flight Records", navStats: "Statistics", navMedia: "Media",
@@ -90,10 +108,13 @@ const translations = {
     route: "Route", airport: "Airport", flightsRecorded: "Recorded segments", oneWayDistance: "One-way distance",
     relatedFlights: "Related records", recordedSegments: "Recorded segments", coordinates: "Coordinates",
     connections: "Connected routes", recentRecords: "Recent records", times: "flights", noRecords: "No flight records match the current filters.",
-    segments: "Segments", kilometers: "Kilometers", aircraft: "Aircraft", cabin: "Cabin", seat: "Seat", terminals: "Terminals",
+    segments: "Segments", kilometers: "Kilometers", aircraft: "Aircraft", registration: "Registration", cabin: "Cabin", seat: "Seat", terminals: "Terminals",
     settings: "Settings", authorEmail: "Author email", emailNotPublic: "Email not public",
     totalDistance: "Total distance", totalTime: "Flight time", totalFare: "Total fare", totalSegments: "Recorded segments",
-    routeFrequency: "Route frequency", aircraftDistribution: "Aircraft distribution", airportVisits: "Airport visits", countriesRegions: "Countries & regions"
+    routeFrequency: "Route frequency", aircraftDistribution: "Aircraft distribution", airportVisits: "Airport visits", countriesRegions: "Countries & regions",
+    earthEquivalent: "of Earth's circumference", knownFareRecords: "records include fare", coversAirports: "airports covered",
+    hours: "h", minutes: "min", routesUnit: "routes", typesUnit: "types", airportsUnit: "airports", countriesUnit: "countries",
+    otherAircraft: "Other aircraft"
   }
 };
 
@@ -106,7 +127,10 @@ const state = {
   selectedRoute: null,
   selectedAirport: null
 };
-const visitedCountries = new Set(["China", "Japan", "USA"]);
+const visitedCountries = new Set([
+  "China", "Japan", "Cambodia", "Singapore", "Australia", "Indonesia", "Malaysia",
+  "Vietnam", "Brunei", "United Arab Emirates", "Spain", "Germany"
+]);
 let landFeatures = fallbackLand.map((ring, index) => ({ name: `fallback-${index}`, rings: [ring] }));
 const t = key => translations[state.lang][key] || key;
 
@@ -124,6 +148,7 @@ function applyLanguage(lang) {
   document.getElementById("langZh").classList.toggle("active", lang === "zh");
   document.getElementById("langEn").classList.toggle("active", lang === "en");
   renderFlights();
+  renderStats();
   if (state.selectedRoute) openRouteDrawer(state.selectedRoute);
   if (state.selectedAirport) openAirportDrawer(state.selectedAirport);
 }
@@ -131,6 +156,9 @@ function applyLanguage(lang) {
 function formatDate(date) {
   const locale=state.lang==="zh"?"zh-CN":"en-CA";
   return new Intl.DateTimeFormat(locale, { year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(`${date}T12:00:00`));
+}
+function formatFare(value) {
+  return Number.isFinite(value) ? `¥${value.toLocaleString()}` : "—";
 }
 function iconMarkup(f, className = "airline-icon") {
   const icon = airlineIcons[f.airlineShort];
@@ -155,9 +183,10 @@ function flightRowMarkup(f) {
       </div>
       <div class="flight-meta">
         <span>${t("aircraft")}<b>${f.aircraft}</b></span><span>${t("cabin")}<b>${f.cabin}</b></span>
-        <span>${t("seat")}<b>${f.seat}</b></span><span>${t("terminals")}<b>${f.terminalFrom} → ${f.terminalTo}</b></span>
+        <span>${t("registration")}<b>${f.registration || "—"}</b></span><span>${t("seat")}<b>${f.seat}</b></span>
+        <span>${t("terminals")}<b>${f.terminalFrom} → ${f.terminalTo}</b></span>
       </div>
-      <div class="fare-cell"><strong>¥${f.fare.toLocaleString()}</strong><small>${f.booking}</small></div>
+      <div class="fare-cell"><strong>${formatFare(f.fare)}</strong><small>${f.booking}</small></div>
       <span class="row-arrow"><svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></span>
     </article>`;
 }
@@ -184,8 +213,8 @@ function openFlight(id) {
   set("detailToCode", f.to); set("detailToCity", to.city); set("detailArrival", `${f.arrive} · ${f.terminalTo}`);
   set("detailDuration", f.duration); set("detailDistance", `${f.distance.toLocaleString()} km`); set("detailNote", f.note);
   document.getElementById("detailInfoGrid").innerHTML = [
-    ["机型", f.aircraft], ["座位", f.seat], ["舱位", f.cabin],
-    ["票价", `¥${f.fare.toLocaleString()}`], ["登机口", f.gate], ["预订渠道", f.booking]
+    ["机型", f.aircraft], ["注册号", f.registration || "—"], ["座位", f.seat], ["舱位", f.cabin],
+    ["票价", formatFare(f.fare)], ["登机口", f.gate], ["预订渠道", f.booking]
   ].map(([key,value]) => `<div><span>${key}</span><strong>${value}</strong></div>`).join("");
   openModal("detailModal");
 }
@@ -295,11 +324,62 @@ function showToast(title, subtitle) {
 }
 
 function renderStats() {
-  document.getElementById("routeRanking").innerHTML = routes.slice(0,5).map((r,i) => `
-    <div class="ranking-row"><span>0${i+1}</span><strong>${airports[r.from].city} — ${airports[r.to].city}</strong><div class="rank-track"><i style="width:${r.count/6*100}%"></i></div><b>${r.count} 次</b></div>
+  const totalDistance=flights.reduce((sum,f)=>sum+(Number(f.distance)||0),0);
+  const totalMinutes=flights.reduce((sum,f)=>sum+(Number(f.durationMinutes)||0),0);
+  const knownFares=flights.filter(f=>Number.isFinite(f.fare));
+  const totalFare=knownFares.reduce((sum,f)=>sum+f.fare,0);
+  const airportCounts=new Map(),countryCounts=new Map(),aircraftCounts=new Map();
+  flights.forEach(f=>{
+    [f.from,f.to].forEach(code=>{
+      airportCounts.set(code,(airportCounts.get(code)||0)+1);
+      const country=airports[code]?.country || "—";
+      countryCounts.set(country,(countryCounts.get(country)||0)+1);
+    });
+    const aircraft=f.aircraft || "—";
+    aircraftCounts.set(aircraft,(aircraftCounts.get(aircraft)||0)+1);
+  });
+  const earthPercent=Math.round(totalDistance/40075*100);
+  const hours=Math.floor(totalMinutes/60),minutes=totalMinutes%60;
+  const earthCopy=state.lang==="zh"?`${t("earthEquivalent")} ${earthPercent}%`:`${earthPercent}% ${t("earthEquivalent")}`;
+  const coverageCopy=state.lang==="zh"?`覆盖 ${airportCounts.size} 座机场`:`${airportCounts.size} ${t("coversAirports")}`;
+  document.getElementById("statsKpis").innerHTML=`
+    <article><span>${t("totalDistance")}</span><strong>${totalDistance.toLocaleString()} <small>km</small></strong><p>${earthCopy}</p></article>
+    <article><span>${t("totalTime")}</span><strong>${hours.toLocaleString()} <small>${t("hours")}</small> ${minutes} <small>${t("minutes")}</small></strong><p>${flights.length} ${t("segments")}</p></article>
+    <article><span>${t("totalFare")}</span><strong>${formatFare(totalFare)}</strong><p>${knownFares.length} ${t("knownFareRecords")}</p></article>
+    <article><span>${t("totalSegments")}</span><strong>${flights.length} <small>${t("times")}</small></strong><p>${coverageCopy}</p></article>`;
+
+  const rankedRoutes=[...routes].sort((a,b)=>b.count-a.count);
+  const maxRoute=Math.max(1,rankedRoutes[0]?.count||1);
+  document.getElementById("routeCountBadge").textContent=`${routes.length} ${t("routesUnit")}`;
+  document.getElementById("routeRanking").innerHTML=rankedRoutes.slice(0,5).map((r,i)=>`
+    <div class="ranking-row"><span>${String(i+1).padStart(2,"0")}</span><strong>${airports[r.from].city} — ${airports[r.to].city}</strong><div class="rank-track"><i style="width:${r.count/maxRoute*100}%"></i></div><b>${r.count} ${t("times")}</b></div>
   `).join("");
-  const list = [["PVG 上海浦东",12],["HKG 香港国际",6],["SHA 上海虹桥",4],["PEK 北京首都",3],["SIN 新加坡樟宜",2]];
-  document.getElementById("airportBars").innerHTML = list.map(([name,count]) => `<div class="airport-row"><span>${name}</span><i style="--w:${count/12*100}%"></i><b>${count}</b></div>`).join("");
+
+  const aircraftRanked=[...aircraftCounts.entries()].sort((a,b)=>b[1]-a[1]);
+  const aircraftTop=aircraftRanked.slice(0,3);
+  const otherCount=aircraftRanked.slice(3).reduce((sum,item)=>sum+item[1],0);
+  const aircraftDisplay=otherCount?[...aircraftTop,[t("otherAircraft"),otherCount]]:aircraftTop;
+  const colors=["#1877f2","#5b9df5","#8bb9f7","#c6d8ef"];
+  let cursor=0;
+  const stops=aircraftDisplay.map((item,index)=>{
+    const start=cursor;cursor+=item[1]/flights.length*100;
+    return `${colors[index]} ${start}% ${cursor}%`;
+  }).join(",");
+  document.getElementById("aircraftCountBadge").textContent=`${aircraftCounts.size} ${t("typesUnit")}`;
+  document.getElementById("aircraftSummary").innerHTML=`
+    <div class="donut" style="background:conic-gradient(${stops})"><span><strong>${flights.length}</strong>${t("segments")}</span></div>
+    <div class="legend">${aircraftDisplay.map((item,index)=>`<p><i style="--c:${colors[index]}"></i>${item[0]} <b>${item[1]}</b></p>`).join("")}</div>`;
+
+  const airportRanked=[...airportCounts.entries()].sort((a,b)=>b[1]-a[1]);
+  const maxAirport=Math.max(1,airportRanked[0]?.[1]||1);
+  document.getElementById("airportCountBadge").textContent=`${airportCounts.size} ${t("airportsUnit")}`;
+  document.getElementById("airportBars").innerHTML=airportRanked.slice(0,6).map(([code,count])=>
+    `<div class="airport-row"><span>${code} ${airports[code].city}</span><i style="--w:${count/maxAirport*100}%"></i><b>${count}</b></div>`
+  ).join("");
+
+  const countries=[...countryCounts.entries()].sort((a,b)=>b[1]-a[1]);
+  document.getElementById("countriesCountBadge").textContent=`${countries.length} ${t("countriesUnit")}`;
+  document.getElementById("countryList").innerHTML=countries.map(([country,count])=>`<span>${country}<b>${count}</b></span>`).join("");
 }
 
 // Globe rendering
@@ -623,4 +703,4 @@ document.getElementById("flightForm").addEventListener("submit",e=>{e.preventDef
 document.querySelector(".drop-zone input").addEventListener("change",e=>{if(e.target.files[0]){closeModals();showToast("文件已读取","正在校验导入字段");}});
 window.addEventListener("resize",resizeGlobe);
 
-applyLanguage("zh");renderStats();resizeGlobe();loadGeography();requestAnimationFrame(animate);
+applyLanguage("zh");resizeGlobe();loadGeography();requestAnimationFrame(animate);

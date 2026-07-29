@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f4f6f8" />
     <title>Flight Archive</title>
-    <link rel="stylesheet" href="./styles.css?v=20260730-glow" />
+    <link rel="stylesheet" href="./styles.css?v=20260730-data" />
   </head>
   <body>
     <div class="app-shell" id="appShell">
@@ -160,40 +160,24 @@
             </div>
           </header>
 
-          <div class="stats-kpis">
-            <article><span data-i18n="totalDistance">累计里程</span><strong>31,820 <small>km</small></strong><p>约为地球周长的 79%</p></article>
-            <article><span data-i18n="totalTime">累计飞行时间</span><strong>47 <small>小时</small> 26 <small>分</small></strong><p>按实际到达时间计算</p></article>
-            <article><span data-i18n="totalFare">累计票价</span><strong>¥26,840</strong><p>平均 ¥1,491 / 航段</p></article>
-            <article><span data-i18n="totalSegments">记录航段</span><strong>18 <small>次</small></strong><p>覆盖 12 座机场</p></article>
-          </div>
+          <div class="stats-kpis" id="statsKpis"></div>
 
           <div class="stats-grid">
             <article class="data-card">
-              <div class="card-head"><div><span>ROUTES</span><h2 data-i18n="routeFrequency">航线次数</h2></div><b>8 条</b></div>
+              <div class="card-head"><div><span>ROUTES</span><h2 data-i18n="routeFrequency">航线次数</h2></div><b id="routeCountBadge"></b></div>
               <div id="routeRanking"></div>
             </article>
             <article class="data-card">
-              <div class="card-head"><div><span>AIRCRAFT</span><h2 data-i18n="aircraftDistribution">机型分布</h2></div><b>7 种</b></div>
-              <div class="aircraft-summary">
-                <div class="donut"><span><strong>18</strong>航段</span></div>
-                <div class="legend">
-                  <p><i style="--c:#1877f2"></i>Airbus A320 系列 <b>8</b></p>
-                  <p><i style="--c:#5b9df5"></i>Boeing 787-9 <b>4</b></p>
-                  <p><i style="--c:#8bb9f7"></i>Airbus A350-900 <b>3</b></p>
-                  <p><i style="--c:#c6d8ef"></i>其他机型 <b>3</b></p>
-                </div>
-              </div>
+              <div class="card-head"><div><span>AIRCRAFT</span><h2 data-i18n="aircraftDistribution">机型分布</h2></div><b id="aircraftCountBadge"></b></div>
+              <div class="aircraft-summary" id="aircraftSummary"></div>
             </article>
             <article class="data-card">
-              <div class="card-head"><div><span>AIRPORTS</span><h2 data-i18n="airportVisits">机场访问次数</h2></div><b>12 座</b></div>
+              <div class="card-head"><div><span>AIRPORTS</span><h2 data-i18n="airportVisits">机场访问次数</h2></div><b id="airportCountBadge"></b></div>
               <div class="airport-bars" id="airportBars"></div>
             </article>
             <article class="data-card countries-card">
-              <div class="card-head"><div><span>GEOGRAPHY</span><h2 data-i18n="countriesRegions">国家与地区</h2></div><b>5 个</b></div>
-              <div class="country-list">
-                <span>中国大陆 <b>12</b></span><span>中国香港 <b>6</b></span>
-                <span>日本 <b>2</b></span><span>新加坡 <b>2</b></span><span>美国 <b>1</b></span>
-              </div>
+              <div class="card-head"><div><span>GEOGRAPHY</span><h2 data-i18n="countriesRegions">国家与地区</h2></div><b id="countriesCountBadge"></b></div>
+              <div class="country-list" id="countryList"></div>
             </article>
           </div>
         </section>
@@ -284,6 +268,7 @@
     </div>
 
     <div class="toast" id="toast"><span>✓</span><div><strong>操作已完成</strong><small>记录已更新</small></div></div>
-    <script src="./app.js?v=20260730-glow"></script>
+    <script src="./flight-data.js?v=20260730-data"></script>
+    <script src="./app.js?v=20260730-data"></script>
   </body>
 </html>
