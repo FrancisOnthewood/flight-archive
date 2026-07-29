@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f4f6f8" />
     <title>Flight Archive</title>
-    <link rel="stylesheet" href="./styles.css?v=20260729-orbit" />
+    <link rel="stylesheet" href="./styles.css?v=20260729-satellite" />
   </head>
   <body>
     <div class="app-shell" id="appShell">
@@ -63,11 +63,6 @@
             <button class="active" id="routeMode" data-i18n="routes">航线</button>
             <button id="airportMode" data-i18n="airports">机场</button>
           </div>
-          <span class="section-label style-label" data-i18n="mapStyle">地球风格</span>
-          <div class="segmented-control">
-            <button class="active" id="styleLight" data-i18n="styleLight">浅色</button>
-            <button id="styleOrbit" data-i18n="styleOrbit">星空</button>
-          </div>
           <p data-i18n="mapHelp">拖拽旋转，滚轮缩放；点击航线或机场查看详情。</p>
         </section>
 
@@ -101,6 +96,13 @@
       <main class="main-content">
         <section class="view atlas-view active" id="atlasView">
           <canvas id="globeCanvas" aria-label="可拖拽的世界飞行航迹地球"></canvas>
+          <div class="globe-style-switch" aria-label="地球风格">
+            <span data-i18n="mapStyle">地球风格</span>
+            <div class="segmented-control">
+              <button class="active" id="styleLight" data-i18n="styleLight">浅色</button>
+              <button id="styleOrbit" data-i18n="styleOrbit">星空</button>
+            </div>
+          </div>
           <div class="globe-loading" id="globeLoading"><span></span>正在载入地理数据</div>
           <div class="hover-tooltip" id="hoverTooltip"></div>
 
@@ -275,6 +277,6 @@
     </div>
 
     <div class="toast" id="toast"><span>✓</span><div><strong>操作已完成</strong><small>记录已更新</small></div></div>
-    <script src="./app.js?v=20260729-orbit"></script>
+    <script src="./app.js?v=20260729-satellite"></script>
   </body>
 </html>

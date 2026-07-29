@@ -365,18 +365,26 @@ async function loadGeography() {
 }
 function drawLand() {
   const orbit=state.globeStyle==="orbit";
+  const satelliteLand=ctx.createLinearGradient(centerX,centerY-globeR,centerX,centerY+globeR);
+  satelliteLand.addColorStop(0,"#687066");
+  satelliteLand.addColorStop(.25,"#65704b");
+  satelliteLand.addColorStop(.5,"#345b3f");
+  satelliteLand.addColorStop(.74,"#6e704a");
+  satelliteLand.addColorStop(1,"#677069");
   landFeatures.forEach(feature=>{
     const visited=visitedCountries.has(feature.name);
-    ctx.fillStyle=orbit?(visited?"#30a879":"#102923"):(visited?"#82b6f4":"#dce3e9");
-    ctx.strokeStyle=orbit?(visited?"rgba(89,237,184,.72)":"rgba(88,148,133,.42)"):(visited?"rgba(24,119,242,.72)":"#abb7c4");
-    ctx.lineWidth=visited?1:.55;
+    const baseColor=orbit?satelliteLand:"#d2d5d3";
+    ctx.strokeStyle=orbit?"rgba(199,216,202,.34)":"#aeb3b4";
+    ctx.lineWidth=visited ? .85 : .5;
     feature.rings.forEach(ring=>{
       const points=ring.map(([lon,lat])=>project(lat,lon));
       visibleSegments(points,.005).forEach(segment=>{
         if(segment.length<3)return;
         ctx.beginPath();
         segment.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
-        ctx.closePath();ctx.fill();ctx.stroke();
+        ctx.closePath();ctx.fillStyle=baseColor;ctx.fill();
+        if(visited){ctx.fillStyle="rgba(232,151,76,.34)";ctx.fill();}
+        ctx.stroke();
       });
     });
   });
@@ -388,79 +396,76 @@ const cityLights=[
   {lat:23.13,lon:113.26,size:1.4},{lat:30.57,lon:104.07,size:1.4},{lat:51.51,lon:-.13,size:1.5},
   {lat:40.71,lon:-74.01,size:1.7},{lat:48.86,lon:2.35,size:1.4},{lat:25.20,lon:55.27,size:1.4}
 ];
-function drawBackground(time) {
+function drawBackground() {
   const orbit=state.globeStyle==="orbit";
-  const gradient=ctx.createLinearGradient(0,0,cw,ch);
+  ctx.fillStyle=orbit?"#02070b":"#dedfdf";ctx.fillRect(0,0,cw,ch);
   if(orbit){
-    gradient.addColorStop(0,"#020710");gradient.addColorStop(.55,"#071528");gradient.addColorStop(1,"#020913");
-  }else{
-    gradient.addColorStop(0,"#f7f9fc");gradient.addColorStop(.52,"#eef4fb");gradient.addColorStop(1,"#e7eff9");
-  }
-  ctx.fillStyle=gradient;ctx.fillRect(0,0,cw,ch);
-  if(orbit){
+    const shiftX=rotation.lon/360*cw,shiftY=rotation.lat/180*ch*.18;
     stars.forEach((star,index)=>{
-      const twinkle=.35+.55*(.5+.5*Math.sin(time*.0015+index*.73));
-      ctx.globalAlpha=twinkle;ctx.fillStyle=index%9===0?"#9fd8ff":"#ffffff";
-      ctx.beginPath();ctx.arc(star.x,star.y,star.r,0,Math.PI*2);ctx.fill();
+      const x=((star.u*cw+shiftX)%cw+cw)%cw;
+      const y=((star.v*ch+shiftY)%ch+ch)%ch;
+      ctx.globalAlpha=star.alpha;ctx.fillStyle=index%11===0?"#b8d8ed":"#ffffff";
+      ctx.beginPath();ctx.arc(x,y,star.r,0,Math.PI*2);ctx.fill();
     });
     ctx.globalAlpha=1;
-  }else{
-    const shift=(time*.018)%160;
-    ctx.strokeStyle="rgba(24,119,242,.075)";ctx.lineWidth=1;
-    for(let i=-2;i<7;i++){
-      ctx.beginPath();
-      ctx.moveTo(-120,i*145+shift);
-      ctx.bezierCurveTo(cw*.28,i*145-75+shift,cw*.72,i*145+110+shift,cw+120,i*145+10+shift);
-      ctx.stroke();
-    }
-    ctx.fillStyle="rgba(24,119,242,.12)";
-    for(let i=0;i<16;i++){
-      const x=(i*173+time*.012)%(cw+80)-40;
-      const y=(i*97+36)%Math.max(ch,1);
-      ctx.beginPath();ctx.arc(x,y,1.4+(i%3)*.45,0,Math.PI*2);ctx.fill();
-    }
   }
 }
-function drawNightLayer(time) {
+function solarPosition(date=new Date()) {
+  const days=date.getTime()/86400000-10957.5;
+  const g=rad((357.529+0.98560028*days)%360);
+  const q=rad((280.459+0.98564736*days)%360);
+  const longitude=q+rad(1.915)*Math.sin(g)+rad(.020)*Math.sin(2*g);
+  const obliquity=rad(23.439-.00000036*days);
+  const rightAscension=Math.atan2(Math.cos(obliquity)*Math.sin(longitude),Math.cos(longitude));
+  const declination=Math.asin(Math.sin(obliquity)*Math.sin(longitude));
+  const sidereal=rad((280.46061837+360.98564736629*days)%360);
+  let lon=(rightAscension-sidereal)*180/Math.PI;
+  lon=((lon+540)%360)-180;
+  return {lat:declination*180/Math.PI,lon};
+}
+function drawNightLayer() {
   if(state.globeStyle!=="orbit")return;
-  const boundary=centerX+Math.sin(time*.000045)*globeR*.17;
-  const shade=ctx.createLinearGradient(boundary-globeR*.32,0,boundary+globeR*.28,0);
-  shade.addColorStop(0,"rgba(2,8,18,0)");
-  shade.addColorStop(.48,"rgba(2,8,18,.18)");
-  shade.addColorStop(1,"rgba(1,5,13,.76)");
+  const sun=solarPosition(),sunPoint=project(sun.lat,sun.lon);
+  let dx=(sunPoint.x-centerX)/globeR,dy=(sunPoint.y-centerY)/globeR;
+  const length=Math.hypot(dx,dy)||1;dx/=length;dy/=length;
+  const startX=centerX-dx*globeR,startY=centerY-dy*globeR;
+  const endX=centerX+dx*globeR,endY=centerY+dy*globeR;
+  const terminator=Math.max(.12,Math.min(.88,.5-sunPoint.z*.38));
+  const shade=ctx.createLinearGradient(startX,startY,endX,endY);
+  shade.addColorStop(0,"rgba(0,3,7,.84)");
+  shade.addColorStop(Math.max(0,terminator-.09),"rgba(1,6,11,.72)");
+  shade.addColorStop(Math.min(1,terminator+.09),"rgba(1,7,12,.04)");
+  shade.addColorStop(1,"rgba(1,7,12,0)");
   ctx.fillStyle=shade;ctx.fillRect(centerX-globeR,centerY-globeR,globeR*2,globeR*2);
-  cityLights.forEach((city,index)=>{
+  const dusk=ctx.createLinearGradient(startX,startY,endX,endY);
+  dusk.addColorStop(Math.max(0,terminator-.025),"rgba(226,137,72,0)");
+  dusk.addColorStop(terminator,"rgba(226,137,72,.12)");
+  dusk.addColorStop(Math.min(1,terminator+.035),"rgba(226,137,72,0)");
+  ctx.fillStyle=dusk;ctx.fillRect(centerX-globeR,centerY-globeR,globeR*2,globeR*2);
+  const sunVector=geoVec(sun.lat,sun.lon);
+  cityLights.forEach(city=>{
     const p=project(city.lat,city.lon);
-    if(p.z<=.02||p.x<boundary-globeR*.05)return;
-    const pulse=.72+.28*Math.sin(time*.002+index);
-    ctx.globalAlpha=pulse;ctx.shadowColor="#ffd36a";ctx.shadowBlur=8;
+    const cityVector=geoVec(city.lat,city.lon);
+    const daylight=cityVector[0]*sunVector[0]+cityVector[1]*sunVector[1]+cityVector[2]*sunVector[2];
+    if(p.z<=.02||daylight>-.04)return;
+    ctx.globalAlpha=Math.min(1,.5-daylight*.55);ctx.shadowColor="#ffd36a";ctx.shadowBlur=8;
     ctx.fillStyle="#ffe4a0";ctx.beginPath();ctx.arc(p.x,p.y,city.size,0,Math.PI*2);ctx.fill();
   });
   ctx.globalAlpha=1;ctx.shadowBlur=0;
 }
-function drawRoutes(time) {
+function drawRoutes() {
   routeHitAreas=[];
-  routes.forEach((route,routeIndex)=>{
+  routes.forEach(route=>{
     const points=greatCircle(airports[route.from],airports[route.to]).map((p,i,array)=>project(p.lat,p.lon,Math.sin(Math.PI*i/(array.length-1))*.055));
     visibleSegments(points,-.01).forEach(segment=>{
       const selected=state.selectedRoute?.id===route.id;
       ctx.beginPath(); segment.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
-      ctx.strokeStyle=state.globeStyle==="orbit"?"#49d7ff":"#1877f2";
-      ctx.lineWidth=(selected?2.5:1)+route.count*.2;
-      ctx.globalAlpha=selected?1:.3+route.count*.08;
-      ctx.shadowColor=state.globeStyle==="orbit"?"#1fc8ff":"#1877f2";
-      ctx.shadowBlur=selected?14:route.count*1.4;ctx.setLineDash([]);ctx.stroke();
-      ctx.globalAlpha=selected?1:.75;ctx.lineWidth=selected?1.8:1.1;
-      ctx.setLineDash([3,10]);ctx.lineDashOffset=-(time*.025+routeIndex*13);ctx.stroke();
+      ctx.strokeStyle=selected?"#0b5fc9":"#1877f2";
+      ctx.lineWidth=(selected?2.2:1)+route.count*.22;
+      ctx.globalAlpha=selected?1:.22+route.count*.1;
+      ctx.shadowColor="#1877f2";ctx.shadowBlur=selected?10:0;ctx.setLineDash([]);ctx.stroke();
       routeHitAreas.push({route,points:segment});
     });
-    const phase=((time*.000075)+(routeIndex/routes.length))%1;
-    const moving=points[Math.min(points.length-1,Math.floor(phase*(points.length-1)))];
-    if(moving?.z>0){
-      ctx.setLineDash([]);ctx.globalAlpha=1;ctx.shadowBlur=12;
-      ctx.fillStyle=state.globeStyle==="orbit"?"#d8f8ff":"#ffffff";
-      ctx.beginPath();ctx.arc(moving.x,moving.y,state.selectedRoute?.id===route.id?3.2:2.2,0,Math.PI*2);ctx.fill();
-    }
   });
   ctx.globalAlpha=1;ctx.shadowBlur=0;ctx.setLineDash([]);ctx.lineDashOffset=0;
 }
@@ -476,7 +481,7 @@ function drawAirports() {
     ctx.beginPath();ctx.arc(p.x,p.y,radius+3,0,Math.PI*2);ctx.fillStyle=selected?"rgba(24,119,242,.16)":"rgba(24,119,242,.08)";ctx.fill();
     ctx.beginPath();ctx.arc(p.x,p.y,radius,0,Math.PI*2);ctx.fillStyle=selected?"#0b5fc9":"#1877f2";ctx.fill();
     if(selected||state.mapMode==="airport"){
-      ctx.font="600 9px DM Sans";ctx.fillStyle="#3e4b5f";ctx.fillText(code,p.x+8,p.y-6);
+      ctx.font="600 9px DM Sans";ctx.fillStyle=state.globeStyle==="orbit"?"#dcecf0":"#3e4b5f";ctx.fillText(code,p.x+8,p.y-6);
     }
     airportHitAreas.push({code,x:p.x,y:p.y});
   });
@@ -484,32 +489,41 @@ function drawAirports() {
 function drawGlobe(time=performance.now()) {
   if(!cw||!ch)return;
   ctx.clearRect(0,0,cw,ch);
-  drawBackground(time);
+  drawBackground();
   const orbit=state.globeStyle==="orbit";
   ctx.save();
-  ctx.shadowColor=orbit?"rgba(35,185,255,.38)":"rgba(52,72,98,.15)";ctx.shadowBlur=orbit?45:35;ctx.shadowOffsetY=orbit?0:14;
-  ctx.beginPath();ctx.arc(centerX,centerY,globeR,0,Math.PI*2);ctx.fillStyle=orbit?"#06345d":"#fbfcfd";ctx.fill();
+  ctx.shadowColor=orbit?"rgba(71,119,137,.34)":"rgba(52,57,61,.18)";ctx.shadowBlur=orbit?38:35;ctx.shadowOffsetY=orbit?0:14;
+  ctx.beginPath();ctx.arc(centerX,centerY,globeR,0,Math.PI*2);ctx.fillStyle=orbit?"#123a4b":"#f2f3f2";ctx.fill();
   ctx.restore();
   ctx.save();ctx.beginPath();ctx.arc(centerX,centerY,globeR,0,Math.PI*2);ctx.clip();
-  const ocean=ctx.createRadialGradient(centerX-globeR*.3,centerY-globeR*.35,globeR*.08,centerX,centerY,globeR);
   if(orbit){
-    ocean.addColorStop(0,"#1877a8");ocean.addColorStop(.55,"#07558b");ocean.addColorStop(1,"#03233f");
+    const sun=solarPosition(),sunPoint=project(sun.lat,sun.lon);
+    const ocean=ctx.createRadialGradient(
+      centerX+(sunPoint.x-centerX)*.3,centerY+(sunPoint.y-centerY)*.3,globeR*.08,
+      centerX,centerY,globeR*1.15
+    );
+    ocean.addColorStop(0,"#2b7285");ocean.addColorStop(.48,"#174f65");ocean.addColorStop(1,"#082b3d");
+    ctx.fillStyle=ocean;
   }else{
-    ocean.addColorStop(0,"#ffffff");ocean.addColorStop(1,"#edf2f6");
+    const ocean=ctx.createRadialGradient(centerX-globeR*.3,centerY-globeR*.35,globeR*.08,centerX,centerY,globeR);
+    ocean.addColorStop(0,"#ffffff");ocean.addColorStop(1,"#e6e9e8");
+    ctx.fillStyle=ocean;
   }
-  ctx.fillStyle=ocean;ctx.fillRect(centerX-globeR,centerY-globeR,globeR*2,globeR*2);
-  drawLand();drawNightLayer(time);
-  if(state.mapMode==="route")drawRoutes(time);else routeHitAreas=[];
+  ctx.fillRect(centerX-globeR,centerY-globeR,globeR*2,globeR*2);
+  drawLand();drawNightLayer();
+  if(state.mapMode==="route")drawRoutes();else routeHitAreas=[];
   drawAirports();
   ctx.restore();
   ctx.beginPath();ctx.arc(centerX,centerY,globeR,0,Math.PI*2);
-  ctx.strokeStyle=orbit?"rgba(102,222,255,.8)":"#b9c3cf";ctx.lineWidth=orbit?1.5:1;ctx.shadowColor=orbit?"#3ed6ff":"transparent";ctx.shadowBlur=orbit?18:0;ctx.stroke();ctx.shadowBlur=0;
+  ctx.strokeStyle=orbit?"rgba(133,184,199,.74)":"#aeb3b4";ctx.lineWidth=orbit?1.25:1;ctx.shadowColor=orbit?"#5e9fb5":"transparent";ctx.shadowBlur=orbit?12:0;ctx.stroke();ctx.shadowBlur=0;
 }
 function resizeGlobe() {
   const rect=canvas.getBoundingClientRect(), dpr=Math.min(devicePixelRatio||1,2);
   canvas.width=Math.round(rect.width*dpr);canvas.height=Math.round(rect.height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);
   cw=rect.width;ch=rect.height;globeR=Math.min(cw,ch)*.43;centerX=cw*.5;centerY=ch*.5;
-  stars=Array.from({length:Math.max(90,Math.floor(cw*ch/8500))},()=>({x:Math.random()*cw,y:Math.random()*ch,r:.35+Math.random()*1.15}));
+  stars=Array.from({length:Math.max(90,Math.floor(cw*ch/8500))},()=>({
+    u:Math.random(),v:Math.random(),r:.35+Math.random()*1.05,alpha:.3+Math.random()*.65
+  }));
   drawGlobe();
 }
 function pointerPos(e){const rect=canvas.getBoundingClientRect();return{x:e.clientX-rect.left,y:e.clientY-rect.top};}

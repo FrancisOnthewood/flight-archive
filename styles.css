@@ -120,7 +120,6 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
 .nav-item.active .nav-count { color: var(--blue); background: white; }
 .map-control { margin-top: 25px; padding: 17px 12px; border-top: 1px solid var(--line); }
 .section-label { display: block; margin-bottom: 9px; color: #8792a3; font-size: 10px; font-weight: 700; letter-spacing: 1.1px; text-transform: uppercase; }
-.style-label { margin-top: 17px; }
 .segmented-control { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; padding: 3px; background: #edf1f5; border-radius: 8px; }
 .segmented-control button { height: 31px; border: 0; border-radius: 6px; background: transparent; color: #7b8798; font-size: 11px; cursor: pointer; }
 .segmented-control button.active { color: var(--blue); background: white; font-weight: 600; box-shadow: 0 2px 7px rgba(34,51,73,.08); }
@@ -171,9 +170,29 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
 .view { display: none; }
 .view.active { display: block; animation: pageIn .22s ease; }
 @keyframes pageIn { from { opacity: 0; } }
-.atlas-view { position: relative; height: 100vh; overflow: hidden; background: #eef1f4; }
+.atlas-view { position: relative; height: 100vh; overflow: hidden; background: #dedfdf; }
 #globeCanvas { position: absolute; inset: 0; width: 100%; height: 100%; cursor: grab; touch-action: none; }
 #globeCanvas.dragging { cursor: grabbing; }
+.globe-style-switch {
+  position: absolute;
+  z-index: 16;
+  top: 18px;
+  right: 20px;
+  min-width: 224px;
+  padding: 8px 9px 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid rgba(190,194,198,.8);
+  border-radius: 11px;
+  color: #68717d;
+  background: rgba(249,249,248,.9);
+  box-shadow: 0 8px 24px rgba(41,47,54,.1);
+  backdrop-filter: blur(14px);
+}
+.globe-style-switch > span { font-size: 11px; font-weight: 600; white-space: nowrap; }
+.globe-style-switch .segmented-control { width: 125px; margin-left: auto; }
+.globe-style-switch .segmented-control button { height: 29px; }
 .globe-loading {
   position: absolute;
   left: 50%;
@@ -565,6 +584,8 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
   .app-shell { --sidebar-width: 64px; }
   .sidebar { padding: 16px 9px; }
   .brand-mark { width: 37px; height: 37px; flex-basis: 37px; }
+  .globe-style-switch { top: 12px; right: 12px; min-width: 0; padding-left: 9px; }
+  .globe-style-switch > span { display: none; }
   .page-view { padding: 30px 14px 50px; }
   .page-header { align-items: flex-start; }
   .page-add { display: none; }
