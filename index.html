@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f4f6f8" />
     <title>Flight Archive</title>
-    <link rel="stylesheet" href="./styles.css?v=20260729-light" />
+    <link rel="stylesheet" href="./styles.css?v=20260729-orbit" />
   </head>
   <body>
     <div class="app-shell" id="appShell">
@@ -13,8 +13,11 @@
         <div class="sidebar-head">
           <a class="brand" href="#" data-view-link="atlas" aria-label="Flight Archive 首页">
             <span class="brand-mark">
-              <svg viewBox="0 0 28 28" aria-hidden="true">
-                <path d="M4.5 17.7c5.5-.9 9.2-4.3 13.1-10.7.5-.9 1.7-1.1 2.5-.5.8.6.9 1.8.3 2.6-3.6 5.1-7.6 8.5-12.1 10.2l6.1 2.1-1.3 1.7-8.5-1.8-2.4-3.7 1.1-.9 1.2 1Z"/>
+              <svg viewBox="0 0 40 40" aria-hidden="true">
+                <circle cx="20" cy="20" r="12.5"/>
+                <path d="M7.5 23.5c8.6-.8 15.4-5.2 22.4-13.2"/>
+                <path class="logo-plane" d="m24.2 10.7 8.8-3.4-3.5 8.8-1.3-3.4-4-2Z"/>
+                <circle class="logo-dot" cx="8" cy="23.4" r="1.8"/>
               </svg>
             </span>
             <span class="brand-copy">
@@ -32,53 +35,65 @@
             <span class="nav-icon">
               <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.7 10h16.6M3.7 14h16.6M12 3.5c2.1 2.2 3.2 5 3.2 8.5s-1.1 6.3-3.2 8.5M12 3.5C9.9 5.7 8.8 8.5 8.8 12s1.1 6.3 3.2 8.5"/></svg>
             </span>
-            <span class="nav-label">航迹地图</span>
+            <span class="nav-label" data-i18n="navMap">航迹地图</span>
           </button>
           <button class="nav-item" data-view="records">
             <span class="nav-icon">
               <svg viewBox="0 0 24 24"><path d="M7 3.5h10l2 2v15H5v-15l2-2Z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
             </span>
-            <span class="nav-label">飞行记录</span>
-            <span class="nav-count" id="navRecordCount">12</span>
+            <span class="nav-label" data-i18n="navRecords">飞行记录</span>
           </button>
           <button class="nav-item" data-view="stats">
             <span class="nav-icon">
               <svg viewBox="0 0 24 24"><path d="M4 19V9m5 10V5m5 14v-7m5 7V3"/></svg>
             </span>
-            <span class="nav-label">数据统计</span>
+            <span class="nav-label" data-i18n="navStats">数据统计</span>
           </button>
           <button class="nav-item" data-view="memories">
             <span class="nav-icon">
               <svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="m5.5 17 4.3-4.2 2.7 2.4 2.4-2 3.6 3.8"/></svg>
             </span>
-            <span class="nav-label">旅途相册</span>
+            <span class="nav-label" data-i18n="navMedia">旅途相册</span>
           </button>
         </nav>
 
         <section class="map-control" id="mapControl">
-          <span class="section-label">地图选择</span>
+          <span class="section-label" data-i18n="mapSelection">地图选择</span>
           <div class="segmented-control">
-            <button class="active" id="routeMode">航线</button>
-            <button id="airportMode">机场</button>
+            <button class="active" id="routeMode" data-i18n="routes">航线</button>
+            <button id="airportMode" data-i18n="airports">机场</button>
           </div>
-          <p>拖拽旋转，滚轮缩放；点击航线或机场查看详情。</p>
+          <span class="section-label style-label" data-i18n="mapStyle">地球风格</span>
+          <div class="segmented-control">
+            <button class="active" id="styleLight" data-i18n="styleLight">浅色</button>
+            <button id="styleOrbit" data-i18n="styleOrbit">星空</button>
+          </div>
+          <p data-i18n="mapHelp">拖拽旋转，滚轮缩放；点击航线或机场查看详情。</p>
+        </section>
+
+        <section class="language-control">
+          <span class="section-label" data-i18n="language">语言</span>
+          <div class="segmented-control">
+            <button class="active" id="langZh">中文</button>
+            <button id="langEn">EN</button>
+          </div>
         </section>
 
         <div class="sidebar-spacer"></div>
 
         <div class="sidebar-summary">
-          <div><strong>18</strong><span>航段</span></div>
-          <div><strong>31,820</strong><span>公里</span></div>
+          <div><strong>18</strong><span data-i18n="segments">航段</span></div>
+          <div><strong>31,820</strong><span data-i18n="kilometers">公里</span></div>
         </div>
 
         <div class="sidebar-actions">
           <button class="subtle-button" id="importButton">
             <svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M5 19h14"/></svg>
-            <span>批量导入</span>
+            <span data-i18n="import">批量导入</span>
           </button>
           <button class="primary-button" id="addButton">
             <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-            <span>添加飞行</span>
+            <span data-i18n="addFlight">添加飞行</span>
           </button>
         </div>
       </aside>
@@ -101,28 +116,28 @@
           <header class="page-header">
             <div>
               <span class="page-kicker">FLIGHT LOG</span>
-              <h1>飞行记录</h1>
-              <p>按日期倒序展示已保存的航段。</p>
+              <h1 data-i18n="recordsTitle">飞行记录</h1>
+              <p data-i18n="recordsDesc">按日期倒序展示已保存的航段。</p>
             </div>
             <button class="primary-button page-add" data-open-add>
               <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-              添加飞行
+              <span data-i18n="addFlight">添加飞行</span>
             </button>
           </header>
 
           <div class="filter-bar">
             <label class="search-field">
               <svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4 4"/></svg>
-              <input id="recordSearch" placeholder="搜索航班号、航司、城市或机场" />
+              <input id="recordSearch" placeholder="搜索航班号、航司、城市或机场" data-i18n-placeholder="searchPlaceholder" />
             </label>
-            <button class="filter-chip active" data-filter="all">全部</button>
+            <button class="filter-chip active" data-filter="all" data-i18n="all">全部</button>
             <button class="filter-chip" data-filter="2026">2026</button>
-            <button class="filter-chip" data-filter="international">国际 / 地区</button>
-            <button class="filter-chip" data-filter="domestic">国内</button>
+            <button class="filter-chip" data-filter="international" data-i18n="international">国际 / 地区</button>
+            <button class="filter-chip" data-filter="domestic" data-i18n="domestic">国内</button>
           </div>
 
           <div class="record-table-head" aria-hidden="true">
-            <span>航班</span><span>日期</span><span>航线与时间</span><span>飞行信息</span><span>票价</span><span></span>
+            <span data-i18n="flight">航班</span><span data-i18n="date">日期</span><span data-i18n="routeTime">航线与时间</span><span data-i18n="flightInfo">飞行信息</span><span data-i18n="fare">票价</span><span></span>
           </div>
           <div class="flight-list" id="flightList"></div>
         </section>
@@ -131,25 +146,25 @@
           <header class="page-header">
             <div>
               <span class="page-kicker">SUMMARY</span>
-              <h1>飞行数据统计</h1>
-              <p>根据当前记录汇总里程、时间、支出、航线、机场与机型。</p>
+              <h1 data-i18n="statsTitle">飞行数据统计</h1>
+              <p data-i18n="statsDesc">根据当前记录汇总里程、时间、支出、航线、机场与机型。</p>
             </div>
           </header>
 
           <div class="stats-kpis">
-            <article><span>累计里程</span><strong>31,820 <small>km</small></strong><p>约为地球周长的 79%</p></article>
-            <article><span>累计飞行时间</span><strong>47 <small>小时</small> 26 <small>分</small></strong><p>按实际到达时间计算</p></article>
-            <article><span>累计票价</span><strong>¥26,840</strong><p>平均 ¥1,491 / 航段</p></article>
-            <article><span>记录航段</span><strong>18 <small>次</small></strong><p>覆盖 12 座机场</p></article>
+            <article><span data-i18n="totalDistance">累计里程</span><strong>31,820 <small>km</small></strong><p>约为地球周长的 79%</p></article>
+            <article><span data-i18n="totalTime">累计飞行时间</span><strong>47 <small>小时</small> 26 <small>分</small></strong><p>按实际到达时间计算</p></article>
+            <article><span data-i18n="totalFare">累计票价</span><strong>¥26,840</strong><p>平均 ¥1,491 / 航段</p></article>
+            <article><span data-i18n="totalSegments">记录航段</span><strong>18 <small>次</small></strong><p>覆盖 12 座机场</p></article>
           </div>
 
           <div class="stats-grid">
             <article class="data-card">
-              <div class="card-head"><div><span>ROUTES</span><h2>航线次数</h2></div><b>8 条</b></div>
+              <div class="card-head"><div><span>ROUTES</span><h2 data-i18n="routeFrequency">航线次数</h2></div><b>8 条</b></div>
               <div id="routeRanking"></div>
             </article>
             <article class="data-card">
-              <div class="card-head"><div><span>AIRCRAFT</span><h2>机型分布</h2></div><b>7 种</b></div>
+              <div class="card-head"><div><span>AIRCRAFT</span><h2 data-i18n="aircraftDistribution">机型分布</h2></div><b>7 种</b></div>
               <div class="aircraft-summary">
                 <div class="donut"><span><strong>18</strong>航段</span></div>
                 <div class="legend">
@@ -161,11 +176,11 @@
               </div>
             </article>
             <article class="data-card">
-              <div class="card-head"><div><span>AIRPORTS</span><h2>机场访问次数</h2></div><b>12 座</b></div>
+              <div class="card-head"><div><span>AIRPORTS</span><h2 data-i18n="airportVisits">机场访问次数</h2></div><b>12 座</b></div>
               <div class="airport-bars" id="airportBars"></div>
             </article>
             <article class="data-card countries-card">
-              <div class="card-head"><div><span>GEOGRAPHY</span><h2>国家与地区</h2></div><b>5 个</b></div>
+              <div class="card-head"><div><span>GEOGRAPHY</span><h2 data-i18n="countriesRegions">国家与地区</h2></div><b>5 个</b></div>
               <div class="country-list">
                 <span>中国大陆 <b>12</b></span><span>中国香港 <b>6</b></span>
                 <span>日本 <b>2</b></span><span>新加坡 <b>2</b></span><span>美国 <b>1</b></span>
@@ -178,8 +193,8 @@
           <header class="page-header">
             <div>
               <span class="page-kicker">MEDIA</span>
-              <h1>旅途相册</h1>
-              <p>与飞行记录关联的照片和登机资料。</p>
+              <h1 data-i18n="mediaTitle">旅途相册</h1>
+              <p data-i18n="mediaDesc">与飞行记录关联的照片和登机资料。</p>
             </div>
           </header>
           <div class="memory-grid">
@@ -260,6 +275,6 @@
     </div>
 
     <div class="toast" id="toast"><span>✓</span><div><strong>操作已完成</strong><small>记录已更新</small></div></div>
-    <script src="./app.js?v=20260729-light"></script>
+    <script src="./app.js?v=20260729-orbit"></script>
   </body>
 </html>

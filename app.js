@@ -58,11 +58,77 @@ const fallbackLand = [
   [[-52,82],[-20,80],[-26,66],[-45,60],[-62,69]]
 ];
 
-const state = { activeView: "atlas", filter: "all", mapMode: "route", selectedRoute: null, selectedAirport: null };
-let landRings = fallbackLand;
+const translations = {
+  zh: {
+    navMap: "航迹地图", navRecords: "飞行记录", navStats: "数据统计", navMedia: "旅途相册",
+    mapSelection: "地图选择", routes: "航线", airports: "机场", mapStyle: "地球风格",
+    styleLight: "浅色", styleOrbit: "星空", mapHelp: "拖拽旋转，滚轮缩放；点击航线或机场查看详情。",
+    language: "语言", import: "批量导入", addFlight: "添加飞行", recordsTitle: "飞行记录",
+    recordsDesc: "按日期倒序展示已保存的航段。", searchPlaceholder: "搜索航班号、航司、城市或机场",
+    all: "全部", international: "国际 / 地区", domestic: "国内", flight: "航班", date: "日期",
+    routeTime: "航线与时间", flightInfo: "飞行信息", fare: "票价", statsTitle: "飞行数据统计",
+    statsDesc: "根据当前记录汇总里程、时间、支出、航线、机场与机型。",
+    mediaTitle: "旅途相册", mediaDesc: "与飞行记录关联的照片和登机资料。",
+    route: "航线", airport: "机场", flightsRecorded: "累计航段", oneWayDistance: "单程距离",
+    relatedFlights: "相关飞行记录", recordedSegments: "已记录航段", coordinates: "地理坐标",
+    connections: "连接航线", recentRecords: "最近记录", times: "次", noRecords: "没有符合当前条件的飞行记录。",
+    segments: "航段", kilometers: "公里", aircraft: "机型", cabin: "舱位", seat: "座位", terminals: "航站楼",
+    totalDistance: "累计里程", totalTime: "累计飞行时间", totalFare: "累计票价", totalSegments: "记录航段",
+    routeFrequency: "航线次数", aircraftDistribution: "机型分布", airportVisits: "机场访问次数", countriesRegions: "国家与地区"
+  },
+  en: {
+    navMap: "Flight Map", navRecords: "Flight Records", navStats: "Statistics", navMedia: "Media",
+    mapSelection: "Map Content", routes: "Routes", airports: "Airports", mapStyle: "Globe Style",
+    styleLight: "Light", styleOrbit: "Orbit", mapHelp: "Drag to rotate, scroll to zoom, and select a route or airport for details.",
+    language: "Language", import: "Import", addFlight: "Add Flight", recordsTitle: "Flight Records",
+    recordsDesc: "Saved flight segments in reverse chronological order.", searchPlaceholder: "Search flight, airline, city, or airport",
+    all: "All", international: "International", domestic: "Domestic", flight: "Flight", date: "Date",
+    routeTime: "Route & Time", flightInfo: "Flight Information", fare: "Fare", statsTitle: "Flight Statistics",
+    statsDesc: "Distance, time, spending, routes, airports, and aircraft summarized from current records.",
+    mediaTitle: "Travel Media", mediaDesc: "Photos and boarding materials linked to flight records.",
+    route: "Route", airport: "Airport", flightsRecorded: "Recorded segments", oneWayDistance: "One-way distance",
+    relatedFlights: "Related records", recordedSegments: "Recorded segments", coordinates: "Coordinates",
+    connections: "Connected routes", recentRecords: "Recent records", times: "flights", noRecords: "No flight records match the current filters.",
+    segments: "Segments", kilometers: "Kilometers", aircraft: "Aircraft", cabin: "Cabin", seat: "Seat", terminals: "Terminals",
+    totalDistance: "Total distance", totalTime: "Flight time", totalFare: "Total fare", totalSegments: "Recorded segments",
+    routeFrequency: "Route frequency", aircraftDistribution: "Aircraft distribution", airportVisits: "Airport visits", countriesRegions: "Countries & regions"
+  }
+};
+
+const state = {
+  activeView: "atlas",
+  filter: "all",
+  mapMode: "route",
+  globeStyle: "light",
+  lang: "zh",
+  selectedRoute: null,
+  selectedAirport: null
+};
+const visitedCountries = new Set(["China", "Japan", "USA"]);
+let landFeatures = fallbackLand.map((ring, index) => ({ name: `fallback-${index}`, rings: [ring] }));
+const t = key => translations[state.lang][key] || key;
+
+function applyLanguage(lang) {
+  state.lang = lang;
+  document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
+  document.querySelectorAll("[data-i18n]").forEach(el => {
+    const value = translations[lang][el.dataset.i18n];
+    if (value) el.textContent = value;
+  });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
+    const value = translations[lang][el.dataset.i18nPlaceholder];
+    if (value) el.placeholder = value;
+  });
+  document.getElementById("langZh").classList.toggle("active", lang === "zh");
+  document.getElementById("langEn").classList.toggle("active", lang === "en");
+  renderFlights();
+  if (state.selectedRoute) openRouteDrawer(state.selectedRoute);
+  if (state.selectedAirport) openAirportDrawer(state.selectedAirport);
+}
 
 function formatDate(date) {
-  return new Intl.DateTimeFormat("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(`${date}T12:00:00`));
+  const locale=state.lang==="zh"?"zh-CN":"en-CA";
+  return new Intl.DateTimeFormat(locale, { year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(`${date}T12:00:00`));
 }
 function iconMarkup(f, className = "airline-icon") {
   const icon = airlineIcons[f.airlineShort];
@@ -86,8 +152,8 @@ function flightRowMarkup(f) {
         <div class="route-point"><strong>${f.to}</strong><span>${to.city} · ${f.arrive}</span></div>
       </div>
       <div class="flight-meta">
-        <span>机型<b>${f.aircraft}</b></span><span>舱位<b>${f.cabin}</b></span>
-        <span>座位<b>${f.seat}</b></span><span>航站楼<b>${f.terminalFrom} → ${f.terminalTo}</b></span>
+        <span>${t("aircraft")}<b>${f.aircraft}</b></span><span>${t("cabin")}<b>${f.cabin}</b></span>
+        <span>${t("seat")}<b>${f.seat}</b></span><span>${t("terminals")}<b>${f.terminalFrom} → ${f.terminalTo}</b></span>
       </div>
       <div class="fare-cell"><strong>¥${f.fare.toLocaleString()}</strong><small>${f.booking}</small></div>
       <span class="row-arrow"><svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></span>
@@ -101,7 +167,7 @@ function renderFlights() {
     const text = `${f.flightNo} ${f.airline} ${f.from} ${f.to} ${airports[f.from].city} ${airports[f.to].city}`.toLowerCase();
     return filterOk && text.includes(query);
   });
-  document.getElementById("flightList").innerHTML = list.length ? list.map(flightRowMarkup).join("") : `<div class="empty-state">没有符合当前条件的飞行记录。</div>`;
+  document.getElementById("flightList").innerHTML = list.length ? list.map(flightRowMarkup).join("") : `<div class="empty-state">${t("noRecords")}</div>`;
   document.querySelectorAll("[data-flight-id]").forEach(el => el.addEventListener("click", () => openFlight(Number(el.dataset.flightId))));
 }
 
@@ -137,14 +203,14 @@ function openRouteDrawer(route) {
   let related = flights.filter(f => f.routeId === route.id);
   if (!related.length) related = flights.filter(f => [f.from,f.to].includes(route.from) || [f.from,f.to].includes(route.to)).slice(0,3);
   document.getElementById("drawerContent").innerHTML = `
-    <span class="drawer-kicker">ROUTE</span>
+    <span class="drawer-kicker">${t("route")}</span>
     <h2 class="drawer-title">${from.city} — ${to.city}</h2>
     <p class="drawer-subtitle">${route.from} / ${from.name}<br>${route.to} / ${to.name}</p>
     <div class="drawer-metrics">
-      <div><strong>${route.count}</strong><span>累计航段</span></div>
-      <div><strong>${route.distance.toLocaleString()} km</strong><span>单程距离</span></div>
+      <div><strong>${route.count}</strong><span>${t("flightsRecorded")}</span></div>
+      <div><strong>${route.distance.toLocaleString()} km</strong><span>${t("oneWayDistance")}</span></div>
     </div>
-    <h3 class="drawer-section-title">相关飞行记录</h3>
+    <h3 class="drawer-section-title">${t("relatedFlights")}</h3>
     ${related.map(drawerFlightMarkup).join("")}
   `;
   document.querySelectorAll("[data-drawer-flight]").forEach(el => el.addEventListener("click", () => openFlight(Number(el.dataset.drawerFlight))));
@@ -159,21 +225,21 @@ function openAirportDrawer(code) {
   const relatedFlights = flights.filter(f => f.from === code || f.to === code);
   const connections = routes.filter(r => r.from === code || r.to === code);
   document.getElementById("drawerContent").innerHTML = `
-    <span class="drawer-kicker">AIRPORT</span>
+    <span class="drawer-kicker">${t("airport")}</span>
     <h2 class="drawer-title">${airport.code}</h2>
     <p class="drawer-subtitle">${airport.name}<br>${airport.city}，${airport.country}</p>
     <div class="drawer-metrics">
-      <div><strong>${relatedFlights.length}</strong><span>已记录航段</span></div>
-      <div><strong>${airport.lat.toFixed(2)}°, ${airport.lon.toFixed(2)}°</strong><span>地理坐标</span></div>
+      <div><strong>${relatedFlights.length}</strong><span>${t("recordedSegments")}</span></div>
+      <div><strong>${airport.lat.toFixed(2)}°, ${airport.lon.toFixed(2)}°</strong><span>${t("coordinates")}</span></div>
     </div>
-    <h3 class="drawer-section-title">连接航线</h3>
+    <h3 class="drawer-section-title">${t("connections")}</h3>
     <div class="connection-list">
       ${connections.length ? connections.map(r => {
         const other = r.from === code ? airports[r.to] : airports[r.from];
-        return `<button data-connection="${r.id}"><span>${airport.city} — ${other.city}</span><b>${r.count} 次</b></button>`;
+        return `<button data-connection="${r.id}"><span>${airport.city} — ${other.city}</span><b>${r.count} ${t("times")}</b></button>`;
       }).join("") : `<p class="drawer-subtitle">当前样本中没有独立航线统计。</p>`}
     </div>
-    <h3 class="drawer-section-title">最近记录</h3>
+    <h3 class="drawer-section-title">${t("recentRecords")}</h3>
     ${relatedFlights.slice(0,4).map(drawerFlightMarkup).join("")}
   `;
   document.querySelectorAll("[data-connection]").forEach(el => el.addEventListener("click", () => {
@@ -270,21 +336,26 @@ function visibleSegments(points, threshold = 0) {
   if(segment.length>1)segments.push(segment);
   return segments;
 }
-function extractLandRings(geojson) {
-  const rings=[];
+function extractLandFeatures(geojson) {
+  const features=[];
   (geojson.features || []).forEach(feature=>{
     const geometry=feature.geometry;
     if(!geometry)return;
-    if(geometry.type==="Polygon") geometry.coordinates.forEach(r=>rings.push(r));
-    if(geometry.type==="MultiPolygon") geometry.coordinates.forEach(p=>p.forEach(r=>rings.push(r)));
+    const name=feature.properties?.name || "";
+    if(geometry.type==="Polygon" && geometry.coordinates[0]) {
+      features.push({name,rings:[geometry.coordinates[0]]});
+    }
+    if(geometry.type==="MultiPolygon") {
+      features.push({name,rings:geometry.coordinates.map(p=>p[0]).filter(Boolean)});
+    }
   });
-  return rings.length?rings:fallbackLand;
+  return features.length?features:fallbackLand.map((ring,index)=>({name:`fallback-${index}`,rings:[ring]}));
 }
 async function loadGeography() {
   try {
     const response=await fetch("./data/world.geojson");
     if(!response.ok)throw new Error(`GeoJSON ${response.status}`);
-    landRings=extractLandRings(await response.json());
+    landFeatures=extractLandFeatures(await response.json());
   } catch(error) {
     console.warn("Using fallback land geometry:",error);
   } finally {
@@ -293,46 +364,105 @@ async function loadGeography() {
   }
 }
 function drawLand() {
-  ctx.fillStyle="#d9e0e8";
-  ctx.strokeStyle="#aeb9c6";
-  ctx.lineWidth=.55;
-  landRings.forEach(ring=>{
-    const points=ring.map(([lon,lat])=>project(lat,lon));
-    visibleSegments(points,.005).forEach(segment=>{
-      if(segment.length<3)return;
-      ctx.beginPath();
-      segment.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
-      ctx.closePath(); ctx.fill(); ctx.stroke();
+  const orbit=state.globeStyle==="orbit";
+  landFeatures.forEach(feature=>{
+    const visited=visitedCountries.has(feature.name);
+    ctx.fillStyle=orbit?(visited?"#30a879":"#102923"):(visited?"#82b6f4":"#dce3e9");
+    ctx.strokeStyle=orbit?(visited?"rgba(89,237,184,.72)":"rgba(88,148,133,.42)"):(visited?"rgba(24,119,242,.72)":"#abb7c4");
+    ctx.lineWidth=visited?1:.55;
+    feature.rings.forEach(ring=>{
+      const points=ring.map(([lon,lat])=>project(lat,lon));
+      visibleSegments(points,.005).forEach(segment=>{
+        if(segment.length<3)return;
+        ctx.beginPath();
+        segment.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
+        ctx.closePath();ctx.fill();ctx.stroke();
+      });
     });
   });
 }
-function drawGraticule() {
-  ctx.strokeStyle="rgba(116,137,160,.18)";
-  ctx.lineWidth=.55;
-  for(let lat=-60;lat<=60;lat+=20){
-    const points=[]; for(let lon=-180;lon<=180;lon+=3)points.push(project(lat,lon));
-    visibleSegments(points).forEach(segment=>{ctx.beginPath();segment.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();});
+let stars=[];
+const cityLights=[
+  {lat:31.23,lon:121.47,size:1.8},{lat:39.90,lon:116.40,size:1.7},{lat:22.32,lon:114.17,size:1.6},
+  {lat:35.68,lon:139.69,size:1.8},{lat:1.35,lon:103.82,size:1.5},{lat:37.77,lon:-122.42,size:1.5},
+  {lat:23.13,lon:113.26,size:1.4},{lat:30.57,lon:104.07,size:1.4},{lat:51.51,lon:-.13,size:1.5},
+  {lat:40.71,lon:-74.01,size:1.7},{lat:48.86,lon:2.35,size:1.4},{lat:25.20,lon:55.27,size:1.4}
+];
+function drawBackground(time) {
+  const orbit=state.globeStyle==="orbit";
+  const gradient=ctx.createLinearGradient(0,0,cw,ch);
+  if(orbit){
+    gradient.addColorStop(0,"#020710");gradient.addColorStop(.55,"#071528");gradient.addColorStop(1,"#020913");
+  }else{
+    gradient.addColorStop(0,"#f7f9fc");gradient.addColorStop(.52,"#eef4fb");gradient.addColorStop(1,"#e7eff9");
   }
-  for(let lon=-180;lon<180;lon+=20){
-    const points=[]; for(let lat=-89;lat<=89;lat+=2)points.push(project(lat,lon));
-    visibleSegments(points).forEach(segment=>{ctx.beginPath();segment.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();});
+  ctx.fillStyle=gradient;ctx.fillRect(0,0,cw,ch);
+  if(orbit){
+    stars.forEach((star,index)=>{
+      const twinkle=.35+.55*(.5+.5*Math.sin(time*.0015+index*.73));
+      ctx.globalAlpha=twinkle;ctx.fillStyle=index%9===0?"#9fd8ff":"#ffffff";
+      ctx.beginPath();ctx.arc(star.x,star.y,star.r,0,Math.PI*2);ctx.fill();
+    });
+    ctx.globalAlpha=1;
+  }else{
+    const shift=(time*.018)%160;
+    ctx.strokeStyle="rgba(24,119,242,.075)";ctx.lineWidth=1;
+    for(let i=-2;i<7;i++){
+      ctx.beginPath();
+      ctx.moveTo(-120,i*145+shift);
+      ctx.bezierCurveTo(cw*.28,i*145-75+shift,cw*.72,i*145+110+shift,cw+120,i*145+10+shift);
+      ctx.stroke();
+    }
+    ctx.fillStyle="rgba(24,119,242,.12)";
+    for(let i=0;i<16;i++){
+      const x=(i*173+time*.012)%(cw+80)-40;
+      const y=(i*97+36)%Math.max(ch,1);
+      ctx.beginPath();ctx.arc(x,y,1.4+(i%3)*.45,0,Math.PI*2);ctx.fill();
+    }
   }
 }
-function drawRoutes() {
+function drawNightLayer(time) {
+  if(state.globeStyle!=="orbit")return;
+  const boundary=centerX+Math.sin(time*.000045)*globeR*.17;
+  const shade=ctx.createLinearGradient(boundary-globeR*.32,0,boundary+globeR*.28,0);
+  shade.addColorStop(0,"rgba(2,8,18,0)");
+  shade.addColorStop(.48,"rgba(2,8,18,.18)");
+  shade.addColorStop(1,"rgba(1,5,13,.76)");
+  ctx.fillStyle=shade;ctx.fillRect(centerX-globeR,centerY-globeR,globeR*2,globeR*2);
+  cityLights.forEach((city,index)=>{
+    const p=project(city.lat,city.lon);
+    if(p.z<=.02||p.x<boundary-globeR*.05)return;
+    const pulse=.72+.28*Math.sin(time*.002+index);
+    ctx.globalAlpha=pulse;ctx.shadowColor="#ffd36a";ctx.shadowBlur=8;
+    ctx.fillStyle="#ffe4a0";ctx.beginPath();ctx.arc(p.x,p.y,city.size,0,Math.PI*2);ctx.fill();
+  });
+  ctx.globalAlpha=1;ctx.shadowBlur=0;
+}
+function drawRoutes(time) {
   routeHitAreas=[];
-  routes.forEach(route=>{
+  routes.forEach((route,routeIndex)=>{
     const points=greatCircle(airports[route.from],airports[route.to]).map((p,i,array)=>project(p.lat,p.lon,Math.sin(Math.PI*i/(array.length-1))*.055));
     visibleSegments(points,-.01).forEach(segment=>{
       const selected=state.selectedRoute?.id===route.id;
       ctx.beginPath(); segment.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
-      ctx.strokeStyle=selected?"#0b5fc9":"#1877f2";
-      ctx.lineWidth=(selected?2.2:1)+route.count*.22;
-      ctx.globalAlpha=selected?1:.22+route.count*.1;
-      ctx.shadowColor="#1877f2"; ctx.shadowBlur=selected?13:route.count*1.5; ctx.stroke();
+      ctx.strokeStyle=state.globeStyle==="orbit"?"#49d7ff":"#1877f2";
+      ctx.lineWidth=(selected?2.5:1)+route.count*.2;
+      ctx.globalAlpha=selected?1:.3+route.count*.08;
+      ctx.shadowColor=state.globeStyle==="orbit"?"#1fc8ff":"#1877f2";
+      ctx.shadowBlur=selected?14:route.count*1.4;ctx.setLineDash([]);ctx.stroke();
+      ctx.globalAlpha=selected?1:.75;ctx.lineWidth=selected?1.8:1.1;
+      ctx.setLineDash([3,10]);ctx.lineDashOffset=-(time*.025+routeIndex*13);ctx.stroke();
       routeHitAreas.push({route,points:segment});
     });
+    const phase=((time*.000075)+(routeIndex/routes.length))%1;
+    const moving=points[Math.min(points.length-1,Math.floor(phase*(points.length-1)))];
+    if(moving?.z>0){
+      ctx.setLineDash([]);ctx.globalAlpha=1;ctx.shadowBlur=12;
+      ctx.fillStyle=state.globeStyle==="orbit"?"#d8f8ff":"#ffffff";
+      ctx.beginPath();ctx.arc(moving.x,moving.y,state.selectedRoute?.id===route.id?3.2:2.2,0,Math.PI*2);ctx.fill();
+    }
   });
-  ctx.globalAlpha=1; ctx.shadowBlur=0;
+  ctx.globalAlpha=1;ctx.shadowBlur=0;ctx.setLineDash([]);ctx.lineDashOffset=0;
 }
 function drawAirports() {
   airportHitAreas=[];
@@ -351,26 +481,36 @@ function drawAirports() {
     airportHitAreas.push({code,x:p.x,y:p.y});
   });
 }
-function drawGlobe() {
+function drawGlobe(time=performance.now()) {
   if(!cw||!ch)return;
   ctx.clearRect(0,0,cw,ch);
+  drawBackground(time);
+  const orbit=state.globeStyle==="orbit";
   ctx.save();
-  ctx.shadowColor="rgba(52,72,98,.15)";ctx.shadowBlur=35;ctx.shadowOffsetY=14;
-  ctx.beginPath();ctx.arc(centerX,centerY,globeR,0,Math.PI*2);ctx.fillStyle="#fbfcfd";ctx.fill();
+  ctx.shadowColor=orbit?"rgba(35,185,255,.38)":"rgba(52,72,98,.15)";ctx.shadowBlur=orbit?45:35;ctx.shadowOffsetY=orbit?0:14;
+  ctx.beginPath();ctx.arc(centerX,centerY,globeR,0,Math.PI*2);ctx.fillStyle=orbit?"#06345d":"#fbfcfd";ctx.fill();
   ctx.restore();
   ctx.save();ctx.beginPath();ctx.arc(centerX,centerY,globeR,0,Math.PI*2);ctx.clip();
   const ocean=ctx.createRadialGradient(centerX-globeR*.3,centerY-globeR*.35,globeR*.08,centerX,centerY,globeR);
-  ocean.addColorStop(0,"#ffffff");ocean.addColorStop(1,"#edf2f6");ctx.fillStyle=ocean;ctx.fillRect(centerX-globeR,centerY-globeR,globeR*2,globeR*2);
-  drawGraticule();drawLand();
-  if(state.mapMode==="route")drawRoutes();else routeHitAreas=[];
+  if(orbit){
+    ocean.addColorStop(0,"#1877a8");ocean.addColorStop(.55,"#07558b");ocean.addColorStop(1,"#03233f");
+  }else{
+    ocean.addColorStop(0,"#ffffff");ocean.addColorStop(1,"#edf2f6");
+  }
+  ctx.fillStyle=ocean;ctx.fillRect(centerX-globeR,centerY-globeR,globeR*2,globeR*2);
+  drawLand();drawNightLayer(time);
+  if(state.mapMode==="route")drawRoutes(time);else routeHitAreas=[];
   drawAirports();
   ctx.restore();
-  ctx.beginPath();ctx.arc(centerX,centerY,globeR,0,Math.PI*2);ctx.strokeStyle="#b9c3cf";ctx.lineWidth=1;ctx.stroke();
+  ctx.beginPath();ctx.arc(centerX,centerY,globeR,0,Math.PI*2);
+  ctx.strokeStyle=orbit?"rgba(102,222,255,.8)":"#b9c3cf";ctx.lineWidth=orbit?1.5:1;ctx.shadowColor=orbit?"#3ed6ff":"transparent";ctx.shadowBlur=orbit?18:0;ctx.stroke();ctx.shadowBlur=0;
 }
 function resizeGlobe() {
   const rect=canvas.getBoundingClientRect(), dpr=Math.min(devicePixelRatio||1,2);
   canvas.width=Math.round(rect.width*dpr);canvas.height=Math.round(rect.height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);
-  cw=rect.width;ch=rect.height;globeR=Math.min(cw,ch)*.43;centerX=cw*.5;centerY=ch*.5;drawGlobe();
+  cw=rect.width;ch=rect.height;globeR=Math.min(cw,ch)*.43;centerX=cw*.5;centerY=ch*.5;
+  stars=Array.from({length:Math.max(90,Math.floor(cw*ch/8500))},()=>({x:Math.random()*cw,y:Math.random()*ch,r:.35+Math.random()*1.15}));
+  drawGlobe();
 }
 function pointerPos(e){const rect=canvas.getBoundingClientRect();return{x:e.clientX-rect.left,y:e.clientY-rect.top};}
 function distancePointToSegment(p,a,b){
@@ -411,7 +551,14 @@ canvas.addEventListener("pointerup",e=>{
 });
 canvas.addEventListener("pointerleave",()=>document.getElementById("hoverTooltip").style.display="none");
 canvas.addEventListener("wheel",e=>{e.preventDefault();globeR=Math.max(Math.min(cw,ch)*.31,Math.min(Math.min(cw,ch)*.49,globeR-e.deltaY*.08));drawGlobe();},{passive:false});
-function animate(){if(autoSpin&&state.activeView==="atlas"){rotation.lon+=.012;drawGlobe();}requestAnimationFrame(animate);}
+let lastFrame=0;
+function animate(time){
+  if(state.activeView==="atlas"&&time-lastFrame>40){
+    if(autoSpin)rotation.lon+=.016;
+    drawGlobe(time);lastFrame=time;
+  }
+  requestAnimationFrame(animate);
+}
 
 document.querySelectorAll(".nav-item").forEach(el=>el.addEventListener("click",()=>setView(el.dataset.view)));
 document.querySelectorAll("[data-view-link]").forEach(el=>el.addEventListener("click",e=>{e.preventDefault();setView(el.dataset.viewLink);}));
@@ -422,6 +569,14 @@ document.getElementById("routeMode").addEventListener("click",()=>{
 document.getElementById("airportMode").addEventListener("click",()=>{
   state.mapMode="airport";document.getElementById("airportMode").classList.add("active");document.getElementById("routeMode").classList.remove("active");closeDrawer();drawGlobe();
 });
+document.getElementById("styleLight").addEventListener("click",()=>{
+  state.globeStyle="light";document.getElementById("styleLight").classList.add("active");document.getElementById("styleOrbit").classList.remove("active");drawGlobe();
+});
+document.getElementById("styleOrbit").addEventListener("click",()=>{
+  state.globeStyle="orbit";document.getElementById("styleOrbit").classList.add("active");document.getElementById("styleLight").classList.remove("active");drawGlobe();
+});
+document.getElementById("langZh").addEventListener("click",()=>applyLanguage("zh"));
+document.getElementById("langEn").addEventListener("click",()=>applyLanguage("en"));
 document.getElementById("drawerClose").addEventListener("click",closeDrawer);
 document.getElementById("recordSearch").addEventListener("input",renderFlights);
 document.querySelectorAll(".filter-chip").forEach(el=>el.addEventListener("click",()=>{document.querySelectorAll(".filter-chip").forEach(c=>c.classList.remove("active"));el.classList.add("active");state.filter=el.dataset.filter;renderFlights();}));
@@ -436,5 +591,4 @@ document.getElementById("flightForm").addEventListener("submit",e=>{e.preventDef
 document.querySelector(".drop-zone input").addEventListener("change",e=>{if(e.target.files[0]){closeModals();showToast("文件已读取","正在校验导入字段");}});
 window.addEventListener("resize",resizeGlobe);
 
-document.getElementById("navRecordCount").textContent=flights.length;
-renderFlights();renderStats();resizeGlobe();loadGeography();animate();
+applyLanguage("zh");renderStats();resizeGlobe();loadGeography();requestAnimationFrame(animate);
