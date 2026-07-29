@@ -2,14 +2,23 @@
   "name": "flight-atlas-journal",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "prebuild": "node scripts/prepare-static.mjs",
-    "build": "next build",
-    "dev": "next dev"
+    "build": "vinext build",
+    "postbuild": "node scripts/finalize-build.mjs",
+    "dev": "vinext dev",
+    "start": "vinext start"
   },
   "dependencies": {
-    "next": "15.4.8",
     "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "react-dom": "19.1.0",
+    "react-server-dom-webpack": "latest",
+    "vinext": "latest"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "latest",
+    "@vitejs/plugin-rsc": "latest",
+    "vite": "latest"
   }
 }

@@ -1,6 +1,4 @@
 const nextConfig = {
-  output: "standalone",
-  distDir: "dist",
   async redirects() {
     return [
       {
