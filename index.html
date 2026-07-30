@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f4f6f8" />
     <title>Flight Archive</title>
-    <link rel="stylesheet" href="./styles.css?v=20260730-v4" />
+    <link rel="stylesheet" href="./styles.css?v=20260730-v7" />
   </head>
   <body>
     <div class="app-shell" id="appShell">
@@ -146,10 +146,15 @@
               <svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4 4"/></svg>
               <input id="recordSearch" placeholder="Search flight, airline, or airport" data-i18n-placeholder="searchPlaceholder" />
             </label>
-            <button class="filter-chip active" data-filter="all" data-i18n="all">All</button>
-            <button class="filter-chip" data-filter="2026">2026</button>
-            <button class="filter-chip" data-filter="international" data-i18n="international">International</button>
-            <button class="filter-chip" data-filter="domestic" data-i18n="domestic">Domestic</button>
+            <label class="year-filter">
+              <span data-i18n="year">Year</span>
+              <select id="yearFilter"></select>
+            </label>
+            <div class="scope-filters">
+              <button class="filter-chip active" data-scope="all" data-i18n="all">All</button>
+              <button class="filter-chip" data-scope="international" data-i18n="international">International / HK, MO &amp; TW</button>
+              <button class="filter-chip" data-scope="domestic" data-i18n="domestic">Domestic</button>
+            </div>
           </div>
 
           <div class="record-table-head" aria-hidden="true">
@@ -268,6 +273,6 @@
 
     <div class="toast" id="toast"><span>✓</span><div><strong data-i18n="actionComplete">Completed</strong><small data-i18n="recordUpdated">Record updated</small></div></div>
     <script src="./flight-data.js?v=20260730-v2"></script>
-    <script src="./app.js?v=20260730-v6"></script>
+    <script src="./app.js?v=20260730-v7"></script>
   </body>
 </html>

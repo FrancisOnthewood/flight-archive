@@ -80,7 +80,8 @@ const translations = {
     language:"Language", settings:"Settings", authorGithub:"Author GitHub",
     hubs:"Hub airports", add:"Add", removeHub:"Remove hub", loadingGeography:"Loading geographic data",
     import:"Import", addFlight:"Add flight", recordsTitle:"Flight Records", totalFlights:"total flights",
-    searchPlaceholder:"Search flight, airline, or airport", all:"All", international:"International", domestic:"Domestic",
+    searchPlaceholder:"Search flight, airline, or airport", all:"All", year:"Year", allYears:"All years",
+    international:"International / HK, MO & TW", domestic:"Domestic",
     flight:"Flight", date:"Date", airportTime:"Airports & time", flightInfo:"Flight information", fare:"Fare",
     statsTitle:"Flight Statistics", mediaTitle:"Travel Media", mediaDesc:"Photos and boarding materials linked to flight records.",
     memorySunset:"Window sunset", memoryCruise:"Cruise", memoryNightApproach:"Night approach",
@@ -121,7 +122,8 @@ const translations = {
     language:"语言", settings:"设置", authorGithub:"作者 GitHub",
     hubs:"枢纽机场", add:"添加", removeHub:"移除枢纽", loadingGeography:"正在载入地理数据",
     import:"批量导入", addFlight:"添加飞行", recordsTitle:"飞行记录", totalFlights:"次飞行",
-    searchPlaceholder:"搜索航班号、航司或机场", all:"全部", international:"国际 / 地区", domestic:"国内",
+    searchPlaceholder:"搜索航班号、航司或机场", all:"全部", year:"年份", allYears:"全部年份",
+    international:"国际 / 港澳台", domestic:"国内",
     flight:"航班", date:"日期", airportTime:"机场与时间", flightInfo:"飞行信息", fare:"票价",
     statsTitle:"飞行数据统计", mediaTitle:"旅途相册", mediaDesc:"与飞行记录关联的照片和登机资料。",
     memorySunset:"舷窗日落", memoryCruise:"巡航阶段", memoryNightApproach:"夜间进近",
@@ -163,7 +165,7 @@ const savedHubs = (() => {
   catch { return ["CAN", "HKG"]; }
 })();
 const state = {
-  activeView:"atlas", filter:"all", mapMode:"route", globeStyle:"light", lang:"en",
+  activeView:"atlas", yearFilter:"all", scopeFilter:"all", mapMode:"route", globeStyle:"light", lang:"en",
   selectedRoute:null, selectedAirport:null, hubs:new Set(savedHubs.filter(code => airports[code]))
 };
 const visitedCountries = new Set([
@@ -202,6 +204,10 @@ function applyLanguage(lang) {
   document.getElementById("langZh").classList.toggle("active", lang === "zh");
   document.getElementById("langEn").classList.toggle("active", lang === "en");
   document.getElementById("cabinSelect").innerHTML = ["economy","premiumEconomy","business","first"].map(key => `<option>${t(key)}</option>`).join("");
+  const years=[...new Set(flights.map(f=>f.date.slice(0,4)))].sort((a,b)=>b.localeCompare(a));
+  const yearFilter=document.getElementById("yearFilter");
+  yearFilter.innerHTML=`<option value="all">${t("allYears")}</option>${years.map(year=>`<option value="${year}">${year}</option>`).join("")}`;
+  yearFilter.value=state.yearFilter;
   document.getElementById("recordTotal").textContent = flights.length;
   renderFlights();
   renderStats();
@@ -234,9 +240,9 @@ function flightRowMarkup(f) {
       </div>
       <div class="date-cell"><strong>${formatDate(f.date)}</strong></div>
       <div class="route-cell">
-        <div class="route-point"><strong>${f.from}</strong><span>${airportCity(from)} · ${f.terminalFrom}</span><small>${f.depart}</small></div>
+        <div class="route-point"><strong>${f.from}</strong><span>${airportCity(from)}</span><small>${f.depart}</small></div>
         <div class="route-line"><span>${f.duration}</span><i></i><small>${f.distance.toLocaleString()} km</small></div>
-        <div class="route-point"><strong>${f.to}</strong><span>${airportCity(to)} · ${f.terminalTo}</span><small>${f.arrive}</small></div>
+        <div class="route-point"><strong>${f.to}</strong><span>${airportCity(to)}</span><small>${f.arrive}</small></div>
       </div>
       <div class="flight-meta">
         <span>${t("aircraft")}<b>${f.aircraft}</b></span><span>${t("cabin")}<b>${displayCabin(f.cabin)}</b></span>
@@ -250,9 +256,10 @@ function flightRowMarkup(f) {
 function renderFlights() {
   const query = (document.getElementById("recordSearch")?.value || "").trim().toLowerCase();
   const list = flights.filter(f => {
-    const filterOk = state.filter === "all" || (state.filter === "2026" ? f.date.startsWith("2026") : f.scope === state.filter);
+    const yearOk=state.yearFilter==="all"||f.date.startsWith(state.yearFilter);
+    const scopeOk=state.scopeFilter==="all"||f.scope===state.scopeFilter;
     const text = `${f.flightNo} ${f.airline} ${f.from} ${f.to} ${airportName(airports[f.from])} ${airportName(airports[f.to])}`.toLowerCase();
-    return filterOk && text.includes(query);
+    return yearOk&&scopeOk&&text.includes(query);
   });
   document.getElementById("flightList").innerHTML = list.length ? list.map(flightRowMarkup).join("") : `<div class="empty-state">${t("noRecords")}</div>`;
   document.querySelectorAll("[data-flight-id]").forEach(el => el.addEventListener("click", () => openFlight(Number(el.dataset.flightId))));
@@ -837,7 +844,11 @@ document.getElementById("addHubButton").addEventListener("click",()=>{
 });
 document.getElementById("drawerClose").addEventListener("click",closeDrawer);
 document.getElementById("recordSearch").addEventListener("input",renderFlights);
-document.querySelectorAll(".filter-chip").forEach(el=>el.addEventListener("click",()=>{document.querySelectorAll(".filter-chip").forEach(c=>c.classList.remove("active"));el.classList.add("active");state.filter=el.dataset.filter;renderFlights();}));
+document.getElementById("yearFilter").addEventListener("change",e=>{state.yearFilter=e.target.value;renderFlights();});
+document.querySelectorAll("[data-scope]").forEach(el=>el.addEventListener("click",()=>{
+  document.querySelectorAll("[data-scope]").forEach(c=>c.classList.remove("active"));
+  el.classList.add("active");state.scopeFilter=el.dataset.scope;renderFlights();
+}));
 document.querySelectorAll("[data-open-add]").forEach(el=>el.addEventListener("click",()=>openModal("addModal")));
 document.getElementById("importButton").addEventListener("click",()=>openModal("importModal"));
 document.getElementById("editFlightButton").addEventListener("click",()=>{closeModals();document.getElementById("addTitle").textContent=t("editFlightRecord");openModal("addModal");});

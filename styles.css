@@ -379,6 +379,20 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
 }
 .search-field svg { width: 16px; color: #8c98a8; }
 .search-field input { width: 100%; border: 0; outline: 0; color: var(--text); background: transparent; font-size: 12px; }
+.year-filter {
+  height: 39px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  white-space: nowrap;
+}
+.year-filter span { color: var(--muted); font-size: 10px; }
+.year-filter select { min-width: 92px; border: 0; outline: 0; color: var(--text); background: transparent; font-size: 11px; cursor: pointer; }
+.scope-filters { display: flex; align-items: center; gap: 8px; }
 .filter-chip { height: 34px; padding: 0 15px; border: 1px solid var(--line); border-radius: 17px; color: #738095; background: white; font-size: 11px; white-space: nowrap; cursor: pointer; }
 .filter-chip:hover, .filter-chip.active { color: var(--blue); border-color: #a9cafa; background: var(--blue-soft); }
 .record-table-head {
@@ -555,7 +569,7 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
 .detail-route > div:not(.detail-flight-line) { min-height: 96px; display: grid; grid-template-rows: 34px 42px 20px; align-items: start; }
 .detail-route > div:not(.detail-flight-line) > strong { align-self: start; font-size: 25px; line-height: 32px; }
 .detail-route > div:not(.detail-flight-line) > span { align-self: start; color: #5b687a; font-size: 9px; line-height: 1.4; }
-.detail-route > div:not(.detail-flight-line) > small { align-self: end; margin: 0; color: var(--soft); font-size: 8px; line-height: 18px; }
+.detail-route > div:not(.detail-flight-line) > small { align-self: end; margin: 0; color: var(--text); font-size: 17px; font-weight: 600; line-height: 20px; }
 .detail-route .align-right { justify-items: end; text-align: right; }
 .detail-flight-line { align-self: center; display: flex; flex-direction: column; text-align: center; }
 .detail-flight-line span { align-self: center; color: #5b687a; }
