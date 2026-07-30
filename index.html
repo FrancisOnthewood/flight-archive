@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f4f6f8" />
     <title>Flight Archive</title>
-    <link rel="stylesheet" href="./styles.css?v=20260730-v21" />
+    <link rel="stylesheet" href="./styles.css?v=20260730-v22" />
   </head>
   <body>
     <div class="app-shell" id="appShell">
@@ -22,7 +22,6 @@
             </span>
             <span class="brand-copy">
               <strong>Flight Archive</strong>
-              <small>PERSONAL FLIGHT RECORDS</small>
             </span>
           </a>
           <button class="collapse-button" id="collapseButton" aria-label="Collapse sidebar" title="Collapse sidebar">
@@ -116,7 +115,12 @@
           </button>
           <header class="incoming-head">
             <span data-i18n="upcomingTravel">Upcoming travel</span>
-            <h2 data-i18n="navIncoming">Incoming Flights</h2>
+            <div class="incoming-title-row">
+              <h2 data-i18n="navIncoming">Incoming Flights</h2>
+              <button class="incoming-add-button" id="addIncomingButton" data-i18n-title="addIncomingFlight" aria-label="Add incoming flight">
+                <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+              </button>
+            </div>
             <p id="incomingSummary"></p>
           </header>
           <div class="incoming-list" id="incomingList"></div>
@@ -305,10 +309,45 @@
       </section>
     </div>
 
+    <div class="modal-backdrop" id="incomingAddModal">
+      <section class="modal form-modal incoming-form-modal" role="dialog" aria-modal="true" aria-labelledby="incomingAddTitle">
+        <button class="modal-close" data-close-modal aria-label="Close">
+          <svg viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17"/></svg>
+        </button>
+        <header class="modal-header">
+          <span data-i18n="incomingEntry">UPCOMING FLIGHT</span>
+          <h2 id="incomingAddTitle" data-i18n="addIncomingFlight">Add incoming flight</h2>
+          <p data-i18n="incomingEntryHelp">Add a planned flight to the incoming list and map.</p>
+        </header>
+        <form id="incomingFlightForm">
+          <div class="form-grid">
+            <label><span data-i18n="flightDate">Flight date</span><input id="incomingDate" type="date" required /></label>
+            <label><span data-i18n="flightNumber">Flight number</span><input id="incomingFlightNo" placeholder="e.g. CX830" data-i18n-placeholder="flightNumberPlaceholder" required /></label>
+            <label><span data-i18n="departureAirport">Departure airport</span><input id="incomingFrom" maxlength="3" placeholder="HKG" required /></label>
+            <label><span data-i18n="arrivalAirport">Arrival airport</span><input id="incomingTo" maxlength="3" placeholder="JFK" required /></label>
+            <label><span data-i18n="departureTime">Departure time</span><input id="incomingDepart" type="time" required /></label>
+            <label><span data-i18n="arrivalTime">Arrival time</span><input id="incomingArrive" type="time" /></label>
+            <label><span data-i18n="airline">Airline</span><input id="incomingAirline" placeholder="Cathay Pacific" /></label>
+            <label><span data-i18n="aircraft">Aircraft</span><input id="incomingAircraft" placeholder="Airbus A350-1000" /></label>
+            <label><span data-i18n="registration">Registration</span><input id="incomingRegistration" placeholder="e.g. B-LXA" /></label>
+            <label><span data-i18n="duration">Duration</span><input id="incomingDuration" placeholder="e.g. 16h 20m" data-i18n-placeholder="durationPlaceholder" /></label>
+            <label><span data-i18n="distance">Distance</span><input id="incomingDistance" type="number" min="0" placeholder="km" /></label>
+            <label><span data-i18n="departureTerminal">Departure terminal</span><input id="incomingTerminalFrom" placeholder="e.g. T1" data-i18n-placeholder="terminalPlaceholder" /></label>
+            <label><span data-i18n="arrivalTerminal">Arrival terminal</span><input id="incomingTerminalTo" placeholder="e.g. T8" data-i18n-placeholder="terminalPlaceholder" /></label>
+          </div>
+          <label class="full-field"><span data-i18n="notes">Notes</span><textarea id="incomingNote" data-i18n-placeholder="notesPlaceholder" placeholder="Add notes about this flight"></textarea></label>
+          <div class="modal-actions">
+            <button type="button" class="subtle-button" data-close-modal data-i18n="cancel">Cancel</button>
+            <button type="submit" class="primary-button" data-i18n="saveIncomingFlight">Save incoming flight</button>
+          </div>
+        </form>
+      </section>
+    </div>
+
     <div class="toast" id="toast"><span>✓</span><div><strong data-i18n="actionComplete">Completed</strong><small data-i18n="recordUpdated">Record updated</small></div></div>
     <script src="./flight-data.js?v=20260730-v2"></script>
     <script src="./incoming-data.js?v=20260730-v1"></script>
     <script src="./global-airports.js?v=20260730-v1"></script>
-    <script src="./app.js?v=20260730-v22"></script>
+    <script src="./app.js?v=20260730-v23"></script>
   </body>
 </html>

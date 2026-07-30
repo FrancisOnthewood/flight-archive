@@ -316,8 +316,23 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
 .incoming-back svg { width: 16px; }
 .incoming-head { margin: 18px 0 17px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
 .incoming-head > span { color: var(--blue); font-size: 9px; font-weight: 700; letter-spacing: 1.1px; text-transform: uppercase; }
-.incoming-head h2 { margin: 6px 0 4px; font-size: 24px; letter-spacing: -.5px; }
+.incoming-title-row { margin: 6px 0 4px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.incoming-head h2 { margin: 0; font-size: 24px; letter-spacing: -.5px; }
 .incoming-head p { margin: 0; color: var(--muted); font-size: 11px; }
+.incoming-add-button {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #a9cafa;
+  border-radius: 9px;
+  color: white;
+  background: var(--blue);
+  cursor: pointer;
+}
+.incoming-add-button:hover { background: var(--blue-dark); }
+.incoming-add-button svg { width: 17px; }
 .incoming-list { min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 9px; }
 .incoming-flight {
   width: 100%;
@@ -596,7 +611,7 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
 .stats-list { max-width: 1240px; margin: 0 auto; display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 18px; }
 .stat-block {
   width: 100%;
-  min-height: 250px;
+  min-height: 320px;
   aspect-ratio: 1;
   padding: 27px;
   display: grid;
@@ -617,10 +632,24 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
 .stat-arrow { grid-column: 2; grid-row: 1; align-self: center; color: #9da8b7; font-size: 28px; font-style: normal; line-height: 1; }
 .stat-value { grid-column: 1 / -1; align-self: end; color: var(--blue); font-size: clamp(27px,3vw,42px); line-height: 1.08; overflow-wrap: anywhere; text-align: left; }
 .stat-unit { grid-column: 1 / -1; color: #526176; font-size: 16px; font-weight: 600; line-height: 1.35; }
-.stat-highlights { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
-.stat-highlights div { min-width: 0; padding-top: 10px; border-top: 1px solid var(--line); }
-.stat-highlights span { display: block; color: var(--soft); font-size: 9px; font-weight: 600; letter-spacing: .45px; text-transform: uppercase; }
-.stat-highlights strong { display: block; margin-top: 4px; overflow: hidden; color: var(--text); font-size: 11px; font-weight: 600; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+.stat-highlights { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr; gap: 0; }
+.stat-highlights > .stat-highlight-entry {
+  min-width: 0;
+  min-height: 52px;
+  padding-top: 10px;
+  display: grid;
+  grid-template-columns: minmax(0,1fr);
+  align-items: center;
+  gap: 10px;
+  border-top: 1px solid var(--line);
+}
+.stat-highlights > .flight-highlight { grid-template-columns: 38px minmax(0,1fr); }
+.stat-highlight-copy { min-width: 0; display: block; }
+.stat-highlight-copy > span { display: block; color: var(--soft); font-size: 10px; font-weight: 700; letter-spacing: .45px; text-transform: uppercase; }
+.stat-highlight-copy > strong { display: block; margin-top: 3px; overflow: hidden; color: var(--text); font-size: 16px; font-weight: 650; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
+.stat-highlight-copy > small { display: block; margin-top: 2px; color: var(--muted); font-size: 12px; font-weight: 600; }
+.stat-highlight-logo { width: 36px; height: 28px; display: grid; place-items: center; color: var(--blue); font-size: 9px; font-weight: 700; }
+.stat-highlight-logo img { width: 100%; height: 100%; object-fit: contain; }
 .stat-block.simple .stat-value { align-self: end; }
 .stat-block.simple .stat-unit { margin-bottom: 4px; }
 
@@ -744,6 +773,7 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
 .modal-header p { margin: 0; color: var(--muted); font-size: 9px; }
 .form-modal { width: min(750px,100%); }
 .form-modal form { margin-top: 20px; }
+.incoming-form-modal form { margin-top: 20px; }
 .smart-lookup { margin-bottom: 16px; padding: 12px 13px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #d2e3fa; border-radius: 8px; background: #f6faff; }
 .smart-lookup strong { display: block; font-size: 9px; }
 .smart-lookup div > span { color: #7b899c; font-size: 8px; }
@@ -803,6 +833,26 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
 .stats-detail-head h2 { margin: 0 0 3px; font-size: 27px; }
 .stats-detail-head p { margin: 0; color: var(--blue); font-size: 17px; font-weight: 600; }
 .stats-detail-content { margin-top: 22px; }
+.stats-favourite-card {
+  margin-bottom: 20px;
+  padding: 17px 18px;
+  display: grid;
+  grid-template-columns: 38px minmax(0,1fr) auto;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid #c9defa;
+  border-radius: 14px;
+  background: linear-gradient(135deg,#f4f8ff,#fff);
+}
+.stats-favourite-icon { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; color: #f28c28; background: #fff2e1; font-size: 16px; }
+.stats-favourite-copy { min-width: 0; }
+.stats-favourite-copy span { display: block; color: var(--muted); font-size: 10px; font-weight: 650; text-transform: uppercase; letter-spacing: .5px; }
+.stats-favourite-copy strong { display: block; margin-top: 4px; overflow: hidden; color: var(--text); font-size: 21px; text-overflow: ellipsis; white-space: nowrap; }
+.stats-favourite-edit { height: 34px; padding: 0 12px; border: 1px solid #a9cafa; border-radius: 8px; color: var(--blue); background: white; font-size: 11px; font-weight: 600; cursor: pointer; }
+.stats-favourite-edit:hover { color: white; background: var(--blue); }
+.stats-favourite-editor { grid-column: 1 / -1; padding-top: 12px; display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px; border-top: 1px solid var(--line); }
+.stats-favourite-editor[hidden] { display: none; }
+.stats-favourite-editor select { min-width: 0; height: 38px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; color: var(--text); background: white; outline: 0; }
 .detail-sort-label { margin: 18px 0 8px; color: var(--soft); font-size: 10px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; }
 .stats-flight-row {
   width: 100%;
@@ -992,7 +1042,8 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
   .route-point strong { font-size: 14px; }
   .stats-kpis { grid-template-columns: 1fr; }
   .stats-list { grid-template-columns: 1fr; }
-  .stat-block { min-height: 0; padding: 24px; }
+  .stats-list { grid-template-columns: 1fr; }
+  .stat-block { min-height: 320px; aspect-ratio: auto; padding: 24px; }
   .stat-label { font-size: 21px; }
   .stat-value { font-size: 30px; }
   .stats-bar-row.has-image { grid-template-columns: 34px minmax(0,1fr); }
@@ -1000,6 +1051,8 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
   .stats-aircraft-visual { grid-column: 2; padding: 8px 0 0; }
   .stats-bar-row.no-leading .stats-aircraft-visual { grid-column: 1; }
   .stats-detail-head h2 { font-size: 23px; }
+  .stats-favourite-card { grid-template-columns: 34px minmax(0,1fr); }
+  .stats-favourite-edit { grid-column: 1 / -1; }
   .aircraft-summary { gap: 15px; }
   .form-grid { grid-template-columns: 1fr; }
   .modal-backdrop { padding: 0; align-items: flex-end; }
