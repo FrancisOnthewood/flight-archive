@@ -846,6 +846,7 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
 .stats-preference-row + .stats-preference-row { border-top: 1px solid var(--line); }
 .stats-preference-logo { width: 44px; height: 38px; display: grid; place-items: center; overflow: hidden; color: var(--blue); font-size: 10px; font-weight: 700; }
 .stats-preference-logo img { width: 100%; height: 100%; display: block; object-fit: contain; }
+.stats-preference-row.favourite-preference .stats-preference-logo img[src$="CPA.png"] { width: 76%; height: 76%; }
 .stats-preference-logo.rounded-flag-mark { width: 38px; height: 38px; border: 1px solid #dbe2eb; border-radius: 50%; box-shadow: 0 2px 7px rgba(35,51,72,.08); }
 .stats-preference-logo.rounded-flag-mark img { object-fit: cover; }
 .stats-preference-logo.entity-code-fallback,

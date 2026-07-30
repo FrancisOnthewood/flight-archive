@@ -942,7 +942,7 @@ function preferenceDetailMarkup(type,sourceFlights) {
   const most=preferenceOptions(type,sourceFlights)[0]||null;
   const favouriteValue=savedFavourites[type]||"";
   const options=favouriteOptions(type);
-  const row=(label,value,display,icon,editable=false)=>`<div class="stats-preference-row">
+  const row=(label,value,display,icon,editable=false)=>`<div class="stats-preference-row${editable?" favourite-preference":""}">
     ${icon}
     <div class="stats-preference-copy"><span>${label}</span><strong>${escapeHtml(display)}</strong></div>
     ${editable?`<button class="stats-favourite-edit" type="button" data-edit-favourite>${t("editFavourite")}</button>`:""}
