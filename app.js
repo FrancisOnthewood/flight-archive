@@ -101,7 +101,7 @@ const translations = {
     mapSelection:"Map content", routes:"Routes", airports:"Airports", mapHelp:"Drag to rotate, scroll to zoom, and select a route or airport for details.",
     flatMapHelp:"Drag to pan, scroll to zoom, and select a route or airport for details.",
     mapStyle:"Map style", lightGlobe:"Light globe", spaceGlobe:"Space globe", flatMap:"Flat map",
-    language:"Language", settings:"Settings", authorGithub:"Author GitHub",
+    language:"Language", settings:"Settings", authorGithub:"Author GitHub", authorEmail:"Author email",
     hubs:"Hub airports", edit:"Edit", done:"Done", noHubs:"No hub selected", selectedAirports:"selected airports", loadingGeography:"Loading geographic data",
     backToMap:"Back to map", upcomingTravel:"Upcoming travel", noIncoming:"No upcoming flights", upcomingCount:"upcoming flights",
     daysRemaining:"days remaining", today:"Today", tomorrow:"Tomorrow",
@@ -112,7 +112,7 @@ const translations = {
     statsTitle:"Flight Statistics",
     route:"Route", airport:"Airport", flightsRecorded:"Flights", oneWayDistance:"One-way distance",
     relatedFlights:"Related flights", recordedSegments:"Flights", coordinates:"Coordinates", connections:"Connected routes",
-    recentRecords:"Recent flights", times:"flights", noConnections:"No connected route in the current records.",
+    recentRecords:"Recent flights", pastFlights:"Past flights", times:"flights", noConnections:"No connected route in the current records.",
     noRecords:"No flight records match the current filters.", aircraft:"Aircraft",
     aircraftIllustrationSingapore:"Singapore Airlines Airbus A350-900 side illustration",
     aircraftIllustrationSingaporeA380:"Singapore Airlines Airbus A380-800 side illustration",
@@ -157,7 +157,7 @@ const translations = {
     mapSelection:"地图内容", routes:"航线", airports:"机场", mapHelp:"拖拽旋转，滚轮缩放；点击航线或机场查看详情。",
     flatMapHelp:"拖拽平移，滚轮缩放；点击航线或机场查看详情。",
     mapStyle:"地图样式", lightGlobe:"浅色地球", spaceGlobe:"星空地球", flatMap:"平面地图",
-    language:"语言", settings:"设置", authorGithub:"作者 GitHub",
+    language:"语言", settings:"设置", authorGithub:"作者 GitHub", authorEmail:"作者邮箱",
     hubs:"枢纽机场", edit:"编辑", done:"完成", noHubs:"未选择枢纽机场", selectedAirports:"个已选机场", loadingGeography:"正在载入地理数据",
     backToMap:"返回首页", upcomingTravel:"未来行程", noIncoming:"暂无即将飞行的航班", upcomingCount:"个即将飞行",
     daysRemaining:"天后出发", today:"今天", tomorrow:"明天",
@@ -168,7 +168,7 @@ const translations = {
     statsTitle:"飞行数据统计",
     route:"航线", airport:"机场", flightsRecorded:"飞行次数", oneWayDistance:"单程距离",
     relatedFlights:"相关飞行", recordedSegments:"飞行次数", coordinates:"地理坐标", connections:"连接航线",
-    recentRecords:"最近飞行", times:"次", noConnections:"当前记录中没有连接航线。",
+    recentRecords:"最近飞行", pastFlights:"过往航班", times:"次", noConnections:"当前记录中没有连接航线。",
     noRecords:"没有符合当前条件的飞行记录。", aircraft:"机型",
     aircraftIllustrationSingapore:"新加坡航空 Airbus A350-900 侧面示意图",
     aircraftIllustrationSingaporeA380:"新加坡航空 Airbus A380-800 侧面示意图",
@@ -474,10 +474,12 @@ function renderFlights() {
 }
 
 function openFlight(id,{returnStatsType=null}={}) {
-  const f = flights.find(item => item.id === id);
+  const f = [...flights,...plannedIncomingFlights].find(item => String(item.id) === String(id));
   if (!f) return;
-  state.activeFlightId=id;
+  const completedFlight=flights.includes(f);
+  state.activeFlightId=f.id;
   state.statsReturnType=returnStatsType;
+  document.getElementById("editFlightButton").hidden=!completedFlight;
   const statsBackButton=document.getElementById("detailBackToStats");
   statsBackButton.hidden=!returnStatsType;
   if(returnStatsType){
@@ -571,12 +573,7 @@ function renderIncomingFlights() {
   container.innerHTML=list.length?list.map(incomingFlightMarkup).join(""):`<div class="incoming-empty"><span>✈</span><p>${t("noIncoming")}</p></div>`;
   container.querySelectorAll("[data-incoming-index]").forEach(button=>button.addEventListener("click",()=>{
     const flight=list[Number(button.dataset.incomingIndex)];
-    const recorded=flights.find(item=>item===flight||item.id===flight.id);
-    if(recorded)openFlight(recorded.id);
-    else {
-      const route=activeMapRoutes().find(item=>item.id===routeIdForFlight(flight));
-      if(route)openRouteDrawer(route);
-    }
+    if(flight)openFlight(flight.id);
   }));
 }
 function setIncomingMode(active) {
@@ -609,7 +606,7 @@ function openRouteDrawer(route) {
     <h3 class="drawer-section-title">${t("relatedFlights")}</h3>
     ${related.map(f=>drawerFlightMarkup(f)).join("")}
   `;
-  document.querySelectorAll("[data-drawer-flight]").forEach(el => el.addEventListener("click", () => openFlight(Number(el.dataset.drawerFlight))));
+  document.querySelectorAll("[data-drawer-flight]").forEach(el => el.addEventListener("click", () => openFlight(el.dataset.drawerFlight)));
   document.getElementById("infoDrawer").classList.add("open");
   drawGlobe();
 }
@@ -628,6 +625,8 @@ function openAirportDrawer(code) {
       <div><strong>${relatedFlights.length}</strong><span>${t("recordedSegments")}</span></div>
       <div><strong>${airport.lat.toFixed(2)}°, ${airport.lon.toFixed(2)}°</strong><span>${t("coordinates")}</span></div>
     </div>
+    <h3 class="drawer-section-title">${t("pastFlights")}</h3>
+    ${relatedFlights.length?relatedFlights.map(f=>drawerFlightMarkup(f)).join(""):`<p class="drawer-subtitle">${t("noRecords")}</p>`}
     <h3 class="drawer-section-title">${t("connections")}</h3>
     <div class="connection-list">
       ${connections.length ? connections.map(r => {
@@ -635,14 +634,12 @@ function openAirportDrawer(code) {
         return `<button data-connection="${r.id}"><span>${airportCity(airport)} — ${airportCity(other)}</span><b>${r.count} ${t("times")}</b></button>`;
       }).join("") : `<p class="drawer-subtitle">${t("noConnections")}</p>`}
     </div>
-    <h3 class="drawer-section-title">${t("recentRecords")}</h3>
-    ${relatedFlights.map(f=>drawerFlightMarkup(f,true)).join("")}
   `;
   document.querySelectorAll("[data-connection]").forEach(el => el.addEventListener("click", () => {
     const route = activeMapRoutes().find(r => r.id === el.dataset.connection);
     if (route) openRouteDrawer(route);
   }));
-  document.querySelectorAll("[data-drawer-flight]").forEach(el => el.addEventListener("click", () => openFlight(Number(el.dataset.drawerFlight))));
+  document.querySelectorAll("[data-drawer-flight]").forEach(el => el.addEventListener("click", () => openFlight(el.dataset.drawerFlight)));
   document.getElementById("infoDrawer").classList.add("open");
   drawGlobe();
 }
@@ -808,13 +805,10 @@ function statsBarMarkup(rows) {
     </div>`;
   }).join("");
 }
-function flagEmoji(countryCode) {
-  const code=String(countryCode||"").toUpperCase();
-  if(!/^[A-Z]{2}$/.test(code))return "◎";
-  return String.fromCodePoint(...[...code].map(letter=>127397+letter.charCodeAt(0)));
-}
 function flagIconForAirport(airport) {
-  return `<span class="stats-flag" aria-hidden="true">${flagEmoji(airport?.countryCode)}</span>`;
+  const code=String(airport?.countryCode||"").toLowerCase();
+  if(!/^[a-z]{2}$/.test(code))return `<span class="stats-flag stats-flag-fallback" aria-hidden="true">◎</span>`;
+  return `<span class="stats-flag" aria-hidden="true"><img src="./flags/${code}.svg" alt="" loading="lazy" /></span>`;
 }
 function airportForCountryLabel(label) {
   return Object.values(airports).find(airport=>airportCountry(airport)===label);
