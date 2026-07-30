@@ -785,7 +785,12 @@ canvas.addEventListener("pointerup",e=>{
   dragging=false;lastPointer=null;canvas.classList.remove("dragging");
 });
 canvas.addEventListener("pointerleave",()=>document.getElementById("hoverTooltip").style.display="none");
-canvas.addEventListener("wheel",e=>{e.preventDefault();globeR=Math.max(Math.min(cw,ch)*.31,Math.min(Math.min(cw,ch)*.49,globeR-e.deltaY*.08));drawGlobe();},{passive:false});
+canvas.addEventListener("wheel",e=>{
+  e.preventDefault();
+  const viewportSize=Math.min(cw,ch);
+  globeR=Math.max(viewportSize*.31,Math.min(viewportSize*1.35,globeR-e.deltaY*.14));
+  drawGlobe();
+},{passive:false});
 let lastFrame=0;
 function animate(time){
   if(state.activeView==="atlas"&&time-lastFrame>40){
