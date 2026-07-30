@@ -33,6 +33,13 @@ const airlineIcons = {
   HU: "icons/Hainan-Airlines.png"
 };
 
+const aircraftVisuals = {
+  "9VSHM": { src: "./airplanes/singapore%20359.png", altKey: "aircraftIllustrationSingapore" },
+  "B309W": { src: "./airplanes/china%20southern%20359%20b309w.png", altKey: "aircraftIllustrationChinaSouthern" },
+  "A6EDV": { src: "./airplanes/emirates%20388%20a6edv.png", altKey: "aircraftIllustrationEmiratesA380" },
+  "A6EGR": { src: "./airplanes/emirates%2077w%20a6egr.png", altKey: "aircraftIllustrationEmirates777" }
+};
+
 const fallbackFlights = [
   { id: 1, routeId: "sha-hkg", from: "PVG", to: "HKG", date: "2026-06-18", airline: "China Eastern Airlines", airlineShort: "MU", flightNo: "MU721", aircraft: "Airbus A320neo", depart: "08:20", arrive: "10:55", duration: "2h 35m", distance: 1256, terminalFrom: "T1", terminalTo: "T1", seat: "34A", cabin: "经济舱", fare: 1680, booking: "航司官网", gate: "H12", status: "准点", note: "天气良好，巡航阶段平稳。", scope: "international" },
   { id: 2, routeId: "sha-hkg", from: "HKG", to: "PVG", date: "2026-03-09", airline: "Cathay Pacific", airlineShort: "CX", flightNo: "CX368", aircraft: "Airbus A330-300", depart: "09:15", arrive: "11:45", duration: "2h 30m", distance: 1256, terminalFrom: "T1", terminalTo: "T2", seat: "42K", cabin: "经济舱", fare: 1840, booking: "携程", gate: "28", status: "准点", note: "上午航班，实际到达时间与计划一致。", scope: "international" },
@@ -96,7 +103,11 @@ const translations = {
     route:"Route", airport:"Airport", flightsRecorded:"Flights", oneWayDistance:"One-way distance",
     relatedFlights:"Related flights", recordedSegments:"Flights", coordinates:"Coordinates", connections:"Connected routes",
     recentRecords:"Recent flights", times:"flights", noConnections:"No connected route in the current records.",
-    noRecords:"No flight records match the current filters.", aircraft:"Aircraft", aircraftIllustration:"Singapore Airlines Airbus A350-900 side illustration", registration:"Registration",
+    noRecords:"No flight records match the current filters.", aircraft:"Aircraft",
+    aircraftIllustrationSingapore:"Singapore Airlines Airbus A350-900 side illustration",
+    aircraftIllustrationChinaSouthern:"China Southern Airlines Airbus A350-900 side illustration",
+    aircraftIllustrationEmiratesA380:"Emirates Airbus A380-800 side illustration",
+    aircraftIllustrationEmirates777:"Emirates Boeing 777-300ER side illustration", registration:"Registration",
     cabin:"Cabin", seat:"Seat", gate:"Gate", notes:"Notes", noNotes:"No notes", close:"Close", editRecord:"Edit record",
     totalTime:"Total flight time", totalDistance:"Total distance", aircraftTypes:"Aircraft types",
     countriesRegions:"Countries / regions", directedRoutes:"Routes flown", citiesVisited:"Cities visited", totalFare:"Total fare",
@@ -140,7 +151,11 @@ const translations = {
     route:"航线", airport:"机场", flightsRecorded:"飞行次数", oneWayDistance:"单程距离",
     relatedFlights:"相关飞行", recordedSegments:"飞行次数", coordinates:"地理坐标", connections:"连接航线",
     recentRecords:"最近飞行", times:"次", noConnections:"当前记录中没有连接航线。",
-    noRecords:"没有符合当前条件的飞行记录。", aircraft:"机型", aircraftIllustration:"新加坡航空 Airbus A350-900 侧面示意图", registration:"注册号",
+    noRecords:"没有符合当前条件的飞行记录。", aircraft:"机型",
+    aircraftIllustrationSingapore:"新加坡航空 Airbus A350-900 侧面示意图",
+    aircraftIllustrationChinaSouthern:"中国南方航空 Airbus A350-900 侧面示意图",
+    aircraftIllustrationEmiratesA380:"阿联酋航空 Airbus A380-800 侧面示意图",
+    aircraftIllustrationEmirates777:"阿联酋航空 Boeing 777-300ER 侧面示意图", registration:"注册号",
     cabin:"舱位", seat:"座位", gate:"登机口", notes:"备注", noNotes:"无备注", close:"关闭", editRecord:"编辑记录",
     totalTime:"总飞行时间", totalDistance:"总飞行里程", aircraftTypes:"坐过的机型",
     countriesRegions:"去过的国家 / 地区", directedRoutes:"飞过的航线", citiesVisited:"去过的城市", totalFare:"总票价",
@@ -346,6 +361,10 @@ function iconMarkup(f, className = "airline-icon") {
     : `<span class="${className} airline-fallback">${f.airlineShort}</span>`;
 }
 
+function normalizeRegistration(value) {
+  return String(value || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
 function flightRowMarkup(f) {
   const from = airports[f.from], to = airports[f.to];
   return `
@@ -392,13 +411,13 @@ function openFlight(id) {
   set("detailFromCode", f.from); set("detailFromCity", `${compactAirportName(from)} · ${f.terminalFrom}`); set("detailDeparture", f.depart);
   set("detailToCode", f.to); set("detailToCity", `${compactAirportName(to)} · ${f.terminalTo}`); set("detailArrival", f.arrive);
   set("detailDuration", f.duration); set("detailDistance", `${f.distance.toLocaleString()} km`); set("detailNote", f.note || t("noNotes"));
-  const showAircraftVisual=f.flightNo==="SQ882"&&f.from==="SIN"&&f.to==="HKG";
+  const aircraftVisualData=aircraftVisuals[normalizeRegistration(f.registration)];
   const aircraftVisual=document.getElementById("detailAircraftVisual");
-  aircraftVisual.hidden=!showAircraftVisual;
-  if(showAircraftVisual){
+  aircraftVisual.hidden=!aircraftVisualData;
+  if(aircraftVisualData){
     const aircraftImage=document.getElementById("detailAircraftImage");
-    aircraftImage.src="./airplanes/singapore%20359.png";
-    aircraftImage.alt=t("aircraftIllustration");
+    aircraftImage.src=aircraftVisualData.src;
+    aircraftImage.alt=t(aircraftVisualData.altKey);
   }
   document.getElementById("detailInfoGrid").innerHTML = [
     [t("aircraft"), f.aircraft], [t("registration"), f.registration || "—"], [t("seat"), f.seat],
@@ -409,7 +428,10 @@ function openFlight(id) {
 
 function drawerFlightMarkup(f,highlighted=false) {
   return `<article class="drawer-flight${highlighted?" highlighted":""}" data-drawer-flight="${f.id}">
-    <div class="drawer-flight-top"><strong>${f.flightNo} · ${f.airline}</strong><span>${formatDate(f.date)}</span></div>
+    <div class="drawer-flight-top">
+      <div class="drawer-flight-identity">${iconMarkup(f,"drawer-airline-icon")}<strong>${f.flightNo} · ${f.airline}</strong></div>
+      <span>${formatDate(f.date)}</span>
+    </div>
     <div class="drawer-flight-route">
       <div><b>${f.from}</b><small>${f.depart}</small></div><i></i><div><b>${f.to}</b><small>${f.arrive}</small></div>
     </div>
