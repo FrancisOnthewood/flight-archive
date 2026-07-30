@@ -32,6 +32,14 @@ const airlineIcons = {
   ZH: "icons/Shenzhen airlines.png",
   HU: "icons/Hainan-Airlines.png"
 };
+const manufacturerLogos = {
+  Airbus: "./manufacturer%20logo/Airbus.svg",
+  Boeing: "./manufacturer%20logo/Boeing.png"
+};
+const airportBrandLogos = {
+  CAN: "./airport%20logos/guangzhou-baiyun-international-airport.avif",
+  HKG: "./airport%20logos/HongKongAirportlogo.svg"
+};
 
 const aircraftVisuals = {
   "9VSHM": { src: "./airplanes/singapore%20359%209vshm.png", altKey: "aircraftIllustrationSingapore" },
@@ -151,7 +159,8 @@ const translations = {
     mostFlownAircraft:"Most flown aircraft", favouriteAircraft:"Favourite aircraft",
     mostFlownAirline:"Most flown airline", favouriteAirline:"Favourite airline",
     mostVisitedAirport:"Most visited airport", favouriteAirport:"Favourite airport",
-    favouriteDestination:"Favourite destination", favouriteCity:"Favourite city", favourite:"Favourite", notSet:"Not set",
+    mostVisitedCountry:"Most visited country / region", favouriteDestination:"Favourite destination",
+    mostVisitedCity:"Most visited city", favouriteCity:"Favourite city", favourite:"Favourite", notSet:"Not set",
     editFavourite:"Edit favourite", saveFavourite:"Save", favouriteUpdated:"Favourite updated",
     timeEquivalent:"Equivalent duration", distanceEquivalent:"Equivalent distance",
     visits:"visits", bundle:"Ticket bundle", perFlight:"per flight",
@@ -215,7 +224,8 @@ const translations = {
     mostFlownAircraft:"乘坐最多机型", favouriteAircraft:"最喜欢的机型",
     mostFlownAirline:"乘坐最多航司", favouriteAirline:"最喜欢的航司",
     mostVisitedAirport:"到访最多机场", favouriteAirport:"最喜欢的机场",
-    favouriteDestination:"最喜欢的目的地", favouriteCity:"最喜欢的城市", favourite:"最喜欢", notSet:"未设置",
+    mostVisitedCountry:"到访最多国家 / 地区", favouriteDestination:"最喜欢的目的地",
+    mostVisitedCity:"到访最多城市", favouriteCity:"最喜欢的城市", favourite:"最喜欢", notSet:"未设置",
     editFavourite:"编辑偏好", saveFavourite:"保存", favouriteUpdated:"偏好已更新",
     timeEquivalent:"时间换算", distanceEquivalent:"距离换算",
     visits:"次", bundle:"联票", perFlight:"每航段",
@@ -846,21 +856,25 @@ function topStatsEntry(grouped) {
     return bCount-aCount||String(a[0]).localeCompare(String(b[0]));
   })[0]||null;
 }
-function favouriteOptions(type,snapshot=statsSnapshot(flights)) {
+function aircraftPreferenceLabel(value) {
+  return String(value||"").replace(/^(Airbus|Boeing)\s+/i,"");
+}
+function preferenceOptions(type,sourceFlights=flights) {
+  const snapshot=statsSnapshot(sourceFlights);
   let options=[];
-  if(type==="aircraft")options=[...snapshot.aircraft.entries()].map(([value,items])=>({value,label:value,count:items.length}));
+  if(type==="aircraft")options=[...snapshot.aircraft.entries()].map(([value,items])=>({value,label:aircraftPreferenceLabel(value),count:items.length}));
   else if(type==="airlines")options=[...snapshot.airlines.entries()].map(([value,items])=>({value,label:items[0]?.airline||value,count:items.length}));
   else if(type==="airports")options=[...snapshot.airportVisits.entries()].map(([value,count])=>({value,label:`${value} · ${airportCity(airports[value])}`,count}));
   else if(type==="countries"){
     const counts=new Map(),labels=new Map();
-    flights.forEach(f=>[f.from,f.to].forEach(code=>{
+    sourceFlights.forEach(f=>[f.from,f.to].forEach(code=>{
       const airport=airports[code],value=airport.countryCode||airport.countryEn||airport.country;
       counts.set(value,(counts.get(value)||0)+1);labels.set(value,airportCountry(airport));
     }));
     options=[...counts.entries()].map(([value,count])=>({value,label:labels.get(value)||value,count}));
   }else if(type==="cities"){
     const counts=new Map(),labels=new Map();
-    flights.forEach(f=>[f.from,f.to].forEach(code=>{
+    sourceFlights.forEach(f=>[f.from,f.to].forEach(code=>{
       const airport=airports[code],value=airport.cityEn||airport.city;
       counts.set(value,(counts.get(value)||0)+1);labels.set(value,airportCity(airport));
     }));
@@ -868,25 +882,73 @@ function favouriteOptions(type,snapshot=statsSnapshot(flights)) {
   }
   return options.sort((a,b)=>b.count-a.count||a.label.localeCompare(b.label));
 }
-function favouriteDisplay(type,value,snapshot=statsSnapshot(flights)) {
-  if(!value)return t("notSet");
-  return favouriteOptions(type,snapshot).find(option=>option.value===value)?.label||value;
+function favouriteOptions(type) {
+  return preferenceOptions(type,flights);
 }
-function favouriteDetailMarkup(type) {
-  const labelKeys={
-    aircraft:"favouriteAircraft",airlines:"favouriteAirline",airports:"favouriteAirport",
-    countries:"favouriteDestination",cities:"favouriteCity"
-  };
-  if(!labelKeys[type])return "";
-  const options=favouriteOptions(type),selected=savedFavourites[type]||"";
-  return `<section class="stats-favourite-card" data-favourite-card="${type}">
-    <div class="stats-favourite-icon">★</div>
-    <div class="stats-favourite-copy"><span>${t(labelKeys[type])}</span><strong>${escapeHtml(favouriteDisplay(type,selected))}</strong></div>
-    <button class="stats-favourite-edit" type="button" data-edit-favourite>${t("editFavourite")}</button>
+function favouriteDisplay(type,value) {
+  if(!value)return t("notSet");
+  return favouriteOptions(type).find(option=>option.value===value)?.label||aircraftPreferenceLabel(value);
+}
+function airportForCountryValue(value,sourceFlights=flights) {
+  const codes=sourceFlights.flatMap(f=>[f.from,f.to]);
+  return codes.map(code=>airports[code]).find(airport=>(airport.countryCode||airport.countryEn||airport.country)===value)
+    ||Object.values(airports).find(airport=>(airport.countryCode||airport.countryEn||airport.country)===value);
+}
+function airportForCityValue(value,sourceFlights=flights) {
+  const codes=sourceFlights.flatMap(f=>[f.from,f.to]);
+  return codes.map(code=>airports[code]).find(airport=>(airport.cityEn||airport.city)===value)
+    ||Object.values(airports).find(airport=>(airport.cityEn||airport.city)===value);
+}
+function manufacturerLogoMarkup(value,className="stat-entity-logo") {
+  const manufacturer=/^Airbus\b/i.test(value)?"Airbus":/^Boeing\b/i.test(value)?"Boeing":null;
+  if(!manufacturer)return "";
+  return `<span class="${className} manufacturer-mark"><img src="${manufacturerLogos[manufacturer]}" alt="${manufacturer} logo" loading="lazy" /></span>`;
+}
+function airportLogoMarkup(code,className="stat-entity-logo") {
+  const src=airportBrandLogos[code];
+  if(!src)return `<span class="${className} entity-code-fallback">${escapeHtml(code||"—")}</span>`;
+  const airport=airports[code];
+  return `<span class="${className} airport-brand-mark"><img src="${src}" alt="${escapeHtml(airport?airportName(airport):code)} logo" loading="lazy" /></span>`;
+}
+function preferenceIcon(type,value,sourceFlights=flights,className="stat-entity-logo") {
+  if(!value)return `<span class="${className} entity-empty-mark">—</span>`;
+  if(type==="aircraft")return manufacturerLogoMarkup(value,className)||`<span class="${className} entity-code-fallback">${escapeHtml(aircraftPreferenceLabel(value).slice(0,3))}</span>`;
+  if(type==="airlines"){
+    const flight=sourceFlights.find(item=>item.airlineShort===value)||flights.find(item=>item.airlineShort===value);
+    return flight?iconMarkup(flight,className):`<span class="${className} entity-code-fallback">${escapeHtml(value)}</span>`;
+  }
+  if(type==="airports")return airportLogoMarkup(value,className);
+  if(type==="countries")return flagIconForAirport(airportForCountryValue(value,sourceFlights),className);
+  if(type==="cities")return flagIconForAirport(airportForCityValue(value,sourceFlights),className);
+  return "";
+}
+function preferenceLabels(type) {
+  return {
+    aircraft:["mostFlownAircraft","favouriteAircraft"],
+    airlines:["mostFlownAirline","favouriteAirline"],
+    airports:["mostVisitedAirport","favouriteAirport"],
+    countries:["mostVisitedCountry","favouriteDestination"],
+    cities:["mostVisitedCity","favouriteCity"]
+  }[type]||null;
+}
+function preferenceDetailMarkup(type,sourceFlights) {
+  const labels=preferenceLabels(type);
+  if(!labels)return "";
+  const most=preferenceOptions(type,sourceFlights)[0]||null;
+  const favouriteValue=savedFavourites[type]||"";
+  const options=favouriteOptions(type);
+  const row=(label,value,display,icon,editable=false)=>`<div class="stats-preference-row">
+    ${icon}
+    <div class="stats-preference-copy"><span>${label}</span><strong>${escapeHtml(display)}</strong></div>
+    ${editable?`<button class="stats-favourite-edit" type="button" data-edit-favourite>${t("editFavourite")}</button>`:""}
+  </div>`;
+  return `<section class="stats-preference-panel" data-favourite-card="${type}">
+    ${row(t(labels[0]),most?.value||"",most?.label||"—",preferenceIcon(type,most?.value||"",sourceFlights,"stats-preference-logo"))}
+    ${row(t(labels[1]),favouriteValue,favouriteDisplay(type,favouriteValue),preferenceIcon(type,favouriteValue,flights,"stats-preference-logo"),true)}
     <div class="stats-favourite-editor" hidden>
       <select data-favourite-select>
         <option value="">${t("notSet")}</option>
-        ${options.map(option=>`<option value="${escapeHtml(option.value)}" ${option.value===selected?"selected":""}>${escapeHtml(option.label)}</option>`).join("")}
+        ${options.map(option=>`<option value="${escapeHtml(option.value)}" ${option.value===favouriteValue?"selected":""}>${escapeHtml(option.label)}</option>`).join("")}
       </select>
       <button class="primary-button" type="button" data-save-favourite>${t("saveFavourite")}</button>
     </div>
@@ -912,8 +974,8 @@ function bindFavouriteEditor(type) {
 function statHighlightsMarkup(items) {
   if(!items.length)return "";
   return `<div class="stat-highlights">${items.map(item=>`
-    <div class="stat-highlight-entry${item.flight?" flight-highlight":""}">
-      ${item.flight?iconMarkup(item.flight,"stat-highlight-logo"):""}
+    <div class="stat-highlight-entry${item.flight||item.icon?" has-highlight-logo":""}">
+      ${item.flight?iconMarkup(item.flight,"stat-highlight-logo"):(item.icon||"")}
       <span class="stat-highlight-copy">
         <span>${item.label}</span>
         <strong>${item.value}</strong>
@@ -927,11 +989,14 @@ function renderStats() {
   const distanceSorted=[...scopedFlights].sort((a,b)=>b.distance-a.distance);
   const longest=durationSorted[0],shortest=durationSorted.at(-1);
   const farthest=distanceSorted[0],shortestDistance=distanceSorted.at(-1);
-  const mostAircraft=topStatsEntry(s.aircraft);
-  const mostAirline=topStatsEntry(s.airlines);
-  const mostAirport=topStatsEntry(s.airportVisits);
-  const favouriteSnapshot=statsSnapshot(flights);
-  const favourite=type=>favouriteDisplay(type,savedFavourites[type],favouriteSnapshot);
+  const preferenceHighlights=type=>{
+    const labels=preferenceLabels(type),most=preferenceOptions(type,scopedFlights)[0]||null;
+    const favouriteValue=savedFavourites[type]||"";
+    return [
+      {label:t(labels[0]),value:most?.label||"—",icon:preferenceIcon(type,most?.value||"",scopedFlights,"stat-highlight-logo")},
+      {label:t(labels[1]),value:favouriteDisplay(type,favouriteValue),icon:preferenceIcon(type,favouriteValue,flights,"stat-highlight-logo")}
+    ];
+  };
   const entries=[
     {type:"time",label:t("totalTime"),value:durationText(s.totalMinutes),unit:`${scopedFlights.length} ${t("flightUnit")}`,highlights:longest?[
       {label:t("longestFlight"),value:`${longest.from} → ${longest.to}`,note:durationText(longest.durationMinutes),flight:longest},
@@ -941,24 +1006,11 @@ function renderStats() {
       {label:t("farthestFlight"),value:`${farthest.from} → ${farthest.to}`,note:`${farthest.distance.toLocaleString()} km`,flight:farthest},
       {label:t("shortestFlight"),value:`${shortestDistance.from} → ${shortestDistance.to}`,note:`${shortestDistance.distance.toLocaleString()} km`,flight:shortestDistance}
     ]:[]},
-    {type:"aircraft",label:t("aircraftTypes"),value:s.aircraft.size.toLocaleString(),unit:t("typeUnit"),highlights:[
-      {label:t("mostFlownAircraft"),value:mostAircraft?`${mostAircraft[0]} · ${mostAircraft[1].length}`:"—"},
-      {label:t("favouriteAircraft"),value:favourite("aircraft")}
-    ]},
-    {type:"airlines",label:t("airlinesFlown"),value:s.airlines.size.toLocaleString(),unit:t("airlineUnit"),highlights:[
-      {label:t("mostFlownAirline"),value:mostAirline?`${mostAirline[1][0].airline} · ${mostAirline[1].length}`:"—"},
-      {label:t("favouriteAirline"),value:favourite("airlines")}
-    ]},
-    {type:"airports",label:t("airportsVisited"),value:s.airportVisits.size.toLocaleString(),unit:t("airportUnit"),highlights:[
-      {label:t("mostVisitedAirport"),value:mostAirport?`${mostAirport[0]} · ${mostAirport[1]} ${t("visits")}`:"—"},
-      {label:t("favouriteAirport"),value:favourite("airports")}
-    ]},
-    {type:"countries",label:t("countriesRegions"),value:s.countries.size.toLocaleString(),unit:t("countryUnit"),highlights:[
-      {label:t("favouriteDestination"),value:favourite("countries")}
-    ]},
-    {type:"cities",label:t("citiesVisited"),value:s.cities.size.toLocaleString(),unit:t("cityUnit"),highlights:[
-      {label:t("favouriteCity"),value:favourite("cities")}
-    ]},
+    {type:"airlines",label:t("airlinesFlown"),value:s.airlines.size.toLocaleString(),unit:t("airlineUnit"),highlights:preferenceHighlights("airlines")},
+    {type:"aircraft",label:t("aircraftTypes"),value:s.aircraft.size.toLocaleString(),unit:t("typeUnit"),highlights:preferenceHighlights("aircraft")},
+    {type:"airports",label:t("airportsVisited"),value:s.airportVisits.size.toLocaleString(),unit:t("airportUnit"),highlights:preferenceHighlights("airports")},
+    {type:"countries",label:t("countriesRegions"),value:s.countries.size.toLocaleString(),unit:t("countryUnit"),highlights:preferenceHighlights("countries")},
+    {type:"cities",label:t("citiesVisited"),value:s.cities.size.toLocaleString(),unit:t("cityUnit"),highlights:preferenceHighlights("cities")},
     {type:"routes",label:t("directedRoutes"),value:s.directedRoutes.size.toLocaleString(),unit:t("routeUnit"),highlights:[]},
     {type:"fare",label:t("totalFare"),value:formatFare(s.totalFare),unit:`${s.knownFares.length} ${t("knownFares")}`,highlights:[]}
   ];
@@ -1013,10 +1065,10 @@ function statsBarMarkup(rows) {
     </div>`;
   }).join("");
 }
-function flagIconForAirport(airport) {
+function flagIconForAirport(airport,className="stats-flag") {
   const code=String(airport?.countryCode||"").toLowerCase();
-  if(!/^[a-z]{2}$/.test(code))return `<span class="stats-flag stats-flag-fallback" aria-hidden="true">◎</span>`;
-  return `<span class="stats-flag" aria-hidden="true"><img src="./circle-flags/flags/${code}.svg" alt="" loading="lazy" /></span>`;
+  if(!/^[a-z]{2}$/.test(code))return `<span class="${className} rounded-flag-mark stats-flag-fallback" aria-hidden="true">◎</span>`;
+  return `<span class="${className} rounded-flag-mark" aria-hidden="true"><img src="./circle-flags/flags/${code}.svg" alt="" loading="lazy" /></span>`;
 }
 function airportForCountryLabel(label) {
   return Object.values(airports).find(airport=>airportCountry(airport)===label);
@@ -1034,7 +1086,10 @@ function openStatsDetail(type) {
   }else if(type==="time"){
     summary=durationText(s.totalMinutes);
     const sorted=[...scopedFlights].sort((a,b)=>b.durationMinutes-a.durationMinutes);
-    content=`${featuredFlightMarkup(sorted[0],durationText(sorted[0].durationMinutes))}
+    content=`<div class="featured-flight-stack">
+        ${featuredFlightMarkup(sorted[0],durationText(sorted[0].durationMinutes))}
+        ${featuredFlightMarkup(sorted.at(-1),durationText(sorted.at(-1).durationMinutes),t("shortestFlight"))}
+      </div>
       ${equivalenceMarkup(t("timeEquivalent"),[
         {symbol:"24",value:s.totalMinutes/1440,label:t("days")},
         {symbol:"7",value:s.totalMinutes/10080,label:t("weeks")},
@@ -1045,7 +1100,10 @@ function openStatsDetail(type) {
   }else if(type==="distance"){
     summary=`${s.totalDistance.toLocaleString()} km`;
     const sorted=[...scopedFlights].sort((a,b)=>b.distance-a.distance);
-    content=`${featuredFlightMarkup(sorted[0],`${sorted[0].distance.toLocaleString()} km`,t("farthestFlight"))}
+    content=`<div class="featured-flight-stack">
+        ${featuredFlightMarkup(sorted[0],`${sorted[0].distance.toLocaleString()} km`,t("farthestFlight"))}
+        ${featuredFlightMarkup(sorted.at(-1),`${sorted.at(-1).distance.toLocaleString()} km`,t("shortestFlight"))}
+      </div>
       ${equivalenceMarkup(t("distanceEquivalent"),[
         {symbol:"◎",value:s.totalDistance/40075,label:t("earthCircumference")},
         {symbol:"◐",value:s.totalDistance/384400,label:t("moonDistance")},
@@ -1099,7 +1157,7 @@ function openStatsDetail(type) {
       }).join("")}`;
   }
   if(["aircraft","airlines","airports","countries","cities"].includes(type)){
-    content=`${favouriteDetailMarkup(type)}${content}`;
+    content=`${preferenceDetailMarkup(type,scopedFlights)}${content}`;
   }
   document.getElementById("statsDetailTitle").textContent=title;
   document.getElementById("statsDetailSummary").textContent=summary;

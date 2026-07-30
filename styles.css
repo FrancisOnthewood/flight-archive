@@ -643,13 +643,17 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
   gap: 10px;
   border-top: 1px solid var(--line);
 }
-.stat-highlights > .flight-highlight { grid-template-columns: 38px minmax(0,1fr); }
+.stat-highlights > .has-highlight-logo { grid-template-columns: 42px minmax(0,1fr); }
 .stat-highlight-copy { min-width: 0; display: block; }
 .stat-highlight-copy > span { display: block; color: var(--soft); font-size: 10px; font-weight: 700; letter-spacing: .45px; text-transform: uppercase; }
 .stat-highlight-copy > strong { display: block; margin-top: 3px; overflow: hidden; color: var(--text); font-size: 16px; font-weight: 650; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
 .stat-highlight-copy > small { display: block; margin-top: 2px; color: var(--muted); font-size: 12px; font-weight: 600; }
 .stat-highlight-logo { width: 36px; height: 28px; display: grid; place-items: center; color: var(--blue); font-size: 9px; font-weight: 700; }
 .stat-highlight-logo img { width: 100%; height: 100%; object-fit: contain; }
+.stat-highlight-logo.rounded-flag-mark { width: 32px; height: 32px; overflow: hidden; border: 1px solid #dbe2eb; border-radius: 50%; box-shadow: 0 2px 7px rgba(35,51,72,.08); }
+.stat-highlight-logo.rounded-flag-mark img { object-fit: cover; }
+.stat-highlight-logo.entity-code-fallback,
+.stat-highlight-logo.entity-empty-mark { border-radius: 9px; color: #74849a; background: var(--paper-soft); font-size: 10px; }
 .stat-block.simple .stat-value { align-self: end; }
 .stat-block.simple .stat-unit { margin-bottom: 4px; }
 
@@ -833,24 +837,27 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
 .stats-detail-head h2 { margin: 0 0 3px; font-size: 27px; }
 .stats-detail-head p { margin: 0; color: var(--blue); font-size: 17px; font-weight: 600; }
 .stats-detail-content { margin-top: 22px; }
-.stats-favourite-card {
+.stats-preference-panel {
   margin-bottom: 20px;
-  padding: 17px 18px;
-  display: grid;
-  grid-template-columns: 38px minmax(0,1fr) auto;
-  gap: 12px;
-  align-items: center;
+  padding: 0 18px;
   border: 1px solid #c9defa;
   border-radius: 14px;
   background: linear-gradient(135deg,#f4f8ff,#fff);
 }
-.stats-favourite-icon { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 50%; color: #f28c28; background: #fff2e1; font-size: 16px; }
-.stats-favourite-copy { min-width: 0; }
-.stats-favourite-copy span { display: block; color: var(--muted); font-size: 10px; font-weight: 650; text-transform: uppercase; letter-spacing: .5px; }
-.stats-favourite-copy strong { display: block; margin-top: 4px; overflow: hidden; color: var(--text); font-size: 21px; text-overflow: ellipsis; white-space: nowrap; }
+.stats-preference-row { min-height: 78px; display: grid; grid-template-columns: 48px minmax(0,1fr) auto; gap: 13px; align-items: center; }
+.stats-preference-row + .stats-preference-row { border-top: 1px solid var(--line); }
+.stats-preference-logo { width: 44px; height: 38px; display: grid; place-items: center; overflow: hidden; color: var(--blue); font-size: 10px; font-weight: 700; }
+.stats-preference-logo img { width: 100%; height: 100%; display: block; object-fit: contain; }
+.stats-preference-logo.rounded-flag-mark { width: 38px; height: 38px; border: 1px solid #dbe2eb; border-radius: 50%; box-shadow: 0 2px 7px rgba(35,51,72,.08); }
+.stats-preference-logo.rounded-flag-mark img { object-fit: cover; }
+.stats-preference-logo.entity-code-fallback,
+.stats-preference-logo.entity-empty-mark { border-radius: 10px; color: #74849a; background: white; }
+.stats-preference-copy { min-width: 0; }
+.stats-preference-copy span { display: block; color: var(--muted); font-size: 10px; font-weight: 650; text-transform: uppercase; letter-spacing: .5px; }
+.stats-preference-copy strong { display: block; margin-top: 4px; overflow: hidden; color: var(--text); font-size: 21px; text-overflow: ellipsis; white-space: nowrap; }
 .stats-favourite-edit { height: 34px; padding: 0 12px; border: 1px solid #a9cafa; border-radius: 8px; color: var(--blue); background: white; font-size: 11px; font-weight: 600; cursor: pointer; }
 .stats-favourite-edit:hover { color: white; background: var(--blue); }
-.stats-favourite-editor { grid-column: 1 / -1; padding-top: 12px; display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px; border-top: 1px solid var(--line); }
+.stats-favourite-editor { padding: 12px 0; display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px; border-top: 1px solid var(--line); }
 .stats-favourite-editor[hidden] { display: none; }
 .stats-favourite-editor select { min-width: 0; height: 38px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; color: var(--text); background: white; outline: 0; }
 .detail-sort-label { margin: 18px 0 8px; color: var(--soft); font-size: 10px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; }
@@ -884,6 +891,7 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
 .stats-flight-row.metric-row .stats-route-codes b { font-size: 15px; }
 .stats-flight-row.metric-row .stats-route-codes i { font-size: 13px; }
 .stats-flight-row.metric-row .stats-flight-value { font-size: 16px; }
+.featured-flight-stack { display: grid; gap: 14px; }
 .featured-flight {
   width: 100%;
   min-height: 218px;
@@ -1051,7 +1059,7 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
   .stats-aircraft-visual { grid-column: 2; padding: 8px 0 0; }
   .stats-bar-row.no-leading .stats-aircraft-visual { grid-column: 1; }
   .stats-detail-head h2 { font-size: 23px; }
-  .stats-favourite-card { grid-template-columns: 34px minmax(0,1fr); }
+  .stats-preference-row { grid-template-columns: 40px minmax(0,1fr); padding: 12px 0; }
   .stats-favourite-edit { grid-column: 1 / -1; }
   .aircraft-summary { gap: 15px; }
   .form-grid { grid-template-columns: 1fr; }
