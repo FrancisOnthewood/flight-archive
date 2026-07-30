@@ -6,15 +6,14 @@
       <stop offset=".52" stop-color="#0d2949"/>
       <stop offset="1" stop-color="#071b31"/>
     </linearGradient>
-    <linearGradient id="edge" x1="5" y1="7" x2="13" y2="57" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#5f7e9e"/>
-      <stop offset=".45" stop-color="#2b4c6f"/>
-      <stop offset="1" stop-color="#06182b"/>
+    <linearGradient id="thinEdge" x1="15.5" y1="13" x2="15.5" y2="51" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7893ad"/>
+      <stop offset=".5" stop-color="#496987"/>
+      <stop offset="1" stop-color="#203c59"/>
     </linearGradient>
   </defs>
   <rect x="3" y="3" width="58" height="58" rx="13" fill="url(#navy)"/>
-  <path fill="url(#edge)" d="M10 7.5c-2.1 1.8-3 4.4-3 7.8v33.4c0 3.4.9 6 3 7.8l5-3.4V10.9l-5-3.4Z"/>
-  <path fill="none" stroke="#7793ad" stroke-linecap="round" stroke-width="1.4" d="M11.1 12.2v39.6" opacity=".7"/>
+  <path fill="none" stroke="url(#thinEdge)" stroke-linecap="round" stroke-width="1.2" d="M20.866 14.21C17.46 16.024 15.5 19.72 15.5 24.2v15.6c0 4.48 1.96 8.176 5.366 9.99"/>
   <path fill="#fff" d="M28.5 13h10C45 13 49 17.8 49 24.2v15.6C49 46.2 45 51 38.5 51h-10C22 51 18 46.2 18 39.8V24.2C18 17.8 22 13 28.5 13Z"/>
   <path fill="none" stroke="#d6e0ea" stroke-width="2" d="M28.8 16h9.4c4.9 0 7.8 3.5 7.8 8.4v15.2c0 4.9-2.9 8.4-7.8 8.4h-9.4c-4.9 0-7.8-3.5-7.8-8.4V24.4c0-4.9 2.9-8.4 7.8-8.4Z"/>
 </svg>
