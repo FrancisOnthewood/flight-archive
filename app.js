@@ -35,7 +35,10 @@ const airlineIcons = {
 
 const aircraftVisuals = {
   "9VSHM": { src: "./airplanes/singapore%20359.png", altKey: "aircraftIllustrationSingapore" },
+  "9VSKV": { src: "./airplanes/singapore%20388%209vskv.png", altKey: "aircraftIllustrationSingaporeA380" },
   "B309W": { src: "./airplanes/china%20southern%20359%20b309w.png", altKey: "aircraftIllustrationChinaSouthern" },
+  "B20DM": { src: "./airplanes/china%20southern%2077w%20b20dm.png", altKey: "aircraftIllustrationChinaSouthern777" },
+  "B32CE": { src: "./airplanes/air%20china%20359%20b32ce.png", altKey: "aircraftIllustrationAirChina" },
   "A6EDV": { src: "./airplanes/emirates%20388%20a6edv.png", altKey: "aircraftIllustrationEmiratesA380" },
   "A6EGR": { src: "./airplanes/emirates%2077w%20a6egr.png", altKey: "aircraftIllustrationEmirates777" }
 };
@@ -105,7 +108,10 @@ const translations = {
     recentRecords:"Recent flights", times:"flights", noConnections:"No connected route in the current records.",
     noRecords:"No flight records match the current filters.", aircraft:"Aircraft",
     aircraftIllustrationSingapore:"Singapore Airlines Airbus A350-900 side illustration",
+    aircraftIllustrationSingaporeA380:"Singapore Airlines Airbus A380-800 side illustration",
     aircraftIllustrationChinaSouthern:"China Southern Airlines Airbus A350-900 side illustration",
+    aircraftIllustrationChinaSouthern777:"China Southern Airlines Boeing 777-300ER side illustration",
+    aircraftIllustrationAirChina:"Air China Airbus A350-900 side illustration",
     aircraftIllustrationEmiratesA380:"Emirates Airbus A380-800 side illustration",
     aircraftIllustrationEmirates777:"Emirates Boeing 777-300ER side illustration", registration:"Registration",
     cabin:"Cabin", seat:"Seat", gate:"Gate", notes:"Notes", noNotes:"No notes", close:"Close", editRecord:"Edit record",
@@ -153,7 +159,10 @@ const translations = {
     recentRecords:"最近飞行", times:"次", noConnections:"当前记录中没有连接航线。",
     noRecords:"没有符合当前条件的飞行记录。", aircraft:"机型",
     aircraftIllustrationSingapore:"新加坡航空 Airbus A350-900 侧面示意图",
+    aircraftIllustrationSingaporeA380:"新加坡航空 Airbus A380-800 侧面示意图",
     aircraftIllustrationChinaSouthern:"中国南方航空 Airbus A350-900 侧面示意图",
+    aircraftIllustrationChinaSouthern777:"中国南方航空 Boeing 777-300ER 侧面示意图",
+    aircraftIllustrationAirChina:"中国国际航空 Airbus A350-900 侧面示意图",
     aircraftIllustrationEmiratesA380:"阿联酋航空 Airbus A380-800 侧面示意图",
     aircraftIllustrationEmirates777:"阿联酋航空 Boeing 777-300ER 侧面示意图", registration:"注册号",
     cabin:"舱位", seat:"座位", gate:"登机口", notes:"备注", noNotes:"无备注", close:"关闭", editRecord:"编辑记录",
