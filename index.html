@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f4f6f8" />
     <title>Flight Archive</title>
-    <link rel="stylesheet" href="./styles.css?v=20260730-v20" />
+    <link rel="stylesheet" href="./styles.css?v=20260730-v21" />
   </head>
   <body>
     <div class="app-shell" id="appShell">
@@ -90,6 +90,10 @@
                 </button>
               </div>
               <div class="hub-chips" id="hubChips"></div>
+              <label class="hub-search" id="hubSearchField">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4 4"/></svg>
+                <input id="hubSearch" type="search" autocomplete="off" spellcheck="false" data-i18n-placeholder="searchAirports" placeholder="Search IATA, ICAO, airport, city, or country" />
+              </label>
               <div class="hub-options" id="hubOptions" aria-label="Select hub airports"></div>
             </div>
             <div class="author-contact">
@@ -304,6 +308,7 @@
     <div class="toast" id="toast"><span>✓</span><div><strong data-i18n="actionComplete">Completed</strong><small data-i18n="recordUpdated">Record updated</small></div></div>
     <script src="./flight-data.js?v=20260730-v2"></script>
     <script src="./incoming-data.js?v=20260730-v1"></script>
-    <script src="./app.js?v=20260730-v21"></script>
+    <script src="./global-airports.js?v=20260730-v1"></script>
+    <script src="./app.js?v=20260730-v22"></script>
   </body>
 </html>

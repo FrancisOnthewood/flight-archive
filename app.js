@@ -103,6 +103,7 @@ const translations = {
     mapStyle:"Map style", lightGlobe:"Light globe", spaceGlobe:"Space globe", flatMap:"Flat map",
     language:"Language", settings:"Settings", authorGithub:"Author GitHub", authorEmail:"Author email",
     hubs:"Hub airports", edit:"Edit", done:"Done", noHubs:"No hub selected", selectedAirports:"selected airports", loadingGeography:"Loading geographic data",
+    searchAirports:"Search IATA, ICAO, airport, city, or country", airportSearchHint:"Search {count} locally stored airports. Enter at least two characters.", noAirportMatches:"No airports match this search.", selectedHubAirports:"Selected hub airports",
     backToMap:"Back to map", upcomingTravel:"Upcoming travel", noIncoming:"No upcoming flights", upcomingCount:"upcoming flights",
     daysRemaining:"days remaining", today:"Today", tomorrow:"Tomorrow",
     import:"Import", addFlight:"Add flight", recordsTitle:"Flight Records", totalFlights:"total flights",
@@ -163,6 +164,7 @@ const translations = {
     mapStyle:"地图样式", lightGlobe:"浅色地球", spaceGlobe:"星空地球", flatMap:"平面地图",
     language:"语言", settings:"设置", authorGithub:"作者 GitHub", authorEmail:"作者邮箱",
     hubs:"枢纽机场", edit:"编辑", done:"完成", noHubs:"未选择枢纽机场", selectedAirports:"个已选机场", loadingGeography:"正在载入地理数据",
+    searchAirports:"搜索 IATA、ICAO、机场、城市或国家", airportSearchHint:"本地已存储 {count} 座机场，请输入至少两个字符。", noAirportMatches:"没有符合搜索条件的机场。", selectedHubAirports:"已选择的枢纽机场",
     backToMap:"返回首页", upcomingTravel:"未来行程", noIncoming:"暂无即将飞行的航班", upcomingCount:"个即将飞行",
     daysRemaining:"天后出发", today:"今天", tomorrow:"明天",
     import:"批量导入", addFlight:"添加飞行", recordsTitle:"飞行记录", totalFlights:"次飞行",
@@ -225,7 +227,7 @@ const savedHubs = (() => {
 const state = {
   activeView:"atlas", yearFilter:"all", scopeFilter:"all", mapMode:"route", globeStyle:"orbit", lang:"en",
   selectedRoute:null, selectedAirport:null, activeFlightId:null, editingFlightId:null,
-  hubs:new Set(savedHubs.filter(code => airports[code])), hubEditorOpen:false, incomingMode:false, statsReturnType:null
+  hubs:new Set(savedHubs.filter(code => airports[code])), hubEditorOpen:false, hubSearch:"", incomingMode:false, statsReturnType:null
 };
 const visitedCountries = new Set([
   "China", "Japan", "Cambodia", "Singapore", "Australia", "Indonesia", "Malaysia",
@@ -233,6 +235,7 @@ const visitedCountries = new Set([
 ]);
 let landFeatures = fallbackLand.map((ring, index) => ({ name: `fallback-${index}`, rings: [ring] }));
 const t = key => translations[state.lang][key] || key;
+const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" })[char]);
 const airportName = airport => state.lang === "zh" ? (airport.nameZh || airport.name) : (airport.nameEn || airport.name);
 const airportCity = airport => state.lang === "zh" ? (airport.cityZh || airport.city) : (airport.cityEn || airport.city);
 const airportCountry = airport => state.lang === "zh" ? (airport.countryZh || airport.country) : (airport.countryEn || airport.country);
@@ -939,28 +942,48 @@ function renderHubSettings(){
   const available=Object.values(airports).sort((a,b)=>a.code.localeCompare(b.code));
   const selected=[...state.hubs].sort();
   document.getElementById("hubChips").innerHTML=selected.length
-    ? selected.map(code=>`<span>${code}</span>`).join("")
+    ? selected.map(code=>`<span>${escapeHtml(code)}</span>`).join("")
     : `<span class="empty-hubs">${t("noHubs")}</span>`;
+  const searchField=document.getElementById("hubSearchField");
+  const searchInput=document.getElementById("hubSearch");
+  searchField.classList.toggle("open",state.hubEditorOpen);
+  searchInput.value=state.hubSearch;
   const options=document.getElementById("hubOptions");
   options.classList.toggle("open",state.hubEditorOpen);
   options.setAttribute("aria-hidden",String(!state.hubEditorOpen));
+  const query=state.hubSearch.trim().toLocaleLowerCase();
+  let matches=[];
+  if(query.length>=2){
+    matches=available.filter(airport=>[
+      airport.code,airport.icao,airport.name,airport.nameEn,airport.nameZh,airport.globalName,
+      airport.city,airport.cityEn,airport.cityZh,airport.globalCity,
+      airport.country,airport.countryEn,airport.countryZh,airport.countryCode
+    ].some(value=>String(value||"").toLocaleLowerCase().includes(query))).slice(0,120);
+  }else if(!query){
+    matches=selected.map(code=>airports[code]).filter(Boolean);
+  }
   const countryGroups=new Map();
-  available.forEach(airport=>{
-    const country=airportCountry(airport);
+  matches.forEach(airport=>{
+    const country=airportCountry(airport)||airport.countryCode||"—";
     if(!countryGroups.has(country))countryGroups.set(country,[]);
     countryGroups.get(country).push(airport);
   });
-  options.innerHTML=[...countryGroups.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([country,list])=>{
+  const groupsMarkup=[...countryGroups.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([country,list])=>{
     const selectedCount=list.filter(airport=>state.hubs.has(airport.code)).length;
-    return `<details class="hub-country" ${selectedCount?"open":""}>
-      <summary><span>${country}</span><b>${selectedCount} / ${list.length}</b></summary>
+    return `<details class="hub-country" open>
+      <summary><span>${escapeHtml(country)}</span><b>${selectedCount?`${selectedCount} / `:""}${list.length}</b></summary>
       <div>${list.map(airport=>`
         <label class="hub-option">
-          <input type="checkbox" value="${airport.code}" ${state.hubs.has(airport.code)?"checked":""} />
-          <span><strong>${airport.code} · ${airportCity(airport)}</strong><small>${airportName(airport)}</small></span>
+          <input type="checkbox" value="${escapeHtml(airport.code)}" ${state.hubs.has(airport.code)?"checked":""} />
+          <span><strong>${escapeHtml(airport.code)} · ${escapeHtml(airport.icao||"—")} · ${escapeHtml(airportCity(airport)||"—")}</strong><small>${escapeHtml(airportName(airport))}</small></span>
         </label>`).join("")}</div>
     </details>`;
   }).join("");
+  if(!state.hubEditorOpen)options.innerHTML="";
+  else if(query.length===1)options.innerHTML=`<p class="hub-search-status">${t("airportSearchHint").replace("{count}",available.length.toLocaleString())}</p>`;
+  else if(!query&&!matches.length)options.innerHTML=`<p class="hub-search-status">${t("airportSearchHint").replace("{count}",available.length.toLocaleString())}</p>`;
+  else if(query.length>=2&&!matches.length)options.innerHTML=`<p class="hub-search-status">${t("noAirportMatches")}</p>`;
+  else options.innerHTML=`${!query?`<p class="hub-search-status">${t("selectedHubAirports")} · ${t("airportSearchHint").replace("{count}",available.length.toLocaleString())}</p>`:""}${groupsMarkup}`;
   const editButton=document.getElementById("editHubsButton");
   editButton.classList.toggle("active",state.hubEditorOpen);
   document.getElementById("hubEditLabel").textContent=state.hubEditorOpen?t("done"):t("edit");
@@ -1266,8 +1289,10 @@ function drawAirports() {
   airportHitAreas=[];
   const codes=new Set(activeMapRoutes().flatMap(r=>[r.from,r.to]));
   if(!state.incomingMode)codes.add("PKX");
+  state.hubs.forEach(code=>codes.add(code));
   codes.forEach(code=>{
     const airport=airports[code],flat=state.globeStyle==="flat";
+    if(!airport)return;
     const positions=flat
       ? [-360,0,360].map(shift=>projectFlat(airport.lat,airport.lon+shift))
       : [project(airport.lat,airport.lon)];
@@ -1409,7 +1434,7 @@ document.querySelectorAll(".nav-item[data-view]").forEach(el=>el.addEventListene
 document.querySelectorAll("[data-view-link]").forEach(el=>el.addEventListener("click",e=>{e.preventDefault();setView(el.dataset.viewLink);}));
 document.getElementById("incomingNavButton").addEventListener("click",()=>setIncomingMode(true));
 document.getElementById("incomingBackButton").addEventListener("click",()=>setIncomingMode(false));
-document.getElementById("collapseButton").addEventListener("click",()=>{document.getElementById("appShell").classList.toggle("sidebar-collapsed");setTimeout(resizeGlobe,260);});
+document.getElementById("collapseButton").addEventListener("click",()=>{document.getElementById("appShell").classList.toggle("sidebar-collapsed");});
 document.getElementById("settingsButton").addEventListener("click",()=>{
   setSettingsOpen(!document.getElementById("settingsPanel").classList.contains("open"));
 });
@@ -1430,6 +1455,9 @@ document.getElementById("langZh").addEventListener("click",()=>applyLanguage("zh
 document.getElementById("langEn").addEventListener("click",()=>applyLanguage("en"));
 document.getElementById("editHubsButton").addEventListener("click",()=>{
   state.hubEditorOpen=!state.hubEditorOpen;renderHubSettings();
+});
+document.getElementById("hubSearch").addEventListener("input",event=>{
+  state.hubSearch=event.target.value;renderHubSettings();
 });
 document.getElementById("drawerClose").addEventListener("click",closeDrawer);
 document.getElementById("recordSearch").addEventListener("input",renderFlights);
