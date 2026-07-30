@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f4f6f8" />
     <title>Flight Archive</title>
-    <link rel="stylesheet" href="./styles.css?v=20260730-v15" />
+    <link rel="stylesheet" href="./styles.css?v=20260730-v16" />
   </head>
   <body>
     <div class="app-shell" id="appShell">
@@ -48,6 +48,12 @@
               <svg viewBox="0 0 24 24"><path d="M4 19V9m5 10V5m5 14v-7m5 7V3"/></svg>
             </span>
             <span class="nav-label" data-i18n="navStats">Statistics</span>
+          </button>
+          <button class="nav-item" id="incomingNavButton">
+            <span class="nav-icon">
+              <svg viewBox="0 0 24 24"><path d="M4 17.5h16M6 14l3-8 2.5 5 4.5-2.5 2 5.5"/><path d="m16.5 5 2.5-1-.5 2.7"/></svg>
+            </span>
+            <span class="nav-label" data-i18n="navIncoming">Incoming Flights</span>
           </button>
         </nav>
 
@@ -96,6 +102,19 @@
             <span data-i18n="settings">Settings</span>
           </button>
         </div>
+
+        <section class="incoming-sidebar" id="incomingSidebar" aria-hidden="true">
+          <button class="incoming-back" id="incomingBackButton">
+            <svg viewBox="0 0 24 24"><path d="m14.5 6-6 6 6 6"/></svg>
+            <span data-i18n="backToMap">Back to map</span>
+          </button>
+          <header class="incoming-head">
+            <span data-i18n="upcomingTravel">Upcoming travel</span>
+            <h2 data-i18n="navIncoming">Incoming Flights</h2>
+            <p id="incomingSummary"></p>
+          </header>
+          <div class="incoming-list" id="incomingList"></div>
+        </section>
       </aside>
 
       <main class="main-content">
@@ -268,6 +287,6 @@
 
     <div class="toast" id="toast"><span>✓</span><div><strong data-i18n="actionComplete">Completed</strong><small data-i18n="recordUpdated">Record updated</small></div></div>
     <script src="./flight-data.js?v=20260730-v2"></script>
-    <script src="./app.js?v=20260730-v15"></script>
+    <script src="./app.js?v=20260730-v16"></script>
   </body>
 </html>

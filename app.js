@@ -34,9 +34,13 @@ const airlineIcons = {
 };
 
 const aircraftVisuals = {
-  "9VSHM": { src: "./airplanes/singapore%20359.png", altKey: "aircraftIllustrationSingapore" },
+  "9VSHM": { src: "./airplanes/singapore%20359%209vshm.png", altKey: "aircraftIllustrationSingapore" },
   "9VSKV": { src: "./airplanes/singapore%20388%209vskv.png?v=20260730-white", altKey: "aircraftIllustrationSingaporeA380" },
+  "V8DLA": { src: "./airplanes/brunei%20788%20v8dla.png", altKey: "aircraftIllustrationRoyalBrunei" },
+  "BLAX": { src: "./airplanes/cathay%20pacific%20333%20blax.png", altKey: "aircraftIllustrationCathayA330" },
   "B309W": { src: "./airplanes/china%20southern%20359%20b309w.png", altKey: "aircraftIllustrationChinaSouthern" },
+  "B1585": { src: "./airplanes/china%20soutehrn%2077w%20b1585.png", altKey: "aircraftIllustrationChinaSouthern737" },
+  "B20C6": { src: "./airplanes/china%20southern%20789%20b20c6.png", altKey: "aircraftIllustrationChinaSouthern787" },
   "B20DM": { src: "./airplanes/china%20southern%2077w%20b20dm.png?v=20260730-white", altKey: "aircraftIllustrationChinaSouthern777" },
   "B32CE": { src: "./airplanes/air%20china%20359%20b32ce.png?v=20260730-white", altKey: "aircraftIllustrationAirChina" },
   "A6EDV": { src: "./airplanes/emirates%20388%20a6edv.png", altKey: "aircraftIllustrationEmiratesA380" },
@@ -73,6 +77,7 @@ const archiveData = window.FLIGHT_ARCHIVE_DATA || {};
 const airports = archiveData.airports || fallbackAirports;
 const flights = archiveData.flights || fallbackFlights;
 const routes = archiveData.routes || fallbackRoutes;
+const plannedIncomingFlights = archiveData.incomingFlights || [];
 const savedFlightEdits = (() => {
   try { return JSON.parse(localStorage.getItem("flightArchiveEdits") || "{}"); }
   catch { return {}; }
@@ -92,12 +97,14 @@ const fallbackLand = [
 
 const translations = {
   en: {
-    navMap:"Flight Map", navRecords:"Flight Records", navStats:"Statistics",
+    navMap:"Flight Map", navRecords:"Flight Records", navStats:"Statistics", navIncoming:"Incoming Flights",
     mapSelection:"Map content", routes:"Routes", airports:"Airports", mapHelp:"Drag to rotate, scroll to zoom, and select a route or airport for details.",
     flatMapHelp:"Drag to pan, scroll to zoom, and select a route or airport for details.",
     mapStyle:"Map style", lightGlobe:"Light globe", spaceGlobe:"Space globe", flatMap:"Flat map",
     language:"Language", settings:"Settings", authorGithub:"Author GitHub",
-    hubs:"Hub airports", edit:"Edit", done:"Done", noHubs:"No hub selected", loadingGeography:"Loading geographic data",
+    hubs:"Hub airports", edit:"Edit", done:"Done", noHubs:"No hub selected", selectedAirports:"selected airports", loadingGeography:"Loading geographic data",
+    backToMap:"Back to map", upcomingTravel:"Upcoming travel", noIncoming:"No upcoming flights", upcomingCount:"upcoming flights",
+    daysRemaining:"days remaining", today:"Today", tomorrow:"Tomorrow",
     import:"Import", addFlight:"Add flight", recordsTitle:"Flight Records", totalFlights:"total flights",
     searchPlaceholder:"Search flight, airline, or airport", all:"All", year:"Year", allYears:"All years",
     international:"International / HK, MO & TW", domestic:"Domestic",
@@ -113,17 +120,24 @@ const translations = {
     aircraftIllustrationChinaSouthern777:"China Southern Airlines Boeing 777-300ER side illustration",
     aircraftIllustrationAirChina:"Air China Airbus A350-900 side illustration",
     aircraftIllustrationEmiratesA380:"Emirates Airbus A380-800 side illustration",
-    aircraftIllustrationEmirates777:"Emirates Boeing 777-300ER side illustration", registration:"Registration",
+    aircraftIllustrationEmirates777:"Emirates Boeing 777-300ER side illustration",
+    aircraftIllustrationRoyalBrunei:"Royal Brunei Airlines Boeing 787-8 side illustration",
+    aircraftIllustrationCathayA330:"Cathay Pacific Airbus A330-300 side illustration",
+    aircraftIllustrationChinaSouthern737:"China Southern Airlines Boeing 737-800 side illustration",
+    aircraftIllustrationChinaSouthern787:"China Southern Airlines Boeing 787-9 side illustration", registration:"Registration",
     cabin:"Cabin", seat:"Seat", gate:"Gate", notes:"Notes", noNotes:"No notes", close:"Close", editRecord:"Edit record",
-    totalTime:"Total flight time", totalDistance:"Total distance", aircraftTypes:"Aircraft types",
+    totalTime:"Total flight time", totalDistance:"Total distance", aircraftTypes:"Aircraft types", airlinesFlown:"Airlines flown",
     countriesRegions:"Countries / regions", directedRoutes:"Routes flown", citiesVisited:"Cities visited", totalFare:"Total fare",
     flightTimeDetail:"Flights sorted from longest to shortest.", distanceDetail:"Distance comparisons and flights sorted from longest to shortest.",
     aircraftDetail:"Aircraft are grouped by family; exact variants remain in each flight record.",
     countriesDetail:"Endpoint visits grouped by country or region.", routesDetail:"Outbound and return directions are counted separately.",
-    citiesDetail:"Endpoint visits grouped by city.", fareDetail:"Known fares sorted from highest to lowest; bundled tickets are grouped.",
+    citiesDetail:"Endpoint visits grouped by city.", airlinesDetail:"Flights grouped by operating airline.",
+    fareDetail:"Known fares sorted from highest to lowest; bundled tickets are grouped.",
     hours:"h", minutes:"min", flightUnit:"flights", typeUnit:"types", countryUnit:"countries / regions",
-    routeUnit:"directed routes", cityUnit:"cities", knownFares:"known fares", longestFirst:"Longest first", highestFirst:"Highest first",
+    airlineUnit:"airlines", routeUnit:"directed routes", cityUnit:"cities", knownFares:"known fares", longestFirst:"Longest first", highestFirst:"Highest first",
     earthCircumference:"Earth circumferences", moonDistance:"Earth–Moon distances", sunDistance:"Earth–Sun distances",
+    days:"Days", weeks:"Weeks", months:"Months", years:"Years", longestFlight:"Longest flight",
+    timeEquivalent:"Equivalent duration", distanceEquivalent:"Equivalent distance",
     exactVariants:"Exact variants", visits:"visits", bundle:"Ticket bundle", perFlight:"per flight",
     flightEntry:"FLIGHT ENTRY", addFlightRecord:"Add flight record", editFlightRecord:"Edit flight record",
     entryHelp:"Enter the core fields first; other details can be added later.", autoLookup:"Automatic flight lookup",
@@ -143,12 +157,14 @@ const translations = {
     validatingFields:"Validating import fields", detail:"View details", hub:"Hub"
   },
   zh: {
-    navMap:"航迹地图", navRecords:"飞行记录", navStats:"数据统计",
+    navMap:"航迹地图", navRecords:"飞行记录", navStats:"数据统计", navIncoming:"即将飞行",
     mapSelection:"地图内容", routes:"航线", airports:"机场", mapHelp:"拖拽旋转，滚轮缩放；点击航线或机场查看详情。",
     flatMapHelp:"拖拽平移，滚轮缩放；点击航线或机场查看详情。",
     mapStyle:"地图样式", lightGlobe:"浅色地球", spaceGlobe:"星空地球", flatMap:"平面地图",
     language:"语言", settings:"设置", authorGithub:"作者 GitHub",
-    hubs:"枢纽机场", edit:"编辑", done:"完成", noHubs:"未选择枢纽机场", loadingGeography:"正在载入地理数据",
+    hubs:"枢纽机场", edit:"编辑", done:"完成", noHubs:"未选择枢纽机场", selectedAirports:"个已选机场", loadingGeography:"正在载入地理数据",
+    backToMap:"返回首页", upcomingTravel:"未来行程", noIncoming:"暂无即将飞行的航班", upcomingCount:"个即将飞行",
+    daysRemaining:"天后出发", today:"今天", tomorrow:"明天",
     import:"批量导入", addFlight:"添加飞行", recordsTitle:"飞行记录", totalFlights:"次飞行",
     searchPlaceholder:"搜索航班号、航司或机场", all:"全部", year:"年份", allYears:"全部年份",
     international:"国际 / 港澳台", domestic:"国内",
@@ -164,17 +180,24 @@ const translations = {
     aircraftIllustrationChinaSouthern777:"中国南方航空 Boeing 777-300ER 侧面示意图",
     aircraftIllustrationAirChina:"中国国际航空 Airbus A350-900 侧面示意图",
     aircraftIllustrationEmiratesA380:"阿联酋航空 Airbus A380-800 侧面示意图",
-    aircraftIllustrationEmirates777:"阿联酋航空 Boeing 777-300ER 侧面示意图", registration:"注册号",
+    aircraftIllustrationEmirates777:"阿联酋航空 Boeing 777-300ER 侧面示意图",
+    aircraftIllustrationRoyalBrunei:"文莱皇家航空 Boeing 787-8 侧面示意图",
+    aircraftIllustrationCathayA330:"国泰航空 Airbus A330-300 侧面示意图",
+    aircraftIllustrationChinaSouthern737:"中国南方航空 Boeing 737-800 侧面示意图",
+    aircraftIllustrationChinaSouthern787:"中国南方航空 Boeing 787-9 侧面示意图", registration:"注册号",
     cabin:"舱位", seat:"座位", gate:"登机口", notes:"备注", noNotes:"无备注", close:"关闭", editRecord:"编辑记录",
-    totalTime:"总飞行时间", totalDistance:"总飞行里程", aircraftTypes:"坐过的机型",
+    totalTime:"总飞行时间", totalDistance:"总飞行里程", aircraftTypes:"坐过的机型", airlinesFlown:"乘坐过的航司",
     countriesRegions:"去过的国家 / 地区", directedRoutes:"飞过的航线", citiesVisited:"去过的城市", totalFare:"总票价",
     flightTimeDetail:"航班按飞行时长由长到短排列。", distanceDetail:"显示距离换算，航班按里程由长到短排列。",
     aircraftDetail:"按机型大类归并；每次飞行仍保留具体子型号。",
     countriesDetail:"按航段端点统计国家或地区访问次数。", routesDetail:"去程与回程分别统计。",
-    citiesDetail:"按航段端点统计城市访问次数。", fareDetail:"已知票价由高到低排列；联票成组显示。",
+    citiesDetail:"按航段端点统计城市访问次数。", airlinesDetail:"按实际承运航空公司统计航班次数。",
+    fareDetail:"已知票价由高到低排列；联票成组显示。",
     hours:"小时", minutes:"分", flightUnit:"次飞行", typeUnit:"种机型", countryUnit:"个国家 / 地区",
-    routeUnit:"条有向航线", cityUnit:"座城市", knownFares:"条已知票价", longestFirst:"由长到短", highestFirst:"由高到低",
+    airlineUnit:"家航司", routeUnit:"条有向航线", cityUnit:"座城市", knownFares:"条已知票价", longestFirst:"由长到短", highestFirst:"由高到低",
     earthCircumference:"圈地球周长", moonDistance:"倍地月距离", sunDistance:"倍地日距离",
+    days:"天", weeks:"周", months:"月", years:"年", longestFlight:"最长航班",
+    timeEquivalent:"时间换算", distanceEquivalent:"距离换算",
     exactVariants:"具体子型号", visits:"次", bundle:"联票", perFlight:"每航段",
     flightEntry:"飞行记录", addFlightRecord:"添加飞行记录", editFlightRecord:"编辑飞行记录",
     entryHelp:"先填写核心字段，其他资料可以稍后补充。", autoLookup:"自动查询航班资料",
@@ -202,7 +225,7 @@ const savedHubs = (() => {
 const state = {
   activeView:"atlas", yearFilter:"all", scopeFilter:"all", mapMode:"route", globeStyle:"light", lang:"en",
   selectedRoute:null, selectedAirport:null, activeFlightId:null, editingFlightId:null,
-  hubs:new Set(savedHubs.filter(code => airports[code])), hubEditorOpen:false
+  hubs:new Set(savedHubs.filter(code => airports[code])), hubEditorOpen:false, incomingMode:false
 };
 const visitedCountries = new Set([
   "China", "Japan", "Cambodia", "Singapore", "Australia", "Indonesia", "Malaysia",
@@ -256,6 +279,7 @@ function applyLanguage(lang) {
   renderFlights();
   renderStats();
   renderHubSettings();
+  renderIncomingFlights();
   updateMapHelp();
   if (state.selectedRoute) openRouteDrawer(state.selectedRoute);
   if (state.selectedAirport) openAirportDrawer(state.selectedAirport);
@@ -382,6 +406,19 @@ function iconMarkup(f, className = "airline-icon") {
 function normalizeRegistration(value) {
   return String(value || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
 }
+function aircraftVisualForFlight(f) {
+  return aircraftVisuals[normalizeRegistration(f?.registration)] || null;
+}
+function aircraftImageMarkup(f,className="aircraft-inline-image") {
+  const visual=aircraftVisualForFlight(f);
+  return visual?`<img class="${className}" src="${visual.src}" alt="${t(visual.altKey)}" loading="lazy" />`:"";
+}
+function genericAircraftMarkup(label) {
+  return `<svg class="stats-aircraft-image generic-aircraft-image" viewBox="0 0 280 84" role="img" aria-label="${label}">
+    <path class="generic-aircraft-body" d="M14 48c24-7 58-10 111-11l94-1 35-18 9 2-22 17 29 3 5 6-34 4-24 18-9 1 12-19-93-1c-53 0-88 2-113 6Z"/>
+    <path class="generic-aircraft-wing" d="m117 38 39-27 12 1-24 26 56 1-2 9-55 1 22 25-12 1-37-26Z"/>
+  </svg>`;
+}
 
 function flightRowMarkup(f) {
   const from = airports[f.from], to = airports[f.to];
@@ -429,7 +466,7 @@ function openFlight(id) {
   set("detailFromCode", f.from); set("detailFromCity", `${compactAirportName(from)} · ${f.terminalFrom}`); set("detailDeparture", f.depart);
   set("detailToCode", f.to); set("detailToCity", `${compactAirportName(to)} · ${f.terminalTo}`); set("detailArrival", f.arrive);
   set("detailDuration", f.duration); set("detailDistance", `${f.distance.toLocaleString()} km`); set("detailNote", f.note || t("noNotes"));
-  const aircraftVisualData=aircraftVisuals[normalizeRegistration(f.registration)];
+  const aircraftVisualData=aircraftVisualForFlight(f);
   const aircraftVisual=document.getElementById("detailAircraftVisual");
   aircraftVisual.hidden=!aircraftVisualData;
   if(aircraftVisualData){
@@ -456,11 +493,86 @@ function drawerFlightMarkup(f,highlighted=false) {
   </article>`;
 }
 
+function departureDateTime(f) {
+  const time=/^\d{1,2}:\d{2}$/.test(f.depart||"")?f.depart:"23:59";
+  return new Date(`${f.date}T${time}:00`);
+}
+function incomingFlights() {
+  const now=new Date(),seen=new Set();
+  return [...plannedIncomingFlights,...flights].filter(f=>{
+    const key=`${f.date}|${f.flightNo}|${f.from}|${f.to}`;
+    if(seen.has(key)||!f.date||!airports[f.from]||!airports[f.to])return false;
+    seen.add(key);
+    return departureDateTime(f)>now;
+  }).sort((a,b)=>departureDateTime(a)-departureDateTime(b));
+}
+function routeIdForFlight(f) {
+  return [f.from,f.to].sort().join("-").toLowerCase();
+}
+function activeMapFlights() {
+  return state.incomingMode?incomingFlights():flights;
+}
+function activeMapRoutes() {
+  if(!state.incomingMode)return routes;
+  const routeMap=new Map();
+  activeMapFlights().forEach(f=>{
+    const id=routeIdForFlight(f);
+    if(!routeMap.has(id))routeMap.set(id,{id,from:f.from,to:f.to,count:0,distanceTotal:0});
+    const route=routeMap.get(id);route.count+=1;route.distanceTotal+=Number(f.distance)||0;
+  });
+  return [...routeMap.values()].map(route=>({
+    id:route.id,from:route.from,to:route.to,count:route.count,
+    distance:route.count?Math.round(route.distanceTotal/route.count):0
+  }));
+}
+function incomingRemainingLabel(f) {
+  const days=Math.max(0,Math.ceil((departureDateTime(f)-new Date())/86400000));
+  if(days===0)return t("today");
+  if(days===1)return t("tomorrow");
+  return `${days} ${t("daysRemaining")}`;
+}
+function incomingFlightMarkup(f,index) {
+  return `<button class="incoming-flight" data-incoming-index="${index}">
+    <div class="incoming-flight-top">${iconMarkup(f,"incoming-airline-icon")}<span><strong>${f.flightNo}</strong><small>${f.airline}</small></span><b>${incomingRemainingLabel(f)}</b></div>
+    <div class="incoming-flight-route"><strong>${f.from}</strong><i></i><strong>${f.to}</strong></div>
+    <p>${formatDate(f.date)} · ${f.depart || "—"}</p>
+  </button>`;
+}
+function renderIncomingFlights() {
+  const list=incomingFlights();
+  const summary=document.getElementById("incomingSummary"),container=document.getElementById("incomingList");
+  if(!summary||!container)return;
+  summary.textContent=`${list.length} ${t("upcomingCount")}`;
+  container.innerHTML=list.length?list.map(incomingFlightMarkup).join(""):`<div class="incoming-empty"><span>✈</span><p>${t("noIncoming")}</p></div>`;
+  container.querySelectorAll("[data-incoming-index]").forEach(button=>button.addEventListener("click",()=>{
+    const flight=list[Number(button.dataset.incomingIndex)];
+    const recorded=flights.find(item=>item===flight||item.id===flight.id);
+    if(recorded)openFlight(recorded.id);
+    else {
+      const route=activeMapRoutes().find(item=>item.id===routeIdForFlight(flight));
+      if(route)openRouteDrawer(route);
+    }
+  }));
+}
+function setIncomingMode(active) {
+  if(active&&state.activeView!=="atlas")setView("atlas");
+  state.incomingMode=active;
+  if(active){
+    state.mapMode="route";
+    document.getElementById("routeMode").classList.add("active");
+    document.getElementById("airportMode").classList.remove("active");
+  }
+  document.getElementById("appShell").classList.toggle("incoming-mode",active);
+  document.getElementById("incomingSidebar").setAttribute("aria-hidden",String(!active));
+  setSettingsOpen(false);closeDrawer();renderIncomingFlights();drawGlobe();
+}
+
 function openRouteDrawer(route) {
   state.selectedRoute = route; state.selectedAirport = null;
   const from = airports[route.from], to = airports[route.to];
-  let related = flights.filter(f => f.routeId === route.id);
-  if (!related.length) related = flights.filter(f => [f.from,f.to].includes(route.from) || [f.from,f.to].includes(route.to)).slice(0,3);
+  const mapFlights=activeMapFlights();
+  let related = mapFlights.filter(f => (f.routeId||routeIdForFlight(f)) === route.id);
+  if (!related.length) related = mapFlights.filter(f => [f.from,f.to].includes(route.from) || [f.from,f.to].includes(route.to)).slice(0,3);
   document.getElementById("drawerContent").innerHTML = `
     <span class="drawer-kicker">${t("route")}</span>
     <h2 class="drawer-title">${airportCity(from)} — ${airportCity(to)}</h2>
@@ -481,8 +593,8 @@ function openAirportDrawer(code) {
   const airport = airports[code];
   if (!airport) return;
   state.selectedAirport = code; state.selectedRoute = null;
-  const relatedFlights = flights.filter(f => f.from === code || f.to === code);
-  const connections = routes.filter(r => r.from === code || r.to === code);
+  const relatedFlights = activeMapFlights().filter(f => f.from === code || f.to === code);
+  const connections = activeMapRoutes().filter(r => r.from === code || r.to === code);
   document.getElementById("drawerContent").innerHTML = `
     <span class="drawer-kicker">${t("airport")}</span>
     <h2 class="drawer-title">${airport.code}</h2>
@@ -502,7 +614,7 @@ function openAirportDrawer(code) {
     ${relatedFlights.map(f=>drawerFlightMarkup(f,true)).join("")}
   `;
   document.querySelectorAll("[data-connection]").forEach(el => el.addEventListener("click", () => {
-    const route = routes.find(r => r.id === el.dataset.connection);
+    const route = activeMapRoutes().find(r => r.id === el.dataset.connection);
     if (route) openRouteDrawer(route);
   }));
   document.querySelectorAll("[data-drawer-flight]").forEach(el => el.addEventListener("click", () => openFlight(Number(el.dataset.drawerFlight))));
@@ -585,12 +697,13 @@ function durationText(minutes) {
 }
 function flightDetailRow(f,value) {
   return `<button class="stats-flight-row" data-flight-id="${f.id}">
+    ${iconMarkup(f,"stats-airline-icon")}
     <span><strong>${f.flightNo}</strong><small>${formatDate(f.date)} · ${f.from} → ${f.to}</small></span>
     <b>${value}</b><i>›</i>
   </button>`;
 }
 function statIcon(type) {
-  return ({time:"◷",distance:"↗",aircraft:"✈",countries:"◎",routes:"⇄",cities:"⌖",fare:"¥"})[type];
+  return ({time:"◷",distance:"↗",aircraft:"✈",airlines:"◉",countries:"◎",routes:"⇄",cities:"⌖",fare:"¥"})[type];
 }
 function statsSnapshot() {
   const totalDistance=flights.reduce((sum,f)=>sum+(Number(f.distance)||0),0);
@@ -598,13 +711,14 @@ function statsSnapshot() {
   const knownFares=flights.filter(f=>Number.isFinite(f.fare));
   const totalFare=knownFares.reduce((sum,f)=>sum+f.fare,0);
   const aircraft=aggregateBy(flights,f=>classifyAircraft(f.aircraft));
+  const airlines=aggregateBy(flights,f=>f.airlineShort);
   const countries=new Map(),cities=new Map(),directedRoutes=aggregateBy(flights,f=>`${f.from}>${f.to}`);
   flights.forEach(f=>[f.from,f.to].forEach(code=>{
     const airport=airports[code],country=airportCountry(airport),city=airportCity(airport);
     countries.set(country,(countries.get(country)||0)+1);
     cities.set(city,(cities.get(city)||0)+1);
   }));
-  return {totalDistance,totalMinutes,knownFares,totalFare,aircraft,countries,cities,directedRoutes};
+  return {totalDistance,totalMinutes,knownFares,totalFare,aircraft,airlines,countries,cities,directedRoutes};
 }
 function renderStats() {
   const s=statsSnapshot();
@@ -612,6 +726,7 @@ function renderStats() {
     ["time",t("totalTime"),durationText(s.totalMinutes),`${flights.length} ${t("flightUnit")}`],
     ["distance",t("totalDistance"),`${s.totalDistance.toLocaleString()} km`,`${(s.totalDistance/40075).toFixed(2)} ${t("earthCircumference")}`],
     ["aircraft",t("aircraftTypes"),s.aircraft.size.toLocaleString(),t("typeUnit")],
+    ["airlines",t("airlinesFlown"),s.airlines.size.toLocaleString(),t("airlineUnit")],
     ["countries",t("countriesRegions"),s.countries.size.toLocaleString(),t("countryUnit")],
     ["routes",t("directedRoutes"),s.directedRoutes.size.toLocaleString(),t("routeUnit")],
     ["cities",t("citiesVisited"),s.cities.size.toLocaleString(),t("cityUnit")],
@@ -625,41 +740,92 @@ function renderStats() {
     </button>`).join("");
   document.querySelectorAll("[data-stat]").forEach(el=>el.addEventListener("click",()=>openStatsDetail(el.dataset.stat)));
 }
-function rankedMapMarkup(map,formatter) {
-  return [...map.entries()].sort((a,b)=>b[1].length-a[1].length||a[0].localeCompare(b[0])).map(([key,items],index)=>`
-    <div class="stats-rank-row"><span>${String(index+1).padStart(2,"0")}</span><strong>${key.replace(">"," → ")}</strong><b>${formatter(items)}</b></div>`).join("");
+function ratioText(value) {
+  const digits=value>=100?0:value>=10?1:value>=1?2:3;
+  return value.toLocaleString(undefined,{minimumFractionDigits:digits,maximumFractionDigits:digits});
+}
+function equivalenceMarkup(label,items) {
+  return `<section class="equivalence-section">
+    <span class="detail-sort-label">${label}</span>
+    <div class="equivalence-grid">${items.map(item=>`
+      <div><span class="equivalence-symbol">${item.symbol}</span><strong>${ratioText(item.value)}</strong><small>${item.label}</small></div>`).join("")}
+    </div>
+  </section>`;
+}
+function featuredFlightMarkup(f,value) {
+  if(!f)return "";
+  const image=aircraftImageMarkup(f,"featured-aircraft-image");
+  return `<button class="featured-flight" data-flight-id="${f.id}">
+    <div class="featured-flight-copy">
+      <span>${t("longestFlight")}</span>
+      <div class="featured-flight-title">${iconMarkup(f,"featured-airline-icon")}<div><strong>${f.flightNo}</strong><small>${f.airline}</small></div></div>
+      <div class="featured-flight-route"><b>${f.from}</b><i></i><b>${f.to}</b></div>
+      <p>${formatDate(f.date)} · ${f.aircraft} · ${f.registration || "—"}</p>
+      <em>${value}</em>
+    </div>
+    ${image?`<div class="featured-aircraft">${image}</div>`:""}
+  </button>`;
+}
+function statsBarMarkup(rows) {
+  const sorted=[...rows].sort((a,b)=>b.count-a.count||a.label.localeCompare(b.label));
+  const maximum=Math.max(1,...sorted.map(row=>row.count));
+  return sorted.map((row,index)=>`
+    <div class="stats-bar-row${row.image?" has-image":""}">
+      ${row.icon||`<span class="stats-rank-index">${String(index+1).padStart(2,"0")}</span>`}
+      <div class="stats-bar-main">
+        <div class="stats-bar-head"><span><strong>${row.label}</strong>${row.note?`<small>${row.note}</small>`:""}</span><b>${row.count} ${row.unit||t("times")}</b></div>
+        <div class="stats-bar-track"><i style="width:${Math.max(5,row.count/maximum*100)}%"></i></div>
+      </div>
+      ${row.image?`<div class="stats-aircraft-visual">${row.image}</div>`:""}
+    </div>`).join("");
 }
 function openStatsDetail(type) {
   const s=statsSnapshot();
-  const title={time:t("totalTime"),distance:t("totalDistance"),aircraft:t("aircraftTypes"),countries:t("countriesRegions"),routes:t("directedRoutes"),cities:t("citiesVisited"),fare:t("totalFare")}[type];
-  const description={time:t("flightTimeDetail"),distance:t("distanceDetail"),aircraft:t("aircraftDetail"),countries:t("countriesDetail"),routes:t("routesDetail"),cities:t("citiesDetail"),fare:t("fareDetail")}[type];
+  const title={time:t("totalTime"),distance:t("totalDistance"),aircraft:t("aircraftTypes"),airlines:t("airlinesFlown"),countries:t("countriesRegions"),routes:t("directedRoutes"),cities:t("citiesVisited"),fare:t("totalFare")}[type];
+  const description={time:t("flightTimeDetail"),distance:t("distanceDetail"),aircraft:t("aircraftDetail"),airlines:t("airlinesDetail"),countries:t("countriesDetail"),routes:t("routesDetail"),cities:t("citiesDetail"),fare:t("fareDetail")}[type];
   let summary="",content="";
   if(type==="time"){
     summary=durationText(s.totalMinutes);
-    content=`<div class="detail-sort-label">${t("longestFirst")}</div>${[...flights].sort((a,b)=>b.durationMinutes-a.durationMinutes).map(f=>flightDetailRow(f,durationText(f.durationMinutes))).join("")}`;
+    const sorted=[...flights].sort((a,b)=>b.durationMinutes-a.durationMinutes);
+    content=`${featuredFlightMarkup(sorted[0],durationText(sorted[0].durationMinutes))}
+      ${equivalenceMarkup(t("timeEquivalent"),[
+        {symbol:"24",value:s.totalMinutes/1440,label:t("days")},
+        {symbol:"7",value:s.totalMinutes/10080,label:t("weeks")},
+        {symbol:"30",value:s.totalMinutes/43830,label:t("months")},
+        {symbol:"365",value:s.totalMinutes/525960,label:t("years")}
+      ])}
+      <div class="detail-sort-label">${t("longestFirst")}</div>${sorted.map(f=>flightDetailRow(f,durationText(f.durationMinutes))).join("")}`;
   }else if(type==="distance"){
     summary=`${s.totalDistance.toLocaleString()} km`;
-    content=`<div class="distance-equivalents">
-      <div><strong>${(s.totalDistance/40075).toFixed(2)}</strong><span>${t("earthCircumference")}</span></div>
-      <div><strong>${(s.totalDistance/384400).toFixed(3)}</strong><span>${t("moonDistance")}</span></div>
-      <div><strong>${(s.totalDistance/149597870.7).toFixed(6)}</strong><span>${t("sunDistance")}</span></div>
-    </div><div class="detail-sort-label">${t("longestFirst")}</div>${[...flights].sort((a,b)=>b.distance-a.distance).map(f=>flightDetailRow(f,`${f.distance.toLocaleString()} km`)).join("")}`;
+    const sorted=[...flights].sort((a,b)=>b.distance-a.distance);
+    content=`${featuredFlightMarkup(sorted[0],`${sorted[0].distance.toLocaleString()} km`)}
+      ${equivalenceMarkup(t("distanceEquivalent"),[
+        {symbol:"◎",value:s.totalDistance/40075,label:t("earthCircumference")},
+        {symbol:"◐",value:s.totalDistance/384400,label:t("moonDistance")},
+        {symbol:"☉",value:s.totalDistance/149597870.7,label:t("sunDistance")}
+      ])}
+      <div class="detail-sort-label">${t("longestFirst")}</div>${sorted.map(f=>flightDetailRow(f,`${f.distance.toLocaleString()} km`)).join("")}`;
   }else if(type==="aircraft"){
     summary=`${s.aircraft.size} ${t("typeUnit")}`;
-    content=[...s.aircraft.entries()].sort((a,b)=>b[1].length-a[1].length).map(([family,items])=>{
+    content=statsBarMarkup([...s.aircraft.entries()].map(([family,items])=>{
       const exact=aggregateBy(items,f=>f.aircraft||"—");
-      return `<section class="aircraft-family"><div><strong>${family}</strong><b>${items.length} ${t("times")}</b></div>
-        <p>${t("exactVariants")}: ${[...exact.entries()].map(([name,list])=>`${name} × ${list.length}`).join(" · ")}</p></section>`;
-    }).join("");
+      const visualFlight=items.find(aircraftVisualForFlight);
+      return {label:family,count:items.length,note:`${t("exactVariants")}: ${[...exact.entries()].map(([name,list])=>`${name} × ${list.length}`).join(" · ")}`,image:visualFlight?aircraftImageMarkup(visualFlight,"stats-aircraft-image"):genericAircraftMarkup(family)};
+    }));
+  }else if(type==="airlines"){
+    summary=`${s.airlines.size} ${t("airlineUnit")}`;
+    content=statsBarMarkup([...s.airlines.entries()].map(([code,items])=>({
+      label:items[0].airline,count:items.length,icon:iconMarkup(items[0],"stats-bar-logo")
+    })));
   }else if(type==="countries"){
     summary=`${s.countries.size} ${t("countryUnit")}`;
-    content=[...s.countries.entries()].sort((a,b)=>b[1]-a[1]).map(([name,count],i)=>`<div class="stats-rank-row"><span>${String(i+1).padStart(2,"0")}</span><strong>${name}</strong><b>${count} ${t("visits")}</b></div>`).join("");
+    content=statsBarMarkup([...s.countries.entries()].map(([name,count])=>({label:name,count,unit:t("visits")})));
   }else if(type==="routes"){
     summary=`${s.directedRoutes.size} ${t("routeUnit")}`;
-    content=rankedMapMarkup(s.directedRoutes,items=>`${items.length} ${t("times")}`);
+    content=statsBarMarkup([...s.directedRoutes.entries()].map(([name,items])=>({label:name.replace(">"," → "),count:items.length})));
   }else if(type==="cities"){
     summary=`${s.cities.size} ${t("cityUnit")}`;
-    content=[...s.cities.entries()].sort((a,b)=>b[1]-a[1]).map(([name,count],i)=>`<div class="stats-rank-row"><span>${String(i+1).padStart(2,"0")}</span><strong>${name}</strong><b>${count} ${t("visits")}</b></div>`).join("");
+    content=statsBarMarkup([...s.cities.entries()].map(([name,count])=>({label:name,count,unit:t("visits")})));
   }else if(type==="fare"){
     summary=formatFare(s.totalFare);
     const fareGroups=new Map();
@@ -691,11 +857,23 @@ function renderHubSettings(){
   const options=document.getElementById("hubOptions");
   options.classList.toggle("open",state.hubEditorOpen);
   options.setAttribute("aria-hidden",String(!state.hubEditorOpen));
-  options.innerHTML=available.map(airport=>`
-    <label class="hub-option">
-      <input type="checkbox" value="${airport.code}" ${state.hubs.has(airport.code)?"checked":""} />
-      <span><strong>${airport.code} · ${airportCity(airport)}</strong><small>${airportName(airport)}</small></span>
-    </label>`).join("");
+  const countryGroups=new Map();
+  available.forEach(airport=>{
+    const country=airportCountry(airport);
+    if(!countryGroups.has(country))countryGroups.set(country,[]);
+    countryGroups.get(country).push(airport);
+  });
+  options.innerHTML=[...countryGroups.entries()].sort((a,b)=>a[0].localeCompare(b[0])).map(([country,list])=>{
+    const selectedCount=list.filter(airport=>state.hubs.has(airport.code)).length;
+    return `<details class="hub-country" ${selectedCount?"open":""}>
+      <summary><span>${country}</span><b>${selectedCount} / ${list.length}</b></summary>
+      <div>${list.map(airport=>`
+        <label class="hub-option">
+          <input type="checkbox" value="${airport.code}" ${state.hubs.has(airport.code)?"checked":""} />
+          <span><strong>${airport.code} · ${airportCity(airport)}</strong><small>${airportName(airport)}</small></span>
+        </label>`).join("")}</div>
+    </details>`;
+  }).join("");
   const editButton=document.getElementById("editHubsButton");
   editButton.classList.toggle("active",state.hubEditorOpen);
   document.getElementById("hubEditLabel").textContent=state.hubEditorOpen?t("done"):t("edit");
@@ -944,7 +1122,7 @@ function drawSurfaceReflection() {
 }
 function drawRoutes() {
   routeHitAreas=[];
-  routes.forEach(route=>{
+  activeMapRoutes().forEach(route=>{
     const geoPoints=greatCircle(airports[route.from],airports[route.to]);
     let segments;
     if(state.globeStyle==="flat"){
@@ -977,8 +1155,8 @@ function drawRoutes() {
 }
 function drawAirports() {
   airportHitAreas=[];
-  const codes=new Set(routes.flatMap(r=>[r.from,r.to]));
-  codes.add("PKX");
+  const codes=new Set(activeMapRoutes().flatMap(r=>[r.from,r.to]));
+  if(!state.incomingMode)codes.add("PKX");
   codes.forEach(code=>{
     const airport=airports[code], p=project(airport.lat,airport.lon);
     if(p.z<=0)return;
@@ -1127,8 +1305,10 @@ function animate(time){
   requestAnimationFrame(animate);
 }
 
-document.querySelectorAll(".nav-item").forEach(el=>el.addEventListener("click",()=>setView(el.dataset.view)));
+document.querySelectorAll(".nav-item[data-view]").forEach(el=>el.addEventListener("click",()=>setView(el.dataset.view)));
 document.querySelectorAll("[data-view-link]").forEach(el=>el.addEventListener("click",e=>{e.preventDefault();setView(el.dataset.viewLink);}));
+document.getElementById("incomingNavButton").addEventListener("click",()=>setIncomingMode(true));
+document.getElementById("incomingBackButton").addEventListener("click",()=>setIncomingMode(false));
 document.getElementById("collapseButton").addEventListener("click",()=>{document.getElementById("appShell").classList.toggle("sidebar-collapsed");setTimeout(resizeGlobe,260);});
 document.getElementById("settingsButton").addEventListener("click",()=>{
   setSettingsOpen(!document.getElementById("settingsPanel").classList.contains("open"));
