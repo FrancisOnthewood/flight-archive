@@ -209,8 +209,8 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
   cursor: pointer;
 }
 .hub-chips { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
-.hub-chips button { padding: 5px 8px; border: 0; border-radius: 13px; color: #701430; background: #f8e9ee; font-size: 10px; cursor: pointer; }
-.hub-chips span { margin-left: 6px; color: #9b294d; }
+.hub-chips button { padding: 5px 8px; border: 0; border-radius: 13px; color: #c83d24; background: #fff0eb; font-size: 10px; cursor: pointer; }
+.hub-chips span { margin-left: 6px; color: #e64b2e; }
 
 .app-shell.sidebar-collapsed { --sidebar-width: 78px; }
 .sidebar-collapsed .sidebar { padding-left: 15px; padding-right: 15px; }

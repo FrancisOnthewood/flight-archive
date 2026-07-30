@@ -713,8 +713,8 @@ function drawAirports() {
     if(p.z<=0)return;
     const selected=state.selectedAirport===code,hub=state.hubs.has(code);
     const radius=selected?5.5:state.mapMode==="airport"?3.8:2.7;
-    ctx.beginPath();ctx.arc(p.x,p.y,radius+3,0,Math.PI*2);ctx.fillStyle=hub?"rgba(112,20,48,.18)":selected?"rgba(24,119,242,.22)":"rgba(24,119,242,.08)";ctx.fill();
-    ctx.beginPath();ctx.arc(p.x,p.y,radius,0,Math.PI*2);ctx.fillStyle=hub?"#701430":selected?"#0b5fc9":"#1877f2";ctx.fill();
+    ctx.beginPath();ctx.arc(p.x,p.y,radius+3,0,Math.PI*2);ctx.fillStyle=hub?"rgba(230,75,46,.19)":selected?"rgba(24,119,242,.22)":"rgba(24,119,242,.08)";ctx.fill();
+    ctx.beginPath();ctx.arc(p.x,p.y,radius,0,Math.PI*2);ctx.fillStyle=hub?"#e64b2e":selected?"#0b5fc9":"#1877f2";ctx.fill();
     if(selected||state.mapMode==="airport"){
       ctx.font="600 9px DM Sans";ctx.fillStyle=state.globeStyle==="orbit"?"#dcecf0":"#3e4b5f";ctx.fillText(code,p.x+8,p.y-6);
     }
