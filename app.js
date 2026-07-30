@@ -92,17 +92,17 @@ const fallbackLand = [
 
 const translations = {
   en: {
-    navMap:"Flight Map", navRecords:"Flight Records", navStats:"Statistics", navMedia:"Media",
+    navMap:"Flight Map", navRecords:"Flight Records", navStats:"Statistics",
     mapSelection:"Map content", routes:"Routes", airports:"Airports", mapHelp:"Drag to rotate, scroll to zoom, and select a route or airport for details.",
+    flatMapHelp:"Drag to pan, scroll to zoom, and select a route or airport for details.",
+    mapStyle:"Map style", lightGlobe:"Light globe", spaceGlobe:"Space globe", flatMap:"Flat map",
     language:"Language", settings:"Settings", authorGithub:"Author GitHub",
-    hubs:"Hub airports", add:"Add", removeHub:"Remove hub", loadingGeography:"Loading geographic data",
+    hubs:"Hub airports", edit:"Edit", done:"Done", noHubs:"No hub selected", loadingGeography:"Loading geographic data",
     import:"Import", addFlight:"Add flight", recordsTitle:"Flight Records", totalFlights:"total flights",
     searchPlaceholder:"Search flight, airline, or airport", all:"All", year:"Year", allYears:"All years",
     international:"International / HK, MO & TW", domestic:"Domestic",
     flight:"Flight", date:"Date", airportTime:"Airports & time", flightInfo:"Flight information", fare:"Fare",
-    statsTitle:"Flight Statistics", mediaTitle:"Travel Media", mediaDesc:"Photos and boarding materials linked to flight records.",
-    memorySunset:"Window sunset", memoryCruise:"Cruise", memoryNightApproach:"Night approach",
-    memoryShanghaiHongKong:"Shanghai → Hong Kong", memoryHongKongShanghai:"Hong Kong → Shanghai", memoryShanghaiSingapore:"Shanghai → Singapore",
+    statsTitle:"Flight Statistics",
     route:"Route", airport:"Airport", flightsRecorded:"Flights", oneWayDistance:"One-way distance",
     relatedFlights:"Related flights", recordedSegments:"Flights", coordinates:"Coordinates", connections:"Connected routes",
     recentRecords:"Recent flights", times:"flights", noConnections:"No connected route in the current records.",
@@ -143,17 +143,17 @@ const translations = {
     validatingFields:"Validating import fields", detail:"View details", hub:"Hub"
   },
   zh: {
-    navMap:"航迹地图", navRecords:"飞行记录", navStats:"数据统计", navMedia:"旅途相册",
+    navMap:"航迹地图", navRecords:"飞行记录", navStats:"数据统计",
     mapSelection:"地图内容", routes:"航线", airports:"机场", mapHelp:"拖拽旋转，滚轮缩放；点击航线或机场查看详情。",
+    flatMapHelp:"拖拽平移，滚轮缩放；点击航线或机场查看详情。",
+    mapStyle:"地图样式", lightGlobe:"浅色地球", spaceGlobe:"星空地球", flatMap:"平面地图",
     language:"语言", settings:"设置", authorGithub:"作者 GitHub",
-    hubs:"枢纽机场", add:"添加", removeHub:"移除枢纽", loadingGeography:"正在载入地理数据",
+    hubs:"枢纽机场", edit:"编辑", done:"完成", noHubs:"未选择枢纽机场", loadingGeography:"正在载入地理数据",
     import:"批量导入", addFlight:"添加飞行", recordsTitle:"飞行记录", totalFlights:"次飞行",
     searchPlaceholder:"搜索航班号、航司或机场", all:"全部", year:"年份", allYears:"全部年份",
     international:"国际 / 港澳台", domestic:"国内",
     flight:"航班", date:"日期", airportTime:"机场与时间", flightInfo:"飞行信息", fare:"票价",
-    statsTitle:"飞行数据统计", mediaTitle:"旅途相册", mediaDesc:"与飞行记录关联的照片和登机资料。",
-    memorySunset:"舷窗日落", memoryCruise:"巡航阶段", memoryNightApproach:"夜间进近",
-    memoryShanghaiHongKong:"上海 → 香港", memoryHongKongShanghai:"香港 → 上海", memoryShanghaiSingapore:"上海 → 新加坡",
+    statsTitle:"飞行数据统计",
     route:"航线", airport:"机场", flightsRecorded:"飞行次数", oneWayDistance:"单程距离",
     relatedFlights:"相关飞行", recordedSegments:"飞行次数", coordinates:"地理坐标", connections:"连接航线",
     recentRecords:"最近飞行", times:"次", noConnections:"当前记录中没有连接航线。",
@@ -202,7 +202,7 @@ const savedHubs = (() => {
 const state = {
   activeView:"atlas", yearFilter:"all", scopeFilter:"all", mapMode:"route", globeStyle:"light", lang:"en",
   selectedRoute:null, selectedAirport:null, activeFlightId:null, editingFlightId:null,
-  hubs:new Set(savedHubs.filter(code => airports[code]))
+  hubs:new Set(savedHubs.filter(code => airports[code])), hubEditorOpen:false
 };
 const visitedCountries = new Set([
   "China", "Japan", "Cambodia", "Singapore", "Australia", "Indonesia", "Malaysia",
@@ -237,6 +237,14 @@ function applyLanguage(lang) {
     const value = translations[lang][el.dataset.i18nPlaceholder];
     if (value) el.placeholder = value;
   });
+  document.querySelectorAll("[data-i18n-title]").forEach(el => {
+    const value = translations[lang][el.dataset.i18nTitle];
+    if (value) { el.title = value; el.setAttribute("aria-label",value); }
+  });
+  document.querySelectorAll("[data-i18n-aria]").forEach(el => {
+    const value = translations[lang][el.dataset.i18nAria];
+    if (value) el.setAttribute("aria-label",value);
+  });
   document.getElementById("langZh").classList.toggle("active", lang === "zh");
   document.getElementById("langEn").classList.toggle("active", lang === "en");
   document.getElementById("cabinSelect").innerHTML = ["economy","premiumEconomy","business","first"].map(key => `<option>${t(key)}</option>`).join("");
@@ -248,6 +256,7 @@ function applyLanguage(lang) {
   renderFlights();
   renderStats();
   renderHubSettings();
+  updateMapHelp();
   if (state.selectedRoute) openRouteDrawer(state.selectedRoute);
   if (state.selectedAirport) openAirportDrawer(state.selectedAirport);
 }
@@ -508,10 +517,16 @@ function closeDrawer() {
 }
 
 function setSettingsOpen(open) {
+  if(!open && state.hubEditorOpen){state.hubEditorOpen=false;renderHubSettings();}
   document.getElementById("settingsPanel").classList.toggle("open",open);
   document.getElementById("settingsPanel").setAttribute("aria-hidden",String(!open));
   document.getElementById("settingsButton").classList.toggle("active",open);
   document.getElementById("settingsButton").setAttribute("aria-expanded",String(open));
+}
+
+function updateMapHelp() {
+  const help=document.querySelector("#mapControl [data-i18n='mapHelp']");
+  if(help)help.textContent=state.globeStyle==="flat"?t("flatMapHelp"):t("mapHelp");
 }
 
 function setView(view) {
@@ -669,10 +684,25 @@ function openStatsDetail(type) {
 function persistHubs(){localStorage.setItem("flightArchiveHubs",JSON.stringify([...state.hubs]));}
 function renderHubSettings(){
   const available=Object.values(airports).sort((a,b)=>a.code.localeCompare(b.code));
-  const select=document.getElementById("hubAirportSelect");
-  select.innerHTML=available.filter(a=>!state.hubs.has(a.code)).map(a=>`<option value="${a.code}">${a.code} · ${airportName(a)}</option>`).join("");
-  document.getElementById("hubChips").innerHTML=[...state.hubs].map(code=>`<button data-remove-hub="${code}" title="${t("removeHub")}">${code}<span>×</span></button>`).join("");
-  document.querySelectorAll("[data-remove-hub]").forEach(el=>el.addEventListener("click",()=>{state.hubs.delete(el.dataset.removeHub);persistHubs();renderHubSettings();drawGlobe();}));
+  const selected=[...state.hubs].sort();
+  document.getElementById("hubChips").innerHTML=selected.length
+    ? selected.map(code=>`<span>${code}</span>`).join("")
+    : `<span class="empty-hubs">${t("noHubs")}</span>`;
+  const options=document.getElementById("hubOptions");
+  options.classList.toggle("open",state.hubEditorOpen);
+  options.setAttribute("aria-hidden",String(!state.hubEditorOpen));
+  options.innerHTML=available.map(airport=>`
+    <label class="hub-option">
+      <input type="checkbox" value="${airport.code}" ${state.hubs.has(airport.code)?"checked":""} />
+      <span><strong>${airport.code} · ${airportCity(airport)}</strong><small>${airportName(airport)}</small></span>
+    </label>`).join("");
+  const editButton=document.getElementById("editHubsButton");
+  editButton.classList.toggle("active",state.hubEditorOpen);
+  document.getElementById("hubEditLabel").textContent=state.hubEditorOpen?t("done"):t("edit");
+  options.querySelectorAll("input").forEach(input=>input.addEventListener("change",()=>{
+    if(input.checked)state.hubs.add(input.value);else state.hubs.delete(input.value);
+    persistHubs();renderHubSettings();drawGlobe();
+  }));
 }
 
 // Globe rendering
@@ -682,9 +712,38 @@ let cw = 0, ch = 0, globeR = 200, centerX = 0, centerY = 0;
 let rotation = { lon: -112, lat: -18 };
 let dragging = false, moved = false, lastPointer = null, autoSpin = true;
 let routeHitAreas = [], airportHitAreas = [];
+let flatView = { zoom:1, panX:0, panY:0 };
 
 const rad = value => value * Math.PI / 180;
+function flatViewport() {
+  const marginX=Math.max(24,cw*.045),marginY=Math.max(54,ch*.075);
+  let width=cw-marginX*2,height=Math.min(ch-marginY*2,width/1.92);
+  width=Math.min(width,height*1.92);
+  return {x:centerX-width/2,y:centerY-height/2,width,height};
+}
+function naturalEarthPoint(lat,lon) {
+  const phi=rad(Math.max(-90,Math.min(90,lat))),lambda=rad(lon),phi2=phi*phi,phi4=phi2*phi2;
+  const x=lambda*(.8707-.131979*phi2+phi4*(-.013791+phi4*(.003971*phi2-.001529*phi4)));
+  const y=phi*(1.007226+phi2*(.015085+phi4*(-.044475+.028874*phi2-.005916*phi4)));
+  return {x:x/(Math.PI*.8707),y:y/1.4224};
+}
+function projectFlat(lat,lon) {
+  const viewport=flatViewport(),point=naturalEarthPoint(lat,lon);
+  return {
+    x:centerX+point.x*viewport.width*.5*flatView.zoom+flatView.panX,
+    y:centerY-point.y*viewport.height*.5*flatView.zoom+flatView.panY,
+    z:1
+  };
+}
+function clampFlatPan() {
+  const viewport=flatViewport();
+  const maxX=Math.max(0,(viewport.width*flatView.zoom-viewport.width)/2);
+  const maxY=Math.max(0,(viewport.height*flatView.zoom-viewport.height)/2);
+  flatView.panX=Math.max(-maxX,Math.min(maxX,flatView.panX));
+  flatView.panY=Math.max(-maxY,Math.min(maxY,flatView.panY));
+}
 function project(lat, lon, altitude = 0) {
+  if(state.globeStyle==="flat")return projectFlat(lat,lon);
   const phi = rad(lat), lambda = rad(lon + rotation.lon), tilt = rad(rotation.lat);
   const x0 = Math.cos(phi) * Math.sin(lambda);
   const y0 = Math.sin(phi);
@@ -746,7 +805,51 @@ async function loadGeography() {
     drawGlobe();
   }
 }
+function unwrapRing(ring) {
+  let previous=null,offset=0;
+  return ring.map(([lon,lat])=>{
+    let unwrapped=lon+offset;
+    if(previous!==null){
+      while(unwrapped-previous>180){offset-=360;unwrapped-=360;}
+      while(unwrapped-previous<-180){offset+=360;unwrapped+=360;}
+    }
+    previous=unwrapped;
+    return [unwrapped,lat];
+  });
+}
+function pointsIntersectViewport(points,viewport,padding=0) {
+  let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+  points.forEach(point=>{
+    minX=Math.min(minX,point.x);maxX=Math.max(maxX,point.x);
+    minY=Math.min(minY,point.y);maxY=Math.max(maxY,point.y);
+  });
+  return maxX>=viewport.x-padding&&minX<=viewport.x+viewport.width+padding&&
+    maxY>=viewport.y-padding&&minY<=viewport.y+viewport.height+padding;
+}
+function drawFlatLand() {
+  const viewport=flatViewport();
+  landFeatures.forEach(feature=>{
+    const visited=visitedCountries.has(feature.name);
+    feature.rings.forEach(ring=>{
+      const continuous=unwrapRing(ring);
+      [-360,0,360].forEach(shift=>{
+        const points=continuous.map(([lon,lat])=>projectFlat(lat,lon+shift));
+        if(!points.length)return;
+        if(!pointsIntersectViewport(points,viewport,8))return;
+        ctx.beginPath();
+        points.forEach((p,index)=>index?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
+        ctx.closePath();
+        ctx.fillStyle=visited?"#e99a32":"#cdd7da";
+        ctx.fill();
+        ctx.strokeStyle=visited?"rgba(178,99,11,.7)":"rgba(72,94,105,.5)";
+        ctx.lineWidth=visited?.8:.5;
+        ctx.stroke();
+      });
+    });
+  });
+}
 function drawLand() {
+  if(state.globeStyle==="flat"){drawFlatLand();return;}
   const orbit=state.globeStyle==="orbit";
   const satelliteLand=ctx.createLinearGradient(centerX,centerY-globeR,centerX,centerY+globeR);
   satelliteLand.addColorStop(0,"#687066");
@@ -842,18 +945,30 @@ function drawSurfaceReflection() {
 function drawRoutes() {
   routeHitAreas=[];
   routes.forEach(route=>{
-    const points=greatCircle(airports[route.from],airports[route.to]).map((p,i,array)=>project(p.lat,p.lon,Math.sin(Math.PI*i/(array.length-1))*.055));
-    visibleSegments(points,-.01).forEach(segment=>{
+    const geoPoints=greatCircle(airports[route.from],airports[route.to]);
+    let segments;
+    if(state.globeStyle==="flat"){
+      const continuous=unwrapRing(geoPoints.map(p=>[p.lon,p.lat]));
+      const viewport=flatViewport();
+      segments=[-360,0,360]
+        .map(shift=>continuous.map(([lon,lat])=>projectFlat(lat,lon+shift)))
+        .filter(points=>pointsIntersectViewport(points,viewport,12));
+    }else{
+      const points=geoPoints.map((p,i,array)=>project(p.lat,p.lon,Math.sin(Math.PI*i/(array.length-1))*.055));
+      segments=visibleSegments(points,-.01);
+    }
+    segments.forEach(segment=>{
       const selected=state.selectedRoute?.id===route.id;
       const connected=Boolean(state.selectedAirport&&(route.from===state.selectedAirport||route.to===state.selectedAirport));
       const highlighted=selected||connected;
       const orbit=state.globeStyle==="orbit";
+      const flat=state.globeStyle==="flat";
       ctx.beginPath(); segment.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
       ctx.strokeStyle=orbit?(highlighted?"#f4fdff":"#d4f4ff"):(highlighted?"#065fd4":"#1877f2");
       ctx.lineWidth=(highlighted?2.25:1)+route.count*.22;
-      ctx.globalAlpha=orbit?(highlighted?1:.5+route.count*.055):(highlighted?1:.22+route.count*.1);
+      ctx.globalAlpha=orbit?(highlighted?1:.5+route.count*.055):(highlighted?1:(flat?.34:.22)+route.count*.1);
       ctx.shadowColor=orbit?"#78d9ff":"#1877f2";
-      ctx.shadowBlur=orbit?(highlighted?18:8+route.count*.7):(highlighted?12:0);
+      ctx.shadowBlur=orbit?(highlighted?18:8+route.count*.7):(highlighted?12:flat?2:0);
       ctx.setLineDash([]);ctx.stroke();
       routeHitAreas.push({route,points:segment});
     });
@@ -867,6 +982,10 @@ function drawAirports() {
   codes.forEach(code=>{
     const airport=airports[code], p=project(airport.lat,airport.lon);
     if(p.z<=0)return;
+    if(state.globeStyle==="flat"){
+      const viewport=flatViewport();
+      if(p.x<viewport.x||p.x>viewport.x+viewport.width||p.y<viewport.y||p.y>viewport.y+viewport.height)return;
+    }
     const selected=state.selectedAirport===code,hub=state.hubs.has(code);
     const radius=selected?5.5:state.mapMode==="airport"?3.8:2.7;
     ctx.beginPath();ctx.arc(p.x,p.y,radius+3,0,Math.PI*2);ctx.fillStyle=hub?"rgba(230,75,46,.19)":selected?"rgba(24,119,242,.22)":"rgba(24,119,242,.08)";ctx.fill();
@@ -877,9 +996,31 @@ function drawAirports() {
     airportHitAreas.push({code,x:p.x,y:p.y});
   });
 }
+function flatViewportPath(viewport) {
+  ctx.beginPath();
+  if(typeof ctx.roundRect==="function")ctx.roundRect(viewport.x,viewport.y,viewport.width,viewport.height,22);
+  else ctx.rect(viewport.x,viewport.y,viewport.width,viewport.height);
+}
+function drawFlatMap() {
+  drawBackground();
+  const viewport=flatViewport();
+  ctx.save();
+  ctx.shadowColor="rgba(0,0,0,.22)";ctx.shadowBlur=34;ctx.shadowOffsetY=13;
+  flatViewportPath(viewport);ctx.fillStyle="#edf3f5";ctx.fill();
+  ctx.restore();
+  ctx.save();
+  flatViewportPath(viewport);ctx.clip();
+  ctx.fillStyle="#edf3f5";ctx.fillRect(viewport.x,viewport.y,viewport.width,viewport.height);
+  drawLand();
+  if(state.mapMode==="route"||state.selectedAirport)drawRoutes();else routeHitAreas=[];
+  drawAirports();
+  ctx.restore();
+  flatViewportPath(viewport);ctx.strokeStyle="rgba(255,255,255,.28)";ctx.lineWidth=1;ctx.stroke();
+}
 function drawGlobe(time=performance.now()) {
   if(!cw||!ch)return;
   ctx.clearRect(0,0,cw,ch);
+  if(state.globeStyle==="flat"){drawFlatMap();return;}
   drawBackground();
   const orbit=state.globeStyle==="orbit";
   ctx.save();
@@ -912,6 +1053,7 @@ function resizeGlobe() {
   const rect=canvas.getBoundingClientRect(), dpr=Math.min(devicePixelRatio||1,2);
   canvas.width=Math.round(rect.width*dpr);canvas.height=Math.round(rect.height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);
   cw=rect.width;ch=rect.height;globeR=Math.min(cw,ch)*.43;centerX=cw*.5;centerY=ch*.5;
+  clampFlatPan();
   stars=Array.from({length:Math.max(90,Math.floor(cw*ch/8500))},()=>({
     u:Math.random(),v:Math.random(),r:.35+Math.random()*1.05,alpha:.3+Math.random()*.65
   }));
@@ -935,10 +1077,14 @@ canvas.addEventListener("pointermove",e=>{
   if(dragging){
     const dx=pos.x-lastPointer.x,dy=pos.y-lastPointer.y;
     if(Math.abs(dx)+Math.abs(dy)>2)moved=true;
-    const baseRadius=Math.min(cw,ch)*.43;
-    const dragScale=Math.max(.22,Math.min(1,baseRadius/globeR));
-    rotation.lon+=dx*.3*dragScale;
-    rotation.lat=Math.max(-72,Math.min(72,rotation.lat+dy*.25*dragScale));
+    if(state.globeStyle==="flat"){
+      flatView.panX+=dx;flatView.panY+=dy;clampFlatPan();
+    }else{
+      const baseRadius=Math.min(cw,ch)*.43;
+      const dragScale=Math.max(.22,Math.min(1,baseRadius/globeR));
+      rotation.lon+=dx*.3*dragScale;
+      rotation.lat=Math.max(-72,Math.min(72,rotation.lat+dy*.25*dragScale));
+    }
     lastPointer=pos;drawGlobe();return;
   }
   const airportHit=hitAirport(pos),routeHit=state.mapMode==="route"?hitRoute(pos):null,tooltip=document.getElementById("hoverTooltip");
@@ -959,14 +1105,23 @@ canvas.addEventListener("pointerup",e=>{
 canvas.addEventListener("pointerleave",()=>document.getElementById("hoverTooltip").style.display="none");
 canvas.addEventListener("wheel",e=>{
   e.preventDefault();
-  const viewportSize=Math.min(cw,ch);
-  globeR=Math.max(viewportSize*.31,Math.min(viewportSize*1.35,globeR-e.deltaY*.22));
+  if(state.globeStyle==="flat"){
+    const pos=pointerPos(e),oldZoom=flatView.zoom;
+    flatView.zoom=Math.max(1,Math.min(5,flatView.zoom-e.deltaY*.0015));
+    const scale=flatView.zoom/oldZoom;
+    flatView.panX=pos.x-centerX-(pos.x-centerX-flatView.panX)*scale;
+    flatView.panY=pos.y-centerY-(pos.y-centerY-flatView.panY)*scale;
+    clampFlatPan();
+  }else{
+    const viewportSize=Math.min(cw,ch);
+    globeR=Math.max(viewportSize*.31,Math.min(viewportSize*1.35,globeR-e.deltaY*.22));
+  }
   drawGlobe();
 },{passive:false});
 let lastFrame=0;
 function animate(time){
   if(state.activeView==="atlas"&&time-lastFrame>40){
-    if(autoSpin)rotation.lon+=.016;
+    if(autoSpin&&state.globeStyle!=="flat")rotation.lon+=.016;
     drawGlobe(time);lastFrame=time;
   }
   requestAnimationFrame(animate);
@@ -986,17 +1141,15 @@ document.getElementById("routeMode").addEventListener("click",()=>{
 document.getElementById("airportMode").addEventListener("click",()=>{
   state.mapMode="airport";document.getElementById("airportMode").classList.add("active");document.getElementById("routeMode").classList.remove("active");closeDrawer();drawGlobe();
 });
-document.getElementById("styleLight").addEventListener("click",()=>{
-  state.globeStyle="light";document.getElementById("styleLight").classList.add("active");document.getElementById("styleOrbit").classList.remove("active");drawGlobe();
-});
-document.getElementById("styleOrbit").addEventListener("click",()=>{
-  state.globeStyle="orbit";document.getElementById("styleOrbit").classList.add("active");document.getElementById("styleLight").classList.remove("active");drawGlobe();
-});
+document.querySelectorAll("[data-map-style]").forEach(button=>button.addEventListener("click",()=>{
+  state.globeStyle=button.dataset.mapStyle;
+  document.querySelectorAll("[data-map-style]").forEach(item=>item.classList.toggle("active",item===button));
+  updateMapHelp();closeDrawer();drawGlobe();
+}));
 document.getElementById("langZh").addEventListener("click",()=>applyLanguage("zh"));
 document.getElementById("langEn").addEventListener("click",()=>applyLanguage("en"));
-document.getElementById("addHubButton").addEventListener("click",()=>{
-  const code=document.getElementById("hubAirportSelect").value;
-  if(code){state.hubs.add(code);persistHubs();renderHubSettings();drawGlobe();}
+document.getElementById("editHubsButton").addEventListener("click",()=>{
+  state.hubEditorOpen=!state.hubEditorOpen;renderHubSettings();
 });
 document.getElementById("drawerClose").addEventListener("click",closeDrawer);
 document.getElementById("recordSearch").addEventListener("input",renderFlights);
