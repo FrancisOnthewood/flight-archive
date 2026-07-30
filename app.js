@@ -1075,7 +1075,21 @@ function flagIconForAirport(airport,className="stats-flag") {
   if(!/^[a-z]{2}$/.test(code))return `<span class="${className} rounded-flag-mark stats-flag-fallback" aria-hidden="true">◎</span>`;
   return `<span class="${className} rounded-flag-mark" aria-hidden="true"><img src="./circle-flags/flags/${code}.svg" alt="" loading="lazy" /></span>`;
 }
-function countryStatsMapMarkup() {
+function visitedCountryFlagsMarkup(sourceFlights) {
+  const countries=new Map();
+  sourceFlights.flatMap(f=>[f.from,f.to]).forEach(code=>{
+    const airport=airports[code],countryCode=String(airport?.countryCode||"").toLowerCase();
+    if(!/^[a-z]{2}$/.test(countryCode)||countries.has(countryCode))return;
+    countries.set(countryCode,airportCountry(airport));
+  });
+  const items=[...countries.entries()].sort((a,b)=>a[1].localeCompare(b[1]));
+  return `<footer class="country-map-flags" aria-label="${escapeHtml(t("visitedLand"))}">
+    ${items.map(([code,name])=>`<span class="country-map-flag" title="${escapeHtml(name)}" aria-label="${escapeHtml(name)}">
+      <img src="./circle-flags/flags/${code}.svg" alt="" loading="lazy" />
+    </span>`).join("")}
+  </footer>`;
+}
+function countryStatsMapMarkup(sourceFlights) {
   return `<section class="country-stats-map">
     <header class="country-stats-map-head">
       <div><span>${t("flightFootprint")}</span><strong>${t("visitedCountryMap")}</strong></div>
@@ -1085,6 +1099,7 @@ function countryStatsMapMarkup() {
       </div>
     </header>
     <canvas id="countryStatsMap" aria-label="${escapeHtml(t("visitedCountryMap"))}"></canvas>
+    ${visitedCountryFlagsMarkup(sourceFlights)}
   </section>`;
 }
 function geoCountryName(airport) {
@@ -1096,16 +1111,6 @@ function countryMapProject(lat,lon,viewport) {
     x:viewport.x+(lon+180)/360*viewport.width,
     y:viewport.y+(90-lat)/180*viewport.height
   };
-}
-function countryMapRoundRect(context,x,y,width,height,radius) {
-  const r=Math.min(radius,width/2,height/2);
-  context.beginPath();
-  context.moveTo(x+r,y);
-  context.arcTo(x+width,y,x+width,y+height,r);
-  context.arcTo(x+width,y+height,x,y+height,r);
-  context.arcTo(x,y+height,x,y,r);
-  context.arcTo(x,y,x+width,y,r);
-  context.closePath();
 }
 function drawCountryStatsMap(sourceFlights=countryStatsMapFlights) {
   const mapCanvas=document.getElementById("countryStatsMap");
@@ -1119,10 +1124,7 @@ function drawCountryStatsMap(sourceFlights=countryStatsMapFlights) {
   mapCanvas.height=Math.round(height*dpr);
   const mapContext=mapCanvas.getContext("2d");
   mapContext.setTransform(dpr,0,0,dpr,0,0);
-  const background=mapContext.createLinearGradient(0,0,0,height);
-  background.addColorStop(0,"#f3f5f3");
-  background.addColorStop(1,"#e5ebed");
-  mapContext.fillStyle=background;
+  mapContext.fillStyle="#e8f0f4";
   mapContext.fillRect(0,0,width,height);
 
   const padding=14,availableWidth=width-padding*2,availableHeight=height-padding*2;
@@ -1147,9 +1149,9 @@ function drawCountryStatsMap(sourceFlights=countryStatsMapFlights) {
         mapContext.beginPath();
         points.forEach((point,index)=>index?mapContext.lineTo(point.x,point.y):mapContext.moveTo(point.x,point.y));
         mapContext.closePath();
-        mapContext.fillStyle=visited?"#c99452":"#cbd3d1";
+        mapContext.fillStyle=visited?"#e99a32":"#cdd7da";
         mapContext.fill();
-        mapContext.strokeStyle=visited?"rgba(112,76,34,.55)":"rgba(55,75,84,.24)";
+        mapContext.strokeStyle=visited?"rgba(178,99,11,.7)":"rgba(72,94,105,.5)";
         mapContext.lineWidth=visited?.75:.45;
         mapContext.stroke();
       });
@@ -1166,58 +1168,10 @@ function drawCountryStatsMap(sourceFlights=countryStatsMapFlights) {
       if(!pointsIntersectViewport(points,viewport,8))return;
       mapContext.beginPath();
       points.forEach((point,index)=>index?mapContext.lineTo(point.x,point.y):mapContext.moveTo(point.x,point.y));
-      mapContext.strokeStyle="rgba(30,77,116,.48)";
+      mapContext.strokeStyle="rgba(24,119,242,.62)";
       mapContext.lineWidth=.8+Math.min(items.length,5)*.16;
       mapContext.stroke();
     });
-  });
-
-  const countryGroups=new Map();
-  sourceFlights.flatMap(f=>[f.from,f.to]).forEach(code=>{
-    const airport=airports[code];
-    if(!airport)return;
-    const key=airport.countryCode||airport.countryEn||airport.country;
-    if(!countryGroups.has(key))countryGroups.set(key,{name:airportCountry(airport),airports:new Map()});
-    countryGroups.get(key).airports.set(code,airport);
-  });
-  const labelRects=[];
-  mapContext.font="600 10px DM Sans, sans-serif";
-  [...countryGroups.values()].forEach((country,index)=>{
-    const countryAirports=[...country.airports.values()];
-    const representative={
-      lat:countryAirports.reduce((sum,airport)=>sum+airport.lat,0)/countryAirports.length,
-      lon:countryAirports.reduce((sum,airport)=>sum+airport.lon,0)/countryAirports.length
-    };
-    const anchor=countryMapProject(representative.lat,representative.lon,viewport);
-    mapContext.fillStyle="#102d4a";
-    mapContext.beginPath();mapContext.arc(anchor.x,anchor.y,2.5,0,Math.PI*2);mapContext.fill();
-    const labelWidth=Math.ceil(mapContext.measureText(country.name).width)+12,labelHeight=20;
-    const candidates=[
-      [anchor.x+7,anchor.y-22],[anchor.x+7,anchor.y+5],
-      [anchor.x-labelWidth-7,anchor.y-22],[anchor.x-labelWidth-7,anchor.y+5],
-      [anchor.x-labelWidth/2,anchor.y+(index%2?9:-29)]
-    ];
-    const rect=candidates.map(([x,y])=>({
-      x:Math.max(4,Math.min(width-labelWidth-4,x)),
-      y:Math.max(4,Math.min(height-labelHeight-4,y)),
-      width:labelWidth,height:labelHeight
-    })).find(candidate=>!labelRects.some(other=>
-      candidate.x<other.x+other.width+3&&candidate.x+candidate.width+3>other.x&&
-      candidate.y<other.y+other.height+3&&candidate.y+candidate.height+3>other.y
-    ))||{
-      x:Math.max(4,Math.min(width-labelWidth-4,anchor.x+7)),
-      y:Math.max(4,Math.min(height-labelHeight-4,anchor.y-22)),
-      width:labelWidth,height:labelHeight
-    };
-    labelRects.push(rect);
-    mapContext.strokeStyle="rgba(16,45,74,.32)";
-    mapContext.lineWidth=.65;
-    mapContext.beginPath();mapContext.moveTo(anchor.x,anchor.y);mapContext.lineTo(rect.x+rect.width/2,rect.y+rect.height/2);mapContext.stroke();
-    countryMapRoundRect(mapContext,rect.x,rect.y,rect.width,rect.height,6);
-    mapContext.fillStyle="rgba(250,251,250,.94)";mapContext.fill();
-    mapContext.strokeStyle="rgba(16,45,74,.16)";mapContext.stroke();
-    mapContext.fillStyle="#20384f";
-    mapContext.fillText(country.name,rect.x+6,rect.y+13.5);
   });
 }
 function airportForCountryLabel(label) {
@@ -1278,7 +1232,7 @@ function openStatsDetail(type) {
     })));
   }else if(type==="countries"){
     summary=`${s.countries.size} ${t("countryUnit")}`;
-    content=`${countryStatsMapMarkup()}${statsBarMarkup([...s.countries.entries()].map(([name,count])=>({
+    content=`${countryStatsMapMarkup(scopedFlights)}${statsBarMarkup([...s.countries.entries()].map(([name,count])=>({
       label:name,count,unit:t("visits"),icon:flagIconForAirport(airportForCountryLabel(name))
     })))}`;
   }else if(type==="routes"){

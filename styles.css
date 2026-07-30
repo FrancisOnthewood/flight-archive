@@ -881,10 +881,33 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
 .country-map-legend { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px 15px; }
 .country-map-legend span { display: inline-flex; align-items: center; gap: 6px; color: #596977; font-size: 9px; white-space: nowrap; }
 .country-map-legend i { width: 14px; height: 8px; display: inline-block; border-radius: 3px; }
-.country-map-legend .visited { border: 1px solid rgba(112,76,34,.4); background: #c99452; }
-.country-map-legend .route { position: relative; height: 1px; border-radius: 0; background: #315f84; }
-.country-map-legend .route::after { content: ""; position: absolute; right: -1px; top: -2px; width: 5px; height: 5px; border-radius: 50%; background: #173653; }
+.country-map-legend .visited { border: 1px solid rgba(178,99,11,.55); background: #e99a32; }
+.country-map-legend .route { position: relative; height: 1px; border-radius: 0; background: #1877f2; }
+.country-map-legend .route::after { content: ""; position: absolute; right: -1px; top: -2px; width: 5px; height: 5px; border-radius: 50%; background: #1877f2; }
 #countryStatsMap { width: 100%; height: 380px; display: block; }
+.country-map-flags {
+  min-height: 56px;
+  padding: 13px 18px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  overflow-x: auto;
+  border-top: 1px solid rgba(58,79,91,.14);
+  background: rgba(250,251,250,.96);
+  scrollbar-width: thin;
+}
+.country-map-flag {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  display: block;
+  overflow: hidden;
+  border: 1px solid #d6dee6;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 3px 8px rgba(35,51,72,.09);
+}
+.country-map-flag img { width: 100%; height: 100%; display: block; object-fit: cover; }
 .detail-sort-label { margin: 18px 0 8px; color: var(--soft); font-size: 10px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; }
 .stats-flight-row {
   width: 100%;
@@ -972,6 +995,9 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
 .stats-flag-fallback { color: var(--blue); font-size: 15px; }
 .stats-bar-logo { width: 38px; height: 31px; display: grid; place-items: center; color: var(--blue); font-size: 9px; font-weight: 700; }
 .stats-bar-logo img { width: 100%; height: 100%; object-fit: contain; }
+.stat-highlight-logo img[src$="CPA.png"],
+.stats-preference-logo img[src$="CPA.png"],
+.stats-bar-logo img[src$="CPA.png"] { width: 72%; height: 72%; }
 .stats-bar-main { min-width: 0; }
 .stats-bar-head { margin-bottom: 9px; display: flex; justify-content: space-between; gap: 14px; align-items: flex-end; }
 .stats-bar-head span { min-width: 0; }
