@@ -138,7 +138,7 @@ const translations = {
     earthCircumference:"Earth circumferences", moonDistance:"Earth–Moon distances", sunDistance:"Earth–Sun distances",
     days:"Days", weeks:"Weeks", months:"Months", years:"Years", longestFlight:"Longest flight",
     timeEquivalent:"Equivalent duration", distanceEquivalent:"Equivalent distance",
-    exactVariants:"Exact variants", visits:"visits", bundle:"Ticket bundle", perFlight:"per flight",
+    visits:"visits", bundle:"Ticket bundle", perFlight:"per flight",
     flightEntry:"FLIGHT ENTRY", addFlightRecord:"Add flight record", editFlightRecord:"Edit flight record",
     entryHelp:"Enter the core fields first; other details can be added later.", autoLookup:"Automatic flight lookup",
     autoLookupHelp:"Use the date and flight number to complete times, terminals, and aircraft.", flightDate:"Flight date",
@@ -198,7 +198,7 @@ const translations = {
     earthCircumference:"圈地球周长", moonDistance:"倍地月距离", sunDistance:"倍地日距离",
     days:"天", weeks:"周", months:"月", years:"年", longestFlight:"最长航班",
     timeEquivalent:"时间换算", distanceEquivalent:"距离换算",
-    exactVariants:"具体子型号", visits:"次", bundle:"联票", perFlight:"每航段",
+    visits:"次", bundle:"联票", perFlight:"每航段",
     flightEntry:"飞行记录", addFlightRecord:"添加飞行记录", editFlightRecord:"编辑飞行记录",
     entryHelp:"先填写核心字段，其他资料可以稍后补充。", autoLookup:"自动查询航班资料",
     autoLookupHelp:"根据日期和航班号补全计划时间、航站楼和机型。", flightDate:"航班日期",
@@ -272,10 +272,12 @@ function applyLanguage(lang) {
   document.getElementById("langEn").classList.toggle("active", lang === "en");
   document.getElementById("cabinSelect").innerHTML = ["economy","premiumEconomy","business","first"].map(key => `<option>${t(key)}</option>`).join("");
   const years=[...new Set(flights.map(f=>f.date.slice(0,4)))].sort((a,b)=>b.localeCompare(a));
-  const yearFilter=document.getElementById("yearFilter");
-  yearFilter.innerHTML=`<option value="all">${t("allYears")}</option>${years.map(year=>`<option value="${year}">${year}</option>`).join("")}`;
-  yearFilter.value=state.yearFilter;
-  document.getElementById("recordTotal").textContent = flights.length;
+  ["yearFilter","statsYearFilter"].forEach(id=>{
+    const yearFilter=document.getElementById(id);
+    yearFilter.innerHTML=`<option value="all">${t("allYears")}</option>${years.map(year=>`<option value="${year}">${year}</option>`).join("")}`;
+    yearFilter.value=state.yearFilter;
+  });
+  syncFilterControls();
   renderFlights();
   renderStats();
   renderHubSettings();
@@ -443,14 +445,38 @@ function flightRowMarkup(f) {
     </article>`;
 }
 
-function renderFlights() {
-  const query = (document.getElementById("recordSearch")?.value || "").trim().toLowerCase();
-  const list = flights.filter(f => {
+function filteredFlights() {
+  return flights.filter(f=>{
     const yearOk=state.yearFilter==="all"||f.date.startsWith(state.yearFilter);
     const scopeOk=state.scopeFilter==="all"||f.scope===state.scopeFilter;
-    const text = `${f.flightNo} ${f.airline} ${f.from} ${f.to} ${airportName(airports[f.from])} ${airportName(airports[f.to])}`.toLowerCase();
-    return yearOk&&scopeOk&&text.includes(query);
+    return yearOk&&scopeOk;
   });
+}
+
+function syncFilterControls() {
+  ["yearFilter","statsYearFilter"].forEach(id=>{
+    const select=document.getElementById(id);
+    if(select)select.value=state.yearFilter;
+  });
+  document.querySelectorAll("[data-scope]").forEach(button=>button.classList.toggle("active",button.dataset.scope===state.scopeFilter));
+  document.querySelectorAll("[data-stats-scope]").forEach(button=>button.classList.toggle("active",button.dataset.statsScope===state.scopeFilter));
+}
+
+function applyFlightFilters(year=state.yearFilter,scope=state.scopeFilter) {
+  state.yearFilter=year;
+  state.scopeFilter=scope;
+  syncFilterControls();
+  renderFlights();
+  renderStats();
+}
+
+function renderFlights() {
+  const query = (document.getElementById("recordSearch")?.value || "").trim().toLowerCase();
+  const list = filteredFlights().filter(f => {
+    const text = `${f.flightNo} ${f.airline} ${f.from} ${f.to} ${airportName(airports[f.from])} ${airportName(airports[f.to])}`.toLowerCase();
+    return text.includes(query);
+  });
+  document.getElementById("recordTotal").textContent=list.length;
   document.getElementById("flightList").innerHTML = list.length ? list.map(flightRowMarkup).join("") : `<div class="empty-state">${t("noRecords")}</div>`;
   document.querySelectorAll("[data-flight-id]").forEach(el => el.addEventListener("click", () => openFlight(Number(el.dataset.flightId))));
 }
@@ -705,15 +731,15 @@ function flightDetailRow(f,value) {
 function statIcon(type) {
   return ({time:"◷",distance:"↗",aircraft:"✈",airlines:"◉",countries:"◎",routes:"⇄",cities:"⌖",fare:"¥"})[type];
 }
-function statsSnapshot() {
-  const totalDistance=flights.reduce((sum,f)=>sum+(Number(f.distance)||0),0);
-  const totalMinutes=flights.reduce((sum,f)=>sum+(Number(f.durationMinutes)||0),0);
-  const knownFares=flights.filter(f=>Number.isFinite(f.fare));
+function statsSnapshot(sourceFlights=filteredFlights()) {
+  const totalDistance=sourceFlights.reduce((sum,f)=>sum+(Number(f.distance)||0),0);
+  const totalMinutes=sourceFlights.reduce((sum,f)=>sum+(Number(f.durationMinutes)||0),0);
+  const knownFares=sourceFlights.filter(f=>Number.isFinite(f.fare));
   const totalFare=knownFares.reduce((sum,f)=>sum+f.fare,0);
-  const aircraft=aggregateBy(flights,f=>classifyAircraft(f.aircraft));
-  const airlines=aggregateBy(flights,f=>f.airlineShort);
-  const countries=new Map(),cities=new Map(),directedRoutes=aggregateBy(flights,f=>`${f.from}>${f.to}`);
-  flights.forEach(f=>[f.from,f.to].forEach(code=>{
+  const aircraft=aggregateBy(sourceFlights,f=>classifyAircraft(f.aircraft));
+  const airlines=aggregateBy(sourceFlights,f=>f.airlineShort);
+  const countries=new Map(),cities=new Map(),directedRoutes=aggregateBy(sourceFlights,f=>`${f.from}>${f.to}`);
+  sourceFlights.forEach(f=>[f.from,f.to].forEach(code=>{
     const airport=airports[code],country=airportCountry(airport),city=airportCity(airport);
     countries.set(country,(countries.get(country)||0)+1);
     cities.set(city,(cities.get(city)||0)+1);
@@ -721,9 +747,9 @@ function statsSnapshot() {
   return {totalDistance,totalMinutes,knownFares,totalFare,aircraft,airlines,countries,cities,directedRoutes};
 }
 function renderStats() {
-  const s=statsSnapshot();
+  const scopedFlights=filteredFlights(),s=statsSnapshot(scopedFlights);
   const entries=[
-    ["time",t("totalTime"),durationText(s.totalMinutes),`${flights.length} ${t("flightUnit")}`],
+    ["time",t("totalTime"),durationText(s.totalMinutes),`${scopedFlights.length} ${t("flightUnit")}`],
     ["distance",t("totalDistance"),`${s.totalDistance.toLocaleString()} km`,`${(s.totalDistance/40075).toFixed(2)} ${t("earthCircumference")}`],
     ["aircraft",t("aircraftTypes"),s.aircraft.size.toLocaleString(),t("typeUnit")],
     ["airlines",t("airlinesFlown"),s.airlines.size.toLocaleString(),t("airlineUnit")],
@@ -780,13 +806,16 @@ function statsBarMarkup(rows) {
     </div>`).join("");
 }
 function openStatsDetail(type) {
-  const s=statsSnapshot();
+  const scopedFlights=filteredFlights(),s=statsSnapshot(scopedFlights);
   const title={time:t("totalTime"),distance:t("totalDistance"),aircraft:t("aircraftTypes"),airlines:t("airlinesFlown"),countries:t("countriesRegions"),routes:t("directedRoutes"),cities:t("citiesVisited"),fare:t("totalFare")}[type];
   const description={time:t("flightTimeDetail"),distance:t("distanceDetail"),aircraft:t("aircraftDetail"),airlines:t("airlinesDetail"),countries:t("countriesDetail"),routes:t("routesDetail"),cities:t("citiesDetail"),fare:t("fareDetail")}[type];
   let summary="",content="";
-  if(type==="time"){
+  if(!scopedFlights.length){
+    summary="0";
+    content=`<div class="empty-state">${t("noRecords")}</div>`;
+  }else if(type==="time"){
     summary=durationText(s.totalMinutes);
-    const sorted=[...flights].sort((a,b)=>b.durationMinutes-a.durationMinutes);
+    const sorted=[...scopedFlights].sort((a,b)=>b.durationMinutes-a.durationMinutes);
     content=`${featuredFlightMarkup(sorted[0],durationText(sorted[0].durationMinutes))}
       ${equivalenceMarkup(t("timeEquivalent"),[
         {symbol:"24",value:s.totalMinutes/1440,label:t("days")},
@@ -797,7 +826,7 @@ function openStatsDetail(type) {
       <div class="detail-sort-label">${t("longestFirst")}</div>${sorted.map(f=>flightDetailRow(f,durationText(f.durationMinutes))).join("")}`;
   }else if(type==="distance"){
     summary=`${s.totalDistance.toLocaleString()} km`;
-    const sorted=[...flights].sort((a,b)=>b.distance-a.distance);
+    const sorted=[...scopedFlights].sort((a,b)=>b.distance-a.distance);
     content=`${featuredFlightMarkup(sorted[0],`${sorted[0].distance.toLocaleString()} km`)}
       ${equivalenceMarkup(t("distanceEquivalent"),[
         {symbol:"◎",value:s.totalDistance/40075,label:t("earthCircumference")},
@@ -808,9 +837,8 @@ function openStatsDetail(type) {
   }else if(type==="aircraft"){
     summary=`${s.aircraft.size} ${t("typeUnit")}`;
     content=statsBarMarkup([...s.aircraft.entries()].map(([family,items])=>{
-      const exact=aggregateBy(items,f=>f.aircraft||"—");
       const visualFlight=items.find(aircraftVisualForFlight);
-      return {label:family,count:items.length,note:`${t("exactVariants")}: ${[...exact.entries()].map(([name,list])=>`${name} × ${list.length}`).join(" · ")}`,image:visualFlight?aircraftImageMarkup(visualFlight,"stats-aircraft-image"):genericAircraftMarkup(family)};
+      return {label:family,count:items.length,image:visualFlight?aircraftImageMarkup(visualFlight,"stats-aircraft-image"):genericAircraftMarkup(family)};
     }));
   }else if(type==="airlines"){
     summary=`${s.airlines.size} ${t("airlineUnit")}`;
@@ -890,14 +918,14 @@ let cw = 0, ch = 0, globeR = 200, centerX = 0, centerY = 0;
 let rotation = { lon: -112, lat: -18 };
 let dragging = false, moved = false, lastPointer = null, autoSpin = true;
 let routeHitAreas = [], airportHitAreas = [];
-let flatView = { zoom:1, panX:0, panY:0 };
+let flatView = { zoom:1.08, panX:0, panY:0 };
 
 const rad = value => value * Math.PI / 180;
 function flatViewport() {
-  const marginX=Math.max(24,cw*.045),marginY=Math.max(54,ch*.075);
-  let width=cw-marginX*2,height=Math.min(ch-marginY*2,width/1.92);
-  width=Math.min(width,height*1.92);
-  return {x:centerX-width/2,y:centerY-height/2,width,height};
+  const mapAspect=1.92;
+  let mapWidth=cw,mapHeight=mapWidth/mapAspect;
+  if(mapHeight<ch){mapHeight=ch;mapWidth=mapHeight*mapAspect;}
+  return {x:0,y:0,width:cw,height:ch,mapWidth,mapHeight};
 }
 function naturalEarthPoint(lat,lon) {
   const phi=rad(Math.max(-90,Math.min(90,lat))),lambda=rad(lon),phi2=phi*phi,phi4=phi2*phi2;
@@ -908,15 +936,15 @@ function naturalEarthPoint(lat,lon) {
 function projectFlat(lat,lon) {
   const viewport=flatViewport(),point=naturalEarthPoint(lat,lon);
   return {
-    x:centerX+point.x*viewport.width*.5*flatView.zoom+flatView.panX,
-    y:centerY-point.y*viewport.height*.5*flatView.zoom+flatView.panY,
+    x:centerX+point.x*viewport.mapWidth*.5*flatView.zoom+flatView.panX,
+    y:centerY-point.y*viewport.mapHeight*.5*flatView.zoom+flatView.panY,
     z:1
   };
 }
 function clampFlatPan() {
   const viewport=flatViewport();
-  const maxX=Math.max(0,(viewport.width*flatView.zoom-viewport.width)/2);
-  const maxY=Math.max(0,(viewport.height*flatView.zoom-viewport.height)/2);
+  const maxX=Math.max(0,(viewport.mapWidth*flatView.zoom-cw)/2);
+  const maxY=Math.max(0,(viewport.mapHeight*flatView.zoom-ch)/2);
   flatView.panX=Math.max(-maxX,Math.min(maxX,flatView.panX));
   flatView.panY=Math.max(-maxY,Math.min(maxY,flatView.panY));
 }
@@ -1174,26 +1202,12 @@ function drawAirports() {
     airportHitAreas.push({code,x:p.x,y:p.y});
   });
 }
-function flatViewportPath(viewport) {
-  ctx.beginPath();
-  if(typeof ctx.roundRect==="function")ctx.roundRect(viewport.x,viewport.y,viewport.width,viewport.height,22);
-  else ctx.rect(viewport.x,viewport.y,viewport.width,viewport.height);
-}
 function drawFlatMap() {
-  drawBackground();
-  const viewport=flatViewport();
-  ctx.save();
-  ctx.shadowColor="rgba(0,0,0,.22)";ctx.shadowBlur=34;ctx.shadowOffsetY=13;
-  flatViewportPath(viewport);ctx.fillStyle="#edf3f5";ctx.fill();
-  ctx.restore();
-  ctx.save();
-  flatViewportPath(viewport);ctx.clip();
-  ctx.fillStyle="#edf3f5";ctx.fillRect(viewport.x,viewport.y,viewport.width,viewport.height);
+  ctx.fillStyle="#e8f0f4";
+  ctx.fillRect(0,0,cw,ch);
   drawLand();
   if(state.mapMode==="route"||state.selectedAirport)drawRoutes();else routeHitAreas=[];
   drawAirports();
-  ctx.restore();
-  flatViewportPath(viewport);ctx.strokeStyle="rgba(255,255,255,.28)";ctx.lineWidth=1;ctx.stroke();
 }
 function drawGlobe(time=performance.now()) {
   if(!cw||!ch)return;
@@ -1333,10 +1347,13 @@ document.getElementById("editHubsButton").addEventListener("click",()=>{
 });
 document.getElementById("drawerClose").addEventListener("click",closeDrawer);
 document.getElementById("recordSearch").addEventListener("input",renderFlights);
-document.getElementById("yearFilter").addEventListener("change",e=>{state.yearFilter=e.target.value;renderFlights();});
+document.getElementById("yearFilter").addEventListener("change",e=>applyFlightFilters(e.target.value));
+document.getElementById("statsYearFilter").addEventListener("change",e=>applyFlightFilters(e.target.value));
 document.querySelectorAll("[data-scope]").forEach(el=>el.addEventListener("click",()=>{
-  document.querySelectorAll("[data-scope]").forEach(c=>c.classList.remove("active"));
-  el.classList.add("active");state.scopeFilter=el.dataset.scope;renderFlights();
+  applyFlightFilters(state.yearFilter,el.dataset.scope);
+}));
+document.querySelectorAll("[data-stats-scope]").forEach(el=>el.addEventListener("click",()=>{
+  applyFlightFilters(state.yearFilter,el.dataset.statsScope);
 }));
 document.querySelectorAll("[data-open-add]").forEach(el=>el.addEventListener("click",prepareAddForm));
 document.getElementById("importButton").addEventListener("click",()=>openModal("importModal"));

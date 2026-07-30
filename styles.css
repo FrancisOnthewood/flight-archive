@@ -471,6 +471,7 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
 .page-add { min-width: 110px; }
 .record-actions { display: flex; align-items: center; gap: 8px; }
 .filter-bar { max-width: 1240px; margin: 0 auto 16px; display: flex; align-items: center; gap: 8px; overflow-x: auto; padding-bottom: 2px; }
+.stats-filter-bar { margin-bottom: 22px; }
 .search-field {
   width: 310px;
   min-width: 230px;
