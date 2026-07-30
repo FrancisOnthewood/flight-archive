@@ -89,7 +89,7 @@ const translations = {
     route:"Route", airport:"Airport", flightsRecorded:"Flights", oneWayDistance:"One-way distance",
     relatedFlights:"Related flights", recordedSegments:"Flights", coordinates:"Coordinates", connections:"Connected routes",
     recentRecords:"Recent flights", times:"flights", noConnections:"No connected route in the current records.",
-    noRecords:"No flight records match the current filters.", aircraft:"Aircraft", registration:"Registration",
+    noRecords:"No flight records match the current filters.", aircraft:"Aircraft", aircraftIllustration:"Singapore Airlines Airbus A350-900 side illustration", registration:"Registration",
     cabin:"Cabin", seat:"Seat", gate:"Gate", notes:"Notes", noNotes:"No notes", close:"Close", editRecord:"Edit record",
     totalTime:"Total flight time", totalDistance:"Total distance", aircraftTypes:"Aircraft types",
     countriesRegions:"Countries / regions", directedRoutes:"Routes flown", citiesVisited:"Cities visited", totalFare:"Total fare",
@@ -131,7 +131,7 @@ const translations = {
     route:"航线", airport:"机场", flightsRecorded:"飞行次数", oneWayDistance:"单程距离",
     relatedFlights:"相关飞行", recordedSegments:"飞行次数", coordinates:"地理坐标", connections:"连接航线",
     recentRecords:"最近飞行", times:"次", noConnections:"当前记录中没有连接航线。",
-    noRecords:"没有符合当前条件的飞行记录。", aircraft:"机型", registration:"注册号",
+    noRecords:"没有符合当前条件的飞行记录。", aircraft:"机型", aircraftIllustration:"新加坡航空 Airbus A350-900 侧面示意图", registration:"注册号",
     cabin:"舱位", seat:"座位", gate:"登机口", notes:"备注", noNotes:"无备注", close:"关闭", editRecord:"编辑记录",
     totalTime:"总飞行时间", totalDistance:"总飞行里程", aircraftTypes:"坐过的机型",
     countriesRegions:"去过的国家 / 地区", directedRoutes:"飞过的航线", citiesVisited:"去过的城市", totalFare:"总票价",
@@ -275,6 +275,14 @@ function openFlight(id) {
   set("detailFromCode", f.from); set("detailFromCity", `${compactAirportName(from)} · ${f.terminalFrom}`); set("detailDeparture", f.depart);
   set("detailToCode", f.to); set("detailToCity", `${compactAirportName(to)} · ${f.terminalTo}`); set("detailArrival", f.arrive);
   set("detailDuration", f.duration); set("detailDistance", `${f.distance.toLocaleString()} km`); set("detailNote", f.note || t("noNotes"));
+  const showAircraftVisual=f.flightNo==="SQ882"&&f.from==="SIN"&&f.to==="HKG";
+  const aircraftVisual=document.getElementById("detailAircraftVisual");
+  aircraftVisual.hidden=!showAircraftVisual;
+  if(showAircraftVisual){
+    const aircraftImage=document.getElementById("detailAircraftImage");
+    aircraftImage.src="./airplanes/singapore%20airlines%20a350.png";
+    aircraftImage.alt=t("aircraftIllustration");
+  }
   document.getElementById("detailInfoGrid").innerHTML = [
     [t("aircraft"), f.aircraft], [t("registration"), f.registration || "—"], [t("seat"), f.seat],
     [t("cabin"), displayCabin(f.cabin)], [t("fare"), formatFare(f.fare)], [t("gate"), f.gate || "—"]

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f4f6f8" />
     <title>Flight Archive</title>
-    <link rel="stylesheet" href="./styles.css?v=20260730-v8" />
+    <link rel="stylesheet" href="./styles.css?v=20260730-v9" />
   </head>
   <body>
     <div class="app-shell" id="appShell">
@@ -203,6 +203,9 @@
           <div class="detail-flight-line"><span id="detailDuration"></span><i></i><small id="detailDistance"></small></div>
           <div class="align-right"><strong id="detailToCode"></strong><span id="detailToCity"></span><small id="detailArrival"></small></div>
         </div>
+        <figure class="detail-aircraft-visual" id="detailAircraftVisual" hidden>
+          <img id="detailAircraftImage" alt="" />
+        </figure>
         <div class="detail-info-grid" id="detailInfoGrid"></div>
         <div class="detail-note"><span data-i18n="notes">Notes</span><p id="detailNote"></p></div>
         <div class="modal-actions"><button class="subtle-button" data-close-modal data-i18n="close">Close</button><button class="primary-button" id="editFlightButton" data-i18n="editRecord">Edit record</button></div>
@@ -273,6 +276,6 @@
 
     <div class="toast" id="toast"><span>✓</span><div><strong data-i18n="actionComplete">Completed</strong><small data-i18n="recordUpdated">Record updated</small></div></div>
     <script src="./flight-data.js?v=20260730-v2"></script>
-    <script src="./app.js?v=20260730-v8"></script>
+    <script src="./app.js?v=20260730-v9"></script>
   </body>
 </html>

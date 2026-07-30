@@ -576,6 +576,9 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
 .detail-flight-line small { align-self: center; margin-top: 5px; color: var(--soft); }
 .detail-flight-line i { position: relative; height: 1px; margin: 8px 0 3px; background: #b6d2f7; }
 .detail-flight-line i::after { content: ""; position: absolute; right: 0; top: -2px; border-left: 5px solid var(--blue); border-top: 2.5px solid transparent; border-bottom: 2.5px solid transparent; }
+.detail-aircraft-visual { margin: -3px 0 18px; padding: 5px 0; overflow: hidden; }
+.detail-aircraft-visual[hidden] { display: none; }
+.detail-aircraft-visual img { width: 100%; height: auto; display: block; object-fit: contain; }
 .detail-info-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 7px; }
 .detail-info-grid div { min-height: 61px; padding: 11px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper-soft); }
 .detail-info-grid span, .detail-note > span { color: var(--soft); font-size: 8px; }
