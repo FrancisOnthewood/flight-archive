@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f4f6f8" />
     <title>Flight Archive</title>
-    <link rel="stylesheet" href="./styles.css?v=20260730-v19" />
+    <link rel="stylesheet" href="./styles.css?v=20260730-v20" />
   </head>
   <body>
     <div class="app-shell" id="appShell">
@@ -123,10 +123,10 @@
         <section class="view atlas-view active" id="atlasView">
           <canvas id="globeCanvas" aria-label="Interactive flight-route globe"></canvas>
           <div class="globe-style-switch" data-i18n-aria="mapStyle">
-            <button class="active" id="styleLight" data-map-style="light" data-i18n-title="lightGlobe">
+            <button id="styleLight" data-map-style="light" data-i18n-title="lightGlobe">
               <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.5"/><path d="M4.8 10.5h14.4M7.3 6.8c2.8 2.1 6.6 2.1 9.4 0M7.3 17.2c2.8-2.1 6.6-2.1 9.4 0"/></svg>
             </button>
-            <button id="styleOrbit" data-map-style="orbit" data-i18n-title="spaceGlobe">
+            <button class="active" id="styleOrbit" data-map-style="orbit" data-i18n-title="spaceGlobe">
               <svg viewBox="0 0 24 24"><path d="M16.8 16.5A7.5 7.5 0 0 1 8.1 5.1a7.5 7.5 0 1 0 8.7 11.4Z"/><path d="m17.5 4 .45 1.05L19 5.5l-1.05.45L17.5 7l-.45-1.05L16 5.5l1.05-.45L17.5 4Z"/></svg>
             </button>
             <button id="styleFlat" data-map-style="flat" data-i18n-title="flatMap">
@@ -304,6 +304,6 @@
     <div class="toast" id="toast"><span>✓</span><div><strong data-i18n="actionComplete">Completed</strong><small data-i18n="recordUpdated">Record updated</small></div></div>
     <script src="./flight-data.js?v=20260730-v2"></script>
     <script src="./incoming-data.js?v=20260730-v1"></script>
-    <script src="./app.js?v=20260730-v20"></script>
+    <script src="./app.js?v=20260730-v21"></script>
   </body>
 </html>
