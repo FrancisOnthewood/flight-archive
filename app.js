@@ -28,17 +28,17 @@ const airlineIcons = {
   BI: "icons/royal brunei.png",
   NS: "icons/hebei airlines.png",
   EK: "icons/Emirates.png",
-  VY: "icons/Vueling.webp",
+  VY: "icons/Vueling-white.png",
   ZH: "icons/Shenzhen airlines.png",
   HU: "icons/Hainan-Airlines.png"
 };
 
 const aircraftVisuals = {
   "9VSHM": { src: "./airplanes/singapore%20359.png", altKey: "aircraftIllustrationSingapore" },
-  "9VSKV": { src: "./airplanes/singapore%20388%209vskv.png", altKey: "aircraftIllustrationSingaporeA380" },
+  "9VSKV": { src: "./airplanes/singapore%20388%209vskv.png?v=20260730-white", altKey: "aircraftIllustrationSingaporeA380" },
   "B309W": { src: "./airplanes/china%20southern%20359%20b309w.png", altKey: "aircraftIllustrationChinaSouthern" },
-  "B20DM": { src: "./airplanes/china%20southern%2077w%20b20dm.png", altKey: "aircraftIllustrationChinaSouthern777" },
-  "B32CE": { src: "./airplanes/air%20china%20359%20b32ce.png", altKey: "aircraftIllustrationAirChina" },
+  "B20DM": { src: "./airplanes/china%20southern%2077w%20b20dm.png?v=20260730-white", altKey: "aircraftIllustrationChinaSouthern777" },
+  "B32CE": { src: "./airplanes/air%20china%20359%20b32ce.png?v=20260730-white", altKey: "aircraftIllustrationAirChina" },
   "A6EDV": { src: "./airplanes/emirates%20388%20a6edv.png", altKey: "aircraftIllustrationEmiratesA380" },
   "A6EGR": { src: "./airplanes/emirates%2077w%20a6egr.png", altKey: "aircraftIllustrationEmirates777" }
 };
