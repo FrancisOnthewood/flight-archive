@@ -908,7 +908,7 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
   flex: 0 0 24px;
   display: block;
   overflow: hidden;
-  border: 1px solid rgba(15,22,31,.88);
+  border: .5px solid rgba(0,0,0,.5);
   border-radius: 50%;
   background: white;
   box-shadow: 0 2px 6px rgba(35,51,72,.12);
