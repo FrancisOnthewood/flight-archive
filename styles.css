@@ -1000,9 +1000,6 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
 .stats-flag-fallback { color: var(--blue); font-size: 15px; }
 .stats-bar-logo { width: 38px; height: 31px; display: grid; place-items: center; color: var(--blue); font-size: 9px; font-weight: 700; }
 .stats-bar-logo img { width: 100%; height: 100%; object-fit: contain; }
-.stat-highlight-logo img[src$="CPA.png"],
-.stats-preference-logo img[src$="CPA.png"],
-.stats-bar-logo img[src$="CPA.png"] { width: 72%; height: 72%; }
 .stats-bar-main { min-width: 0; }
 .stats-bar-head { margin-bottom: 9px; display: flex; justify-content: space-between; gap: 14px; align-items: flex-end; }
 .stats-bar-head span { min-width: 0; }
