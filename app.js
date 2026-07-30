@@ -1184,7 +1184,7 @@ function drawCountryStatsMap(sourceFlights=countryStatsMapFlights) {
     if(!cityGroups.has(key))cityGroups.set(key,new Map());
     cityGroups.get(key).set(code,airport);
   });
-  mapContext.lineWidth=.7;
+  mapContext.lineWidth=.35;
   cityGroups.forEach(group=>{
     const cityAirports=[...group.values()];
     const city={
