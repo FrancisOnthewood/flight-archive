@@ -603,7 +603,7 @@ function drawLand() {
         ctx.beginPath();
         segment.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
         ctx.closePath();ctx.fillStyle=baseColor;ctx.fill();
-        if(visited){ctx.fillStyle="rgba(255,76,0,.68)";ctx.fill();}
+        if(visited){ctx.fillStyle="rgba(244,98,32,.64)";ctx.fill();}
         ctx.stroke();
       });
     });
@@ -705,11 +705,10 @@ function drawAirports() {
     const airport=airports[code], p=project(airport.lat,airport.lon);
     if(p.z<=0)return;
     const selected=state.selectedAirport===code,hub=state.hubs.has(code);
-    const radius=selected?5.5:hub?4.7:state.mapMode==="airport"?3.8:2.7;
-    ctx.beginPath();ctx.arc(p.x,p.y,radius+(hub?4:3),0,Math.PI*2);ctx.fillStyle=hub?"rgba(112,20,48,.24)":selected?"rgba(24,119,242,.22)":"rgba(24,119,242,.08)";ctx.fill();
-    if(hub){ctx.beginPath();ctx.arc(p.x,p.y,radius+2.2,0,Math.PI*2);ctx.strokeStyle="#701430";ctx.lineWidth=1.2;ctx.stroke();}
+    const radius=selected?5.5:state.mapMode==="airport"?3.8:2.7;
+    ctx.beginPath();ctx.arc(p.x,p.y,radius+3,0,Math.PI*2);ctx.fillStyle=hub?"rgba(112,20,48,.18)":selected?"rgba(24,119,242,.22)":"rgba(24,119,242,.08)";ctx.fill();
     ctx.beginPath();ctx.arc(p.x,p.y,radius,0,Math.PI*2);ctx.fillStyle=hub?"#701430":selected?"#0b5fc9":"#1877f2";ctx.fill();
-    if(selected||hub||state.mapMode==="airport"){
+    if(selected||state.mapMode==="airport"){
       ctx.font="600 9px DM Sans";ctx.fillStyle=state.globeStyle==="orbit"?"#dcecf0":"#3e4b5f";ctx.fillText(code,p.x+8,p.y-6);
     }
     airportHitAreas.push({code,x:p.x,y:p.y});
