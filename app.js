@@ -63,6 +63,13 @@ const archiveData = window.FLIGHT_ARCHIVE_DATA || {};
 const airports = archiveData.airports || fallbackAirports;
 const flights = archiveData.flights || fallbackFlights;
 const routes = archiveData.routes || fallbackRoutes;
+const savedFlightEdits = (() => {
+  try { return JSON.parse(localStorage.getItem("flightArchiveEdits") || "{}"); }
+  catch { return {}; }
+})();
+flights.forEach(flight => {
+  if(savedFlightEdits[flight.id])Object.assign(flight,savedFlightEdits[flight.id]);
+});
 
 const fallbackLand = [
   [[-168,71],[-140,70],[-125,58],[-110,53],[-98,50],[-82,52],[-62,47],[-55,37],[-75,24],[-92,18],[-105,22],[-118,32],[-132,50],[-160,58]],
@@ -106,8 +113,10 @@ const translations = {
     autoLookupHelp:"Use the date and flight number to complete times, terminals, and aircraft.", flightDate:"Flight date",
     flightNumber:"Flight number", flightNumberPlaceholder:"e.g. MU721", departureAirport:"Departure airport",
     departurePlaceholder:"PVG / Shanghai Pudong", arrivalAirport:"Arrival airport", arrivalPlaceholder:"HKG / Hong Kong International",
-    airline:"Airline", aircraftPlaceholder:"e.g. Airbus A320neo", departureTime:"Departure time", arrivalTime:"Arrival time",
-    seatPlaceholder:"e.g. 34A", farePlaceholder:"CNY", notesPlaceholder:"Add notes about this flight",
+    departureTerminal:"Departure terminal", arrivalTerminal:"Arrival terminal", terminalPlaceholder:"e.g. T3",
+    airline:"Airline", aircraftPlaceholder:"e.g. Airbus A320neo", registrationPlaceholder:"e.g. 9V-SHM",
+    duration:"Duration", durationPlaceholder:"e.g. 3h 17m", distance:"Distance", departureTime:"Departure time", arrivalTime:"Arrival time",
+    gatePlaceholder:"e.g. A12", seatPlaceholder:"e.g. 34A", farePlaceholder:"CNY", notesPlaceholder:"Add notes about this flight",
     uploadPhotos:"Upload photos or boarding passes", photoLimit:"JPG / PNG, up to 10 MB each", cancel:"Cancel", saveRecord:"Save record",
     economy:"Economy", premiumEconomy:"Premium Economy", business:"Business", first:"First",
     bulkImport:"BULK IMPORT", excelImport:"Excel bulk import", importHelp:"Import existing records with the standard fields.",
@@ -148,8 +157,10 @@ const translations = {
     autoLookupHelp:"根据日期和航班号补全计划时间、航站楼和机型。", flightDate:"航班日期",
     flightNumber:"航班号", flightNumberPlaceholder:"例如 MU721", departureAirport:"出发机场",
     departurePlaceholder:"PVG / 上海浦东", arrivalAirport:"到达机场", arrivalPlaceholder:"HKG / 香港国际",
-    airline:"航空公司", aircraftPlaceholder:"例如 Airbus A320neo", departureTime:"起飞时间", arrivalTime:"到达时间",
-    seatPlaceholder:"例如 34A", farePlaceholder:"人民币", notesPlaceholder:"填写与本次飞行相关的信息",
+    departureTerminal:"出发航站楼", arrivalTerminal:"到达航站楼", terminalPlaceholder:"例如 T3",
+    airline:"航空公司", aircraftPlaceholder:"例如 Airbus A320neo", registrationPlaceholder:"例如 9V-SHM",
+    duration:"飞行时长", durationPlaceholder:"例如 3h 17m", distance:"里程", departureTime:"起飞时间", arrivalTime:"到达时间",
+    gatePlaceholder:"例如 A12", seatPlaceholder:"例如 34A", farePlaceholder:"人民币", notesPlaceholder:"填写与本次飞行相关的信息",
     uploadPhotos:"上传照片或登机牌", photoLimit:"JPG / PNG，单张不超过 10 MB", cancel:"取消", saveRecord:"保存记录",
     economy:"经济舱", premiumEconomy:"超级经济舱", business:"商务舱", first:"头等舱",
     bulkImport:"批量导入", excelImport:"Excel 批量导入", importHelp:"使用标准字段导入既有飞行记录。",
@@ -166,7 +177,8 @@ const savedHubs = (() => {
 })();
 const state = {
   activeView:"atlas", yearFilter:"all", scopeFilter:"all", mapMode:"route", globeStyle:"light", lang:"en",
-  selectedRoute:null, selectedAirport:null, hubs:new Set(savedHubs.filter(code => airports[code]))
+  selectedRoute:null, selectedAirport:null, activeFlightId:null, editingFlightId:null,
+  hubs:new Set(savedHubs.filter(code => airports[code]))
 };
 const visitedCountries = new Set([
   "China", "Japan", "Cambodia", "Singapore", "Australia", "Indonesia", "Malaysia",
@@ -223,6 +235,110 @@ function formatDate(date) {
 function formatFare(value) {
   return Number.isFinite(value) ? `¥${value.toLocaleString()}` : "—";
 }
+function parseDurationMinutes(value) {
+  const text=String(value||"").trim();
+  const hours=text.match(/(\d+)\s*h/i),minutes=text.match(/(\d+)\s*m(?:in)?/i);
+  if(hours)return Number(hours[1])*60+(minutes?Number(minutes[1]):0);
+  if(minutes)return Number(minutes[1]);
+  return 0;
+}
+function airportCodeFromInput(value,currentCode) {
+  const match=String(value||"").toUpperCase().match(/\b[A-Z]{3}\b/);
+  return match&&airports[match[0]]?match[0]:currentCode;
+}
+function timeInputValue(value) {
+  const match=String(value||"").match(/^(\d{1,2}):(\d{2})$/);
+  return match?`${match[1].padStart(2,"0")}:${match[2]}`:"";
+}
+function rebuildRoutes() {
+  const routeMap=new Map();
+  flights.forEach(f=>{
+    const codes=[f.from,f.to].sort(),id=codes.join("-").toLowerCase();
+    f.routeId=id;
+    if(!routeMap.has(id))routeMap.set(id,{id,from:f.from,to:f.to,count:0,distanceTotal:0});
+    const route=routeMap.get(id);
+    route.count+=1;route.distanceTotal+=Number(f.distance)||0;
+  });
+  const rebuilt=[...routeMap.values()].map(route=>({
+    id:route.id,from:route.from,to:route.to,count:route.count,
+    distance:Math.round(route.distanceTotal/route.count)
+  })).sort((a,b)=>b.count-a.count||a.id.localeCompare(b.id));
+  routes.splice(0,routes.length,...rebuilt);
+}
+function setFormValue(id,value) {
+  document.getElementById(id).value=value??"";
+}
+function prepareAddForm() {
+  state.editingFlightId=null;
+  const form=document.getElementById("flightForm");
+  form.reset();
+  document.getElementById("addTitle").dataset.i18n="addFlightRecord";
+  document.getElementById("addTitle").textContent=t("addFlightRecord");
+  setFormValue("formDate",new Date().toISOString().slice(0,10));
+  document.getElementById("cabinSelect").value=t("economy");
+  openModal("addModal");
+}
+function prepareEditForm(id) {
+  const f=flights.find(item=>item.id===id);
+  if(!f)return;
+  state.editingFlightId=id;
+  document.getElementById("addTitle").dataset.i18n="editFlightRecord";
+  document.getElementById("addTitle").textContent=t("editFlightRecord");
+  setFormValue("formDate",f.date);
+  setFormValue("formFlightNo",f.flightNo);
+  setFormValue("formFrom",`${f.from} / ${airportName(airports[f.from])}`);
+  setFormValue("formTo",`${f.to} / ${airportName(airports[f.to])}`);
+  setFormValue("formTerminalFrom",f.terminalFrom==="—"?"":f.terminalFrom);
+  setFormValue("formTerminalTo",f.terminalTo==="—"?"":f.terminalTo);
+  setFormValue("formAirline",f.airline);
+  setFormValue("formAircraft",f.aircraft);
+  setFormValue("formRegistration",f.registration==="—"?"":f.registration);
+  setFormValue("formDuration",f.duration);
+  setFormValue("formDepart",timeInputValue(f.depart));
+  setFormValue("formArrive",timeInputValue(f.arrive));
+  setFormValue("formDistance",f.distance);
+  setFormValue("formGate",f.gate==="—"?"":f.gate);
+  setFormValue("formSeat",f.seat==="—"||f.seat==="——"?"":f.seat);
+  setFormValue("formFare",Number.isFinite(f.fare)?f.fare:"");
+  setFormValue("formNote",f.note);
+  document.getElementById("cabinSelect").value=displayCabin(f.cabin);
+  openModal("addModal");
+}
+function saveEditedFlight() {
+  const f=flights.find(item=>item.id===state.editingFlightId);
+  if(!f)return false;
+  const previousFare=f.fare;
+  f.date=document.getElementById("formDate").value||f.date;
+  f.flightNo=document.getElementById("formFlightNo").value.trim().toUpperCase()||f.flightNo;
+  f.from=airportCodeFromInput(document.getElementById("formFrom").value,f.from);
+  f.to=airportCodeFromInput(document.getElementById("formTo").value,f.to);
+  f.terminalFrom=document.getElementById("formTerminalFrom").value.trim()||"—";
+  f.terminalTo=document.getElementById("formTerminalTo").value.trim()||"—";
+  f.airline=document.getElementById("formAirline").value.trim()||f.airline;
+  f.airlineShort=(f.flightNo.match(/^([A-Z0-9]{2})/)||[])[1]||f.airlineShort;
+  f.aircraft=document.getElementById("formAircraft").value.trim()||f.aircraft;
+  f.registration=document.getElementById("formRegistration").value.trim()||"—";
+  f.duration=document.getElementById("formDuration").value.trim()||f.duration;
+  f.durationMinutes=parseDurationMinutes(f.duration);
+  f.depart=document.getElementById("formDepart").value||f.depart;
+  f.arrive=document.getElementById("formArrive").value||f.arrive;
+  f.distance=Math.max(0,Number(document.getElementById("formDistance").value)||0);
+  f.gate=document.getElementById("formGate").value.trim()||"—";
+  f.seat=document.getElementById("formSeat").value.trim()||"—";
+  f.cabin=document.getElementById("cabinSelect").value||f.cabin;
+  const fareValue=document.getElementById("formFare").value;
+  f.fare=fareValue===""?null:Math.max(0,Number(fareValue));
+  if(f.fare!==previousFare){f.fareRaw=fareValue||null;f.fareGroup=null;}
+  f.note=document.getElementById("formNote").value.trim();
+  f.scope=airports[f.from].countryCode===airports[f.to].countryCode?"domestic":"international";
+  rebuildRoutes();
+  const editableKeys=["date","flightNo","from","to","terminalFrom","terminalTo","airline","airlineShort","aircraft","registration","duration","durationMinutes","depart","arrive","distance","gate","seat","cabin","fare","fareRaw","fareGroup","note","scope","routeId"];
+  const edit=Object.fromEntries(editableKeys.map(key=>[key,f[key]]));
+  savedFlightEdits[f.id]=edit;
+  try{localStorage.setItem("flightArchiveEdits",JSON.stringify(savedFlightEdits));}catch{}
+  state.editingFlightId=null;
+  return true;
+}
 function iconMarkup(f, className = "airline-icon") {
   const icon = airlineIcons[f.airlineShort];
   return icon
@@ -268,6 +384,7 @@ function renderFlights() {
 function openFlight(id) {
   const f = flights.find(item => item.id === id);
   if (!f) return;
+  state.activeFlightId=id;
   const from = airports[f.from], to = airports[f.to];
   const set = (id, value) => document.getElementById(id).textContent = value;
   document.getElementById("detailLogo").innerHTML = airlineIcons[f.airlineShort] ? `<img src="${airlineIcons[f.airlineShort]}" alt="${f.airline} logo" />` : f.airlineShort;
@@ -280,7 +397,7 @@ function openFlight(id) {
   aircraftVisual.hidden=!showAircraftVisual;
   if(showAircraftVisual){
     const aircraftImage=document.getElementById("detailAircraftImage");
-    aircraftImage.src="./airplanes/singapore%20airlines%20a350.png";
+    aircraftImage.src="./airplanes/singapore%20359.png";
     aircraftImage.alt=t("aircraftIllustration");
   }
   document.getElementById("detailInfoGrid").innerHTML = [
@@ -618,7 +735,7 @@ function drawLand() {
         ctx.beginPath();
         segment.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
         ctx.closePath();ctx.fillStyle=baseColor;ctx.fill();
-        if(visited){ctx.fillStyle="rgba(244,98,32,.64)";ctx.fill();}
+        if(visited){ctx.fillStyle="rgba(242,148,32,.62)";ctx.fill();}
         ctx.stroke();
       });
     });
@@ -857,14 +974,20 @@ document.querySelectorAll("[data-scope]").forEach(el=>el.addEventListener("click
   document.querySelectorAll("[data-scope]").forEach(c=>c.classList.remove("active"));
   el.classList.add("active");state.scopeFilter=el.dataset.scope;renderFlights();
 }));
-document.querySelectorAll("[data-open-add]").forEach(el=>el.addEventListener("click",()=>openModal("addModal")));
+document.querySelectorAll("[data-open-add]").forEach(el=>el.addEventListener("click",prepareAddForm));
 document.getElementById("importButton").addEventListener("click",()=>openModal("importModal"));
-document.getElementById("editFlightButton").addEventListener("click",()=>{closeModals();document.getElementById("addTitle").textContent=t("editFlightRecord");openModal("addModal");});
+document.getElementById("editFlightButton").addEventListener("click",()=>{closeModals();prepareEditForm(state.activeFlightId);});
 document.querySelectorAll("[data-close-modal]").forEach(el=>el.addEventListener("click",closeModals));
 document.querySelectorAll(".modal-backdrop").forEach(el=>el.addEventListener("click",e=>{if(e.target===el)closeModals();}));
 document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeModals();closeDrawer();setSettingsOpen(false);}});
-document.getElementById("flightForm").addEventListener("submit",e=>{e.preventDefault();closeModals();showToast(t("recordSaved"),t("recordUpdated"));});
+document.getElementById("flightForm").addEventListener("submit",e=>{
+  e.preventDefault();
+  const edited=state.editingFlightId!==null&&saveEditedFlight();
+  closeModals();
+  if(edited){renderFlights();renderStats();closeDrawer();drawGlobe();}
+  showToast(t("recordSaved"),t("recordUpdated"));
+});
 document.querySelector(".drop-zone input").addEventListener("change",e=>{if(e.target.files[0]){closeModals();showToast(t("fileRead"),t("validatingFields"));}});
 window.addEventListener("resize",resizeGlobe);
 
-applyLanguage("en");resizeGlobe();loadGeography();requestAnimationFrame(animate);
+rebuildRoutes();applyLanguage("en");resizeGlobe();loadGeography();requestAnimationFrame(animate);

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f4f6f8" />
     <title>Flight Archive</title>
-    <link rel="stylesheet" href="./styles.css?v=20260730-v10" />
+    <link rel="stylesheet" href="./styles.css?v=20260730-v11" />
   </head>
   <body>
     <div class="app-shell" id="appShell">
@@ -239,19 +239,25 @@
             <label class="switch"><input type="checkbox" checked /><span></span></label>
           </div>
           <div class="form-grid">
-            <label><span data-i18n="flightDate">Flight date</span><input type="date" value="2026-07-29" required /></label>
-            <label><span data-i18n="flightNumber">Flight number</span><input placeholder="e.g. MU721" data-i18n-placeholder="flightNumberPlaceholder" required /></label>
-            <label><span data-i18n="departureAirport">Departure airport</span><input placeholder="PVG / Shanghai Pudong" data-i18n-placeholder="departurePlaceholder" required /></label>
-            <label><span data-i18n="arrivalAirport">Arrival airport</span><input placeholder="HKG / Hong Kong International" data-i18n-placeholder="arrivalPlaceholder" required /></label>
-            <label><span data-i18n="airline">Airline</span><input placeholder="Airline" data-i18n-placeholder="airline" /></label>
-            <label><span data-i18n="aircraft">Aircraft</span><input placeholder="e.g. Airbus A320neo" data-i18n-placeholder="aircraftPlaceholder" /></label>
-            <label><span data-i18n="departureTime">Departure time</span><input type="time" /></label>
-            <label><span data-i18n="arrivalTime">Arrival time</span><input type="time" /></label>
-            <label><span data-i18n="seat">Seat</span><input placeholder="e.g. 34A" data-i18n-placeholder="seatPlaceholder" /></label>
+            <label><span data-i18n="flightDate">Flight date</span><input id="formDate" type="date" required /></label>
+            <label><span data-i18n="flightNumber">Flight number</span><input id="formFlightNo" placeholder="e.g. MU721" data-i18n-placeholder="flightNumberPlaceholder" required /></label>
+            <label><span data-i18n="departureAirport">Departure airport</span><input id="formFrom" placeholder="PVG / Shanghai Pudong" data-i18n-placeholder="departurePlaceholder" required /></label>
+            <label><span data-i18n="arrivalAirport">Arrival airport</span><input id="formTo" placeholder="HKG / Hong Kong International" data-i18n-placeholder="arrivalPlaceholder" required /></label>
+            <label><span data-i18n="departureTerminal">Departure terminal</span><input id="formTerminalFrom" placeholder="e.g. T3" data-i18n-placeholder="terminalPlaceholder" /></label>
+            <label><span data-i18n="arrivalTerminal">Arrival terminal</span><input id="formTerminalTo" placeholder="e.g. T1" data-i18n-placeholder="terminalPlaceholder" /></label>
+            <label><span data-i18n="airline">Airline</span><input id="formAirline" placeholder="Airline" data-i18n-placeholder="airline" /></label>
+            <label><span data-i18n="aircraft">Aircraft</span><input id="formAircraft" placeholder="e.g. Airbus A320neo" data-i18n-placeholder="aircraftPlaceholder" /></label>
+            <label><span data-i18n="registration">Registration</span><input id="formRegistration" placeholder="e.g. 9V-SHM" data-i18n-placeholder="registrationPlaceholder" /></label>
+            <label><span data-i18n="duration">Duration</span><input id="formDuration" placeholder="e.g. 3h 17m" data-i18n-placeholder="durationPlaceholder" /></label>
+            <label><span data-i18n="departureTime">Departure time</span><input id="formDepart" type="time" /></label>
+            <label><span data-i18n="arrivalTime">Arrival time</span><input id="formArrive" type="time" /></label>
+            <label><span data-i18n="distance">Distance</span><input id="formDistance" type="number" min="0" placeholder="km" /></label>
+            <label><span data-i18n="gate">Gate</span><input id="formGate" placeholder="e.g. A12" data-i18n-placeholder="gatePlaceholder" /></label>
+            <label><span data-i18n="seat">Seat</span><input id="formSeat" placeholder="e.g. 34A" data-i18n-placeholder="seatPlaceholder" /></label>
             <label><span data-i18n="cabin">Cabin</span><select id="cabinSelect"></select></label>
-            <label><span data-i18n="fare">Fare</span><input type="number" placeholder="CNY" data-i18n-placeholder="farePlaceholder" /></label>
+            <label><span data-i18n="fare">Fare</span><input id="formFare" type="number" min="0" placeholder="CNY" data-i18n-placeholder="farePlaceholder" /></label>
           </div>
-          <label class="full-field"><span data-i18n="notes">Notes</span><textarea placeholder="Add notes about this flight" data-i18n-placeholder="notesPlaceholder"></textarea></label>
+          <label class="full-field"><span data-i18n="notes">Notes</span><textarea id="formNote" placeholder="Add notes about this flight" data-i18n-placeholder="notesPlaceholder"></textarea></label>
           <label class="photo-upload"><input type="file" accept="image/*" multiple /><span>+</span><strong data-i18n="uploadPhotos">Upload photos or boarding passes</strong><small data-i18n="photoLimit">JPG / PNG, up to 10 MB each</small></label>
           <div class="modal-actions"><button type="button" class="subtle-button" data-close-modal data-i18n="cancel">Cancel</button><button type="submit" class="primary-button" data-i18n="saveRecord">Save record</button></div>
         </form>
@@ -276,6 +282,6 @@
 
     <div class="toast" id="toast"><span>✓</span><div><strong data-i18n="actionComplete">Completed</strong><small data-i18n="recordUpdated">Record updated</small></div></div>
     <script src="./flight-data.js?v=20260730-v2"></script>
-    <script src="./app.js?v=20260730-v9"></script>
+    <script src="./app.js?v=20260730-v11"></script>
   </body>
 </html>
