@@ -623,6 +623,9 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
   transition: .16s ease;
 }
 .stat-block:hover { transform: translateY(-3px); border-color: #a9cafa; box-shadow: 0 16px 38px rgba(35,51,72,.09); }
+.stat-block.aligned-stat { grid-template-rows: auto minmax(58px,1fr) minmax(22px,auto) 124px; }
+.stat-block.aligned-stat .stat-highlights { min-height: 124px; grid-template-rows: repeat(2,minmax(62px,1fr)); }
+.stat-block.aligned-stat .stat-highlight-entry { min-height: 62px; }
 .stat-label { font-size: 22px; font-weight: 650; letter-spacing: -.35px; }
 .stat-arrow { grid-column: 2; grid-row: 1; align-self: center; color: #9da8b7; font-size: 28px; font-style: normal; line-height: 1; }
 .stat-value { grid-column: 1 / -1; align-self: end; color: var(--blue); font-size: clamp(27px,3vw,42px); line-height: 1.08; overflow-wrap: anywhere; text-align: left; }
@@ -855,6 +858,33 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
 .stats-favourite-editor { padding: 12px 0; display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 8px; border-top: 1px solid var(--line); }
 .stats-favourite-editor[hidden] { display: none; }
 .stats-favourite-editor select { min-width: 0; height: 38px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; color: var(--text); background: white; outline: 0; }
+.country-stats-map {
+  margin: 0 0 22px;
+  overflow: hidden;
+  border: 1px solid #c9d3da;
+  border-radius: 17px;
+  background: #eef2f2;
+  box-shadow: 0 12px 28px rgba(24,47,67,.06);
+}
+.country-stats-map-head {
+  min-height: 66px;
+  padding: 15px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border-bottom: 1px solid rgba(58,79,91,.14);
+  background: rgba(250,251,250,.9);
+}
+.country-stats-map-head div:first-child span { display: block; color: #74808b; font-size: 9px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; }
+.country-stats-map-head div:first-child strong { display: block; margin-top: 4px; color: #20384f; font-size: 16px; }
+.country-map-legend { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px 15px; }
+.country-map-legend span { display: inline-flex; align-items: center; gap: 6px; color: #596977; font-size: 9px; white-space: nowrap; }
+.country-map-legend i { width: 14px; height: 8px; display: inline-block; border-radius: 3px; }
+.country-map-legend .visited { border: 1px solid rgba(112,76,34,.4); background: #c99452; }
+.country-map-legend .route { position: relative; height: 1px; border-radius: 0; background: #315f84; }
+.country-map-legend .route::after { content: ""; position: absolute; right: -1px; top: -2px; width: 5px; height: 5px; border-radius: 50%; background: #173653; }
+#countryStatsMap { width: 100%; height: 380px; display: block; }
 .detail-sort-label { margin: 18px 0 8px; color: var(--soft); font-size: 10px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; }
 .stats-flight-row {
   width: 100%;
@@ -1056,6 +1086,9 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
   .stats-detail-head h2 { font-size: 23px; }
   .stats-preference-row { grid-template-columns: 40px minmax(0,1fr); padding: 12px 0; }
   .stats-favourite-edit { grid-column: 1 / -1; }
+  .country-stats-map-head { align-items: flex-start; flex-direction: column; gap: 9px; }
+  .country-map-legend { justify-content: flex-start; }
+  #countryStatsMap { height: 300px; }
   .aircraft-summary { gap: 15px; }
   .form-grid { grid-template-columns: 1fr; }
   .modal-backdrop { padding: 0; align-items: flex-end; }

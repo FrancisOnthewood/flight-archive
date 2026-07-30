@@ -15,7 +15,7 @@ const fallbackAirports = {
 
 const airlineIcons = {
   MU: "icons/China_Eastern_Airlines.png",
-  CX: "icons/Cathay_Pacific.png",
+  CX: "./airline-logos/flightaware_logos/CPA.png",
   HX: "icons/Hong_Kong_Airlines.png",
   SQ: "icons/singapore airlines.png",
   CA: "icons/Air_China.png",
@@ -162,6 +162,8 @@ const translations = {
     mostVisitedCountry:"Most visited country / region", favouriteDestination:"Favourite destination",
     mostVisitedCity:"Most visited city", favouriteCity:"Favourite city", favourite:"Favourite", notSet:"Not set",
     editFavourite:"Edit favourite", saveFavourite:"Save", favouriteUpdated:"Favourite updated",
+    flightFootprint:"Flight footprint", visitedCountryMap:"Visited countries and flight paths",
+    visitedLand:"Visited country / region", flightRoutes:"Flight paths",
     timeEquivalent:"Equivalent duration", distanceEquivalent:"Equivalent distance",
     visits:"visits", bundle:"Ticket bundle", perFlight:"per flight",
     flightEntry:"FLIGHT ENTRY", addFlightRecord:"Add flight record", editFlightRecord:"Edit flight record",
@@ -227,6 +229,8 @@ const translations = {
     mostVisitedCountry:"到访最多国家 / 地区", favouriteDestination:"最喜欢的目的地",
     mostVisitedCity:"到访最多城市", favouriteCity:"最喜欢的城市", favourite:"最喜欢", notSet:"未设置",
     editFavourite:"编辑偏好", saveFavourite:"保存", favouriteUpdated:"偏好已更新",
+    flightFootprint:"飞行足迹", visitedCountryMap:"到访国家 / 地区与飞行航线",
+    visitedLand:"到访国家 / 地区", flightRoutes:"飞行航线",
     timeEquivalent:"时间换算", distanceEquivalent:"距离换算",
     visits:"次", bundle:"联票", perFlight:"每航段",
     flightEntry:"飞行记录", addFlightRecord:"添加飞行记录", editFlightRecord:"编辑飞行记录",
@@ -262,6 +266,7 @@ const visitedCountries = new Set([
   "Vietnam", "Brunei", "United Arab Emirates", "Spain", "Germany"
 ]);
 let landFeatures = fallbackLand.map((ring, index) => ({ name: `fallback-${index}`, rings: [ring] }));
+let countryStatsMapFlights = [];
 const t = key => translations[state.lang][key] || key;
 const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" })[char]);
 const airportName = airport => state.lang === "zh" ? (airport.nameZh || airport.name) : (airport.nameEn || airport.name);
@@ -1015,7 +1020,7 @@ function renderStats() {
     {type:"fare",label:t("totalFare"),value:formatFare(s.totalFare),unit:`${s.knownFares.length} ${t("knownFares")}`,highlights:[]}
   ];
   document.getElementById("statsList").innerHTML=entries.map(item=>`
-    <button class="stat-block${item.highlights.length?"":" simple"}" data-stat="${item.type}">
+    <button class="stat-block${item.highlights.length?"":" simple"}${["time","distance","airlines"].includes(item.type)?" aligned-stat":""}" data-stat="${item.type}">
       <span class="stat-label">${item.label}</span><i class="stat-arrow">›</i>
       <strong class="stat-value">${item.value}</strong><b class="stat-unit">${item.unit}</b>
       ${statHighlightsMarkup(item.highlights)}
@@ -1069,6 +1074,151 @@ function flagIconForAirport(airport,className="stats-flag") {
   const code=String(airport?.countryCode||"").toLowerCase();
   if(!/^[a-z]{2}$/.test(code))return `<span class="${className} rounded-flag-mark stats-flag-fallback" aria-hidden="true">◎</span>`;
   return `<span class="${className} rounded-flag-mark" aria-hidden="true"><img src="./circle-flags/flags/${code}.svg" alt="" loading="lazy" /></span>`;
+}
+function countryStatsMapMarkup() {
+  return `<section class="country-stats-map">
+    <header class="country-stats-map-head">
+      <div><span>${t("flightFootprint")}</span><strong>${t("visitedCountryMap")}</strong></div>
+      <div class="country-map-legend">
+        <span><i class="visited"></i>${t("visitedLand")}</span>
+        <span><i class="route"></i>${t("flightRoutes")}</span>
+      </div>
+    </header>
+    <canvas id="countryStatsMap" aria-label="${escapeHtml(t("visitedCountryMap"))}"></canvas>
+  </section>`;
+}
+function geoCountryName(airport) {
+  const name=airport?.countryEn||airport?.country||"";
+  return {"Hong Kong SAR":"China","Macao SAR":"China"}[name]||name;
+}
+function countryMapProject(lat,lon,viewport) {
+  return {
+    x:viewport.x+(lon+180)/360*viewport.width,
+    y:viewport.y+(90-lat)/180*viewport.height
+  };
+}
+function countryMapRoundRect(context,x,y,width,height,radius) {
+  const r=Math.min(radius,width/2,height/2);
+  context.beginPath();
+  context.moveTo(x+r,y);
+  context.arcTo(x+width,y,x+width,y+height,r);
+  context.arcTo(x+width,y+height,x,y+height,r);
+  context.arcTo(x,y+height,x,y,r);
+  context.arcTo(x,y,x+width,y,r);
+  context.closePath();
+}
+function drawCountryStatsMap(sourceFlights=countryStatsMapFlights) {
+  const mapCanvas=document.getElementById("countryStatsMap");
+  if(!mapCanvas)return;
+  countryStatsMapFlights=[...sourceFlights];
+  const bounds=mapCanvas.getBoundingClientRect();
+  const width=Math.max(320,Math.round(bounds.width||820));
+  const height=Math.max(260,Math.round(bounds.height||380));
+  const dpr=Math.min(window.devicePixelRatio||1,2);
+  mapCanvas.width=Math.round(width*dpr);
+  mapCanvas.height=Math.round(height*dpr);
+  const mapContext=mapCanvas.getContext("2d");
+  mapContext.setTransform(dpr,0,0,dpr,0,0);
+  const background=mapContext.createLinearGradient(0,0,0,height);
+  background.addColorStop(0,"#f3f5f3");
+  background.addColorStop(1,"#e5ebed");
+  mapContext.fillStyle=background;
+  mapContext.fillRect(0,0,width,height);
+
+  const padding=14,availableWidth=width-padding*2,availableHeight=height-padding*2;
+  const mapWidth=Math.min(availableWidth,availableHeight*2);
+  const mapHeight=mapWidth/2;
+  const viewport={x:(width-mapWidth)/2,y:(height-mapHeight)/2,width:mapWidth,height:mapHeight};
+  const geoVisited=new Set(sourceFlights.flatMap(f=>[f.from,f.to]).map(code=>geoCountryName(airports[code])).filter(Boolean));
+
+  landFeatures.forEach(feature=>{
+    const visited=geoVisited.has(feature.name);
+    feature.rings.forEach(ring=>{
+      const continuous=unwrapRing(rotateRingAtDateline(ring));
+      const longitudes=continuous.map(point=>point[0]);
+      const closesAtSouthPole=feature.name==="Antarctica"&&Math.max(...longitudes)-Math.min(...longitudes)>300;
+      [-360,0,360].forEach(shift=>{
+        const points=continuous.map(([lon,lat])=>countryMapProject(lat,lon+shift,viewport));
+        if(closesAtSouthPole){
+          points.push(countryMapProject(-90,continuous[continuous.length-1][0]+shift,viewport));
+          points.push(countryMapProject(-90,continuous[0][0]+shift,viewport));
+        }
+        if(!points.length||!pointsIntersectViewport(points,viewport,5))return;
+        mapContext.beginPath();
+        points.forEach((point,index)=>index?mapContext.lineTo(point.x,point.y):mapContext.moveTo(point.x,point.y));
+        mapContext.closePath();
+        mapContext.fillStyle=visited?"#c99452":"#cbd3d1";
+        mapContext.fill();
+        mapContext.strokeStyle=visited?"rgba(112,76,34,.55)":"rgba(55,75,84,.24)";
+        mapContext.lineWidth=visited?.75:.45;
+        mapContext.stroke();
+      });
+    });
+  });
+
+  const routeGroups=aggregateBy(sourceFlights,f=>[f.from,f.to].sort().join(">"));
+  routeGroups.forEach((items,key)=>{
+    const [from,to]=key.split(">"),fromAirport=airports[from],toAirport=airports[to];
+    if(!fromAirport||!toAirport)return;
+    const continuous=unwrapRing(greatCircle(fromAirport,toAirport,48).map(point=>[point.lon,point.lat]));
+    [-360,0,360].forEach(shift=>{
+      const points=continuous.map(([lon,lat])=>countryMapProject(lat,lon+shift,viewport));
+      if(!pointsIntersectViewport(points,viewport,8))return;
+      mapContext.beginPath();
+      points.forEach((point,index)=>index?mapContext.lineTo(point.x,point.y):mapContext.moveTo(point.x,point.y));
+      mapContext.strokeStyle="rgba(30,77,116,.48)";
+      mapContext.lineWidth=.8+Math.min(items.length,5)*.16;
+      mapContext.stroke();
+    });
+  });
+
+  const countryGroups=new Map();
+  sourceFlights.flatMap(f=>[f.from,f.to]).forEach(code=>{
+    const airport=airports[code];
+    if(!airport)return;
+    const key=airport.countryCode||airport.countryEn||airport.country;
+    if(!countryGroups.has(key))countryGroups.set(key,{name:airportCountry(airport),airports:new Map()});
+    countryGroups.get(key).airports.set(code,airport);
+  });
+  const labelRects=[];
+  mapContext.font="600 10px DM Sans, sans-serif";
+  [...countryGroups.values()].forEach((country,index)=>{
+    const countryAirports=[...country.airports.values()];
+    const representative={
+      lat:countryAirports.reduce((sum,airport)=>sum+airport.lat,0)/countryAirports.length,
+      lon:countryAirports.reduce((sum,airport)=>sum+airport.lon,0)/countryAirports.length
+    };
+    const anchor=countryMapProject(representative.lat,representative.lon,viewport);
+    mapContext.fillStyle="#102d4a";
+    mapContext.beginPath();mapContext.arc(anchor.x,anchor.y,2.5,0,Math.PI*2);mapContext.fill();
+    const labelWidth=Math.ceil(mapContext.measureText(country.name).width)+12,labelHeight=20;
+    const candidates=[
+      [anchor.x+7,anchor.y-22],[anchor.x+7,anchor.y+5],
+      [anchor.x-labelWidth-7,anchor.y-22],[anchor.x-labelWidth-7,anchor.y+5],
+      [anchor.x-labelWidth/2,anchor.y+(index%2?9:-29)]
+    ];
+    const rect=candidates.map(([x,y])=>({
+      x:Math.max(4,Math.min(width-labelWidth-4,x)),
+      y:Math.max(4,Math.min(height-labelHeight-4,y)),
+      width:labelWidth,height:labelHeight
+    })).find(candidate=>!labelRects.some(other=>
+      candidate.x<other.x+other.width+3&&candidate.x+candidate.width+3>other.x&&
+      candidate.y<other.y+other.height+3&&candidate.y+candidate.height+3>other.y
+    ))||{
+      x:Math.max(4,Math.min(width-labelWidth-4,anchor.x+7)),
+      y:Math.max(4,Math.min(height-labelHeight-4,anchor.y-22)),
+      width:labelWidth,height:labelHeight
+    };
+    labelRects.push(rect);
+    mapContext.strokeStyle="rgba(16,45,74,.32)";
+    mapContext.lineWidth=.65;
+    mapContext.beginPath();mapContext.moveTo(anchor.x,anchor.y);mapContext.lineTo(rect.x+rect.width/2,rect.y+rect.height/2);mapContext.stroke();
+    countryMapRoundRect(mapContext,rect.x,rect.y,rect.width,rect.height,6);
+    mapContext.fillStyle="rgba(250,251,250,.94)";mapContext.fill();
+    mapContext.strokeStyle="rgba(16,45,74,.16)";mapContext.stroke();
+    mapContext.fillStyle="#20384f";
+    mapContext.fillText(country.name,rect.x+6,rect.y+13.5);
+  });
 }
 function airportForCountryLabel(label) {
   return Object.values(airports).find(airport=>airportCountry(airport)===label);
@@ -1128,7 +1278,9 @@ function openStatsDetail(type) {
     })));
   }else if(type==="countries"){
     summary=`${s.countries.size} ${t("countryUnit")}`;
-    content=statsBarMarkup([...s.countries.entries()].map(([name,count])=>({label:name,count,unit:t("visits"),icon:flagIconForAirport(airportForCountryLabel(name))})));
+    content=`${countryStatsMapMarkup()}${statsBarMarkup([...s.countries.entries()].map(([name,count])=>({
+      label:name,count,unit:t("visits"),icon:flagIconForAirport(airportForCountryLabel(name))
+    })))}`;
   }else if(type==="routes"){
     summary=`${s.directedRoutes.size} ${t("routeUnit")}`;
     content=statsBarMarkup([...s.directedRoutes.entries()].map(([name,items])=>{
@@ -1165,6 +1317,10 @@ function openStatsDetail(type) {
   document.querySelectorAll("#statsDetailContent [data-flight-id]").forEach(el=>el.addEventListener("click",()=>{closeModals();openFlight(Number(el.dataset.flightId),{returnStatsType:type});}));
   bindFavouriteEditor(type);
   openModal("statsDetailModal");
+  if(type==="countries"){
+    countryStatsMapFlights=[...scopedFlights];
+    requestAnimationFrame(()=>drawCountryStatsMap(countryStatsMapFlights));
+  }
 }
 function persistHubs(){localStorage.setItem("flightArchiveHubs",JSON.stringify([...state.hubs]));}
 function renderHubSettings(){
@@ -1321,6 +1477,7 @@ async function loadGeography() {
   } finally {
     document.getElementById("globeLoading").classList.add("hidden");
     drawGlobe();
+    if(document.getElementById("countryStatsMap"))drawCountryStatsMap(countryStatsMapFlights);
   }
 }
 function unwrapRing(ring) {
@@ -1726,6 +1883,9 @@ document.getElementById("incomingFlightForm").addEventListener("submit",e=>{
   showToast(t("incomingSaved"),t("recordSaved"));
 });
 document.querySelector(".drop-zone input").addEventListener("change",e=>{if(e.target.files[0]){closeModals();showToast(t("fileRead"),t("validatingFields"));}});
-window.addEventListener("resize",resizeGlobe);
+window.addEventListener("resize",()=>{
+  resizeGlobe();
+  if(document.getElementById("countryStatsMap"))drawCountryStatsMap(countryStatsMapFlights);
+});
 
 rebuildRoutes();applyLanguage("en");resizeGlobe();loadGeography();requestAnimationFrame(animate);
