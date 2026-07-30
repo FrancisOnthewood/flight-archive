@@ -185,7 +185,8 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
 .settings-label { display: block; margin-bottom: 7px; color: var(--muted); font-size: 11px; }
 .author-contact { margin-top: 14px; padding-top: 13px; display: flex; flex-direction: column; gap: 4px; border-top: 1px solid var(--line); }
 .author-contact span { color: var(--muted); font-size: 10px; }
-.author-contact strong { font-size: 12px; font-weight: 500; }
+.author-contact strong, .author-contact a { color: var(--text); font-size: 12px; font-weight: 500; text-decoration: none; }
+.author-contact a:hover { color: var(--blue); }
 .hub-settings { margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--line); }
 .hub-picker { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 6px; }
 .hub-picker select {
@@ -208,8 +209,8 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
   cursor: pointer;
 }
 .hub-chips { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
-.hub-chips button { padding: 5px 8px; border: 0; border-radius: 13px; color: #9c4b10; background: #fff0e4; font-size: 10px; cursor: pointer; }
-.hub-chips span { margin-left: 6px; color: #d66b1e; }
+.hub-chips button { padding: 5px 8px; border: 0; border-radius: 13px; color: #701430; background: #f8e9ee; font-size: 10px; cursor: pointer; }
+.hub-chips span { margin-left: 6px; color: #9b294d; }
 
 .app-shell.sidebar-collapsed { --sidebar-width: 78px; }
 .sidebar-collapsed .sidebar { padding-left: 15px; padding-right: 15px; }
@@ -253,7 +254,7 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
 }
 .globe-style-switch button:hover { color: white; background: rgba(255,255,255,.08); }
 .globe-style-switch button.active { color: #fff; background: transparent; }
-.globe-style-switch button.active::after { content: ""; position: absolute; bottom: 0; width: 15px; height: 2px; border-radius: 2px; background: #ff7a1a; }
+.globe-style-switch button.active::after { content: ""; position: absolute; bottom: 0; width: 15px; height: 2px; border-radius: 2px; background: #ff5200; }
 .globe-style-switch button { position: relative; }
 .globe-style-switch svg { width: 23px; height: 23px; }
 .globe-loading {
@@ -336,6 +337,7 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
   cursor: pointer;
 }
 .drawer-flight:hover { border-color: #a9cafa; background: #fbfdff; }
+.drawer-flight.highlighted { border-color: #8bbcfb; background: #f2f7ff; box-shadow: inset 3px 0 var(--blue); }
 .drawer-flight-top { display: flex; justify-content: space-between; align-items: center; }
 .drawer-flight-top strong { color: var(--blue); font-size: 10px; }
 .drawer-flight-top span { color: var(--soft); font-size: 8px; }
@@ -550,12 +552,14 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
 .modal-title-row h2 { margin: 2px 0; font-size: 21px; }
 .modal-title-row p { margin: 0; color: var(--soft); font-size: 8px; }
 .detail-route { margin: 24px 0 18px; padding: 20px 0; display: grid; grid-template-columns: 1fr 1.2fr 1fr; align-items: center; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-.detail-route > div { display: flex; flex-direction: column; }
-.detail-route strong { font-size: 25px; }
-.detail-route span { color: #5b687a; font-size: 9px; }
-.detail-route small { margin-top: 5px; color: var(--soft); font-size: 8px; }
-.detail-route .align-right { text-align: right; }
-.detail-flight-line { text-align: center; }
+.detail-route > div:not(.detail-flight-line) { min-height: 96px; display: grid; grid-template-rows: 34px 42px 20px; align-items: start; }
+.detail-route > div:not(.detail-flight-line) > strong { align-self: start; font-size: 25px; line-height: 32px; }
+.detail-route > div:not(.detail-flight-line) > span { align-self: start; color: #5b687a; font-size: 9px; line-height: 1.4; }
+.detail-route > div:not(.detail-flight-line) > small { align-self: end; margin: 0; color: var(--soft); font-size: 8px; line-height: 18px; }
+.detail-route .align-right { justify-items: end; text-align: right; }
+.detail-flight-line { align-self: center; display: flex; flex-direction: column; text-align: center; }
+.detail-flight-line span { align-self: center; color: #5b687a; }
+.detail-flight-line small { align-self: center; margin-top: 5px; color: var(--soft); }
 .detail-flight-line i { position: relative; height: 1px; margin: 8px 0 3px; background: #b6d2f7; }
 .detail-flight-line i::after { content: ""; position: absolute; right: 0; top: -2px; border-left: 5px solid var(--blue); border-top: 2.5px solid transparent; border-bottom: 2.5px solid transparent; }
 .detail-info-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 7px; }

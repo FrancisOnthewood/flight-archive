@@ -77,7 +77,7 @@ const translations = {
   en: {
     navMap:"Flight Map", navRecords:"Flight Records", navStats:"Statistics", navMedia:"Media",
     mapSelection:"Map content", routes:"Routes", airports:"Airports", mapHelp:"Drag to rotate, scroll to zoom, and select a route or airport for details.",
-    language:"Language", settings:"Settings", authorEmail:"Author email", emailNotPublic:"Email not public",
+    language:"Language", settings:"Settings", authorGithub:"Author GitHub",
     hubs:"Hub airports", add:"Add", removeHub:"Remove hub", loadingGeography:"Loading geographic data",
     import:"Import", addFlight:"Add flight", recordsTitle:"Flight Records", totalFlights:"total flights",
     searchPlaceholder:"Search flight, airline, or airport", all:"All", international:"International", domestic:"Domestic",
@@ -118,7 +118,7 @@ const translations = {
   zh: {
     navMap:"航迹地图", navRecords:"飞行记录", navStats:"数据统计", navMedia:"旅途相册",
     mapSelection:"地图内容", routes:"航线", airports:"机场", mapHelp:"拖拽旋转，滚轮缩放；点击航线或机场查看详情。",
-    language:"语言", settings:"设置", authorEmail:"作者邮箱", emailNotPublic:"邮箱未公开",
+    language:"语言", settings:"设置", authorGithub:"作者 GitHub",
     hubs:"枢纽机场", add:"添加", removeHub:"移除枢纽", loadingGeography:"正在载入地理数据",
     import:"批量导入", addFlight:"添加飞行", recordsTitle:"飞行记录", totalFlights:"次飞行",
     searchPlaceholder:"搜索航班号、航司或机场", all:"全部", international:"国际 / 地区", domestic:"国内",
@@ -175,6 +175,11 @@ const t = key => translations[state.lang][key] || key;
 const airportName = airport => state.lang === "zh" ? (airport.nameZh || airport.name) : (airport.nameEn || airport.name);
 const airportCity = airport => state.lang === "zh" ? (airport.cityZh || airport.city) : (airport.cityEn || airport.city);
 const airportCountry = airport => state.lang === "zh" ? (airport.countryZh || airport.country) : (airport.countryEn || airport.country);
+const compactAirportName = airport => {
+  const name=airportName(airport);
+  if(state.lang==="zh")return name;
+  return name.replace(/\bInternational\b/gi,"Intl").replace(/\bAirport\b/gi,"").replace(/\s+/g," ").trim();
+};
 const displayCabin = value => {
   const normalized = String(value || "").toLowerCase();
   if (normalized.includes("first") || normalized.includes("头等")) return t("first");
@@ -229,9 +234,9 @@ function flightRowMarkup(f) {
       </div>
       <div class="date-cell"><strong>${formatDate(f.date)}</strong></div>
       <div class="route-cell">
-        <div class="route-point"><strong>${f.from}</strong><span>${airportName(from)} · ${f.terminalFrom}</span><small>${f.depart}</small></div>
+        <div class="route-point"><strong>${f.from}</strong><span>${airportCity(from)} · ${f.terminalFrom}</span><small>${f.depart}</small></div>
         <div class="route-line"><span>${f.duration}</span><i></i><small>${f.distance.toLocaleString()} km</small></div>
-        <div class="route-point"><strong>${f.to}</strong><span>${airportName(to)} · ${f.terminalTo}</span><small>${f.arrive}</small></div>
+        <div class="route-point"><strong>${f.to}</strong><span>${airportCity(to)} · ${f.terminalTo}</span><small>${f.arrive}</small></div>
       </div>
       <div class="flight-meta">
         <span>${t("aircraft")}<b>${f.aircraft}</b></span><span>${t("cabin")}<b>${displayCabin(f.cabin)}</b></span>
@@ -260,8 +265,8 @@ function openFlight(id) {
   const set = (id, value) => document.getElementById(id).textContent = value;
   document.getElementById("detailLogo").innerHTML = airlineIcons[f.airlineShort] ? `<img src="${airlineIcons[f.airlineShort]}" alt="${f.airline} logo" />` : f.airlineShort;
   set("detailAirline", f.airline); set("detailTitle", f.flightNo); set("detailDate", formatDate(f.date));
-  set("detailFromCode", f.from); set("detailFromCity", `${airportName(from)} · ${f.terminalFrom}`); set("detailDeparture", f.depart);
-  set("detailToCode", f.to); set("detailToCity", `${airportName(to)} · ${f.terminalTo}`); set("detailArrival", f.arrive);
+  set("detailFromCode", f.from); set("detailFromCity", `${compactAirportName(from)} · ${f.terminalFrom}`); set("detailDeparture", f.depart);
+  set("detailToCode", f.to); set("detailToCity", `${compactAirportName(to)} · ${f.terminalTo}`); set("detailArrival", f.arrive);
   set("detailDuration", f.duration); set("detailDistance", `${f.distance.toLocaleString()} km`); set("detailNote", f.note || t("noNotes"));
   document.getElementById("detailInfoGrid").innerHTML = [
     [t("aircraft"), f.aircraft], [t("registration"), f.registration || "—"], [t("seat"), f.seat],
@@ -270,8 +275,8 @@ function openFlight(id) {
   openModal("detailModal");
 }
 
-function drawerFlightMarkup(f) {
-  return `<article class="drawer-flight" data-drawer-flight="${f.id}">
+function drawerFlightMarkup(f,highlighted=false) {
+  return `<article class="drawer-flight${highlighted?" highlighted":""}" data-drawer-flight="${f.id}">
     <div class="drawer-flight-top"><strong>${f.flightNo} · ${f.airline}</strong><span>${formatDate(f.date)}</span></div>
     <div class="drawer-flight-route">
       <div><b>${f.from}</b><small>${f.depart}</small></div><i></i><div><b>${f.to}</b><small>${f.arrive}</small></div>
@@ -293,7 +298,7 @@ function openRouteDrawer(route) {
       <div><strong>${route.distance.toLocaleString()} km</strong><span>${t("oneWayDistance")}</span></div>
     </div>
     <h3 class="drawer-section-title">${t("relatedFlights")}</h3>
-    ${related.map(drawerFlightMarkup).join("")}
+    ${related.map(f=>drawerFlightMarkup(f)).join("")}
   `;
   document.querySelectorAll("[data-drawer-flight]").forEach(el => el.addEventListener("click", () => openFlight(Number(el.dataset.drawerFlight))));
   document.getElementById("infoDrawer").classList.add("open");
@@ -322,7 +327,7 @@ function openAirportDrawer(code) {
       }).join("") : `<p class="drawer-subtitle">${t("noConnections")}</p>`}
     </div>
     <h3 class="drawer-section-title">${t("recentRecords")}</h3>
-    ${relatedFlights.slice(0,4).map(drawerFlightMarkup).join("")}
+    ${relatedFlights.map(f=>drawerFlightMarkup(f,true)).join("")}
   `;
   document.querySelectorAll("[data-connection]").forEach(el => el.addEventListener("click", () => {
     const route = routes.find(r => r.id === el.dataset.connection);
@@ -598,7 +603,7 @@ function drawLand() {
         ctx.beginPath();
         segment.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
         ctx.closePath();ctx.fillStyle=baseColor;ctx.fill();
-        if(visited){ctx.fillStyle="rgba(255,112,20,.52)";ctx.fill();}
+        if(visited){ctx.fillStyle="rgba(255,76,0,.68)";ctx.fill();}
         ctx.stroke();
       });
     });
@@ -676,13 +681,15 @@ function drawRoutes() {
     const points=greatCircle(airports[route.from],airports[route.to]).map((p,i,array)=>project(p.lat,p.lon,Math.sin(Math.PI*i/(array.length-1))*.055));
     visibleSegments(points,-.01).forEach(segment=>{
       const selected=state.selectedRoute?.id===route.id;
+      const connected=Boolean(state.selectedAirport&&(route.from===state.selectedAirport||route.to===state.selectedAirport));
+      const highlighted=selected||connected;
       const orbit=state.globeStyle==="orbit";
       ctx.beginPath(); segment.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
-      ctx.strokeStyle=orbit?(selected?"#f4fdff":"#d4f4ff"):(selected?"#0b5fc9":"#1877f2");
-      ctx.lineWidth=(selected?2.2:1)+route.count*.22;
-      ctx.globalAlpha=orbit?(selected?1:.5+route.count*.055):(selected?1:.22+route.count*.1);
+      ctx.strokeStyle=orbit?(highlighted?"#f4fdff":"#d4f4ff"):(highlighted?"#065fd4":"#1877f2");
+      ctx.lineWidth=(highlighted?2.25:1)+route.count*.22;
+      ctx.globalAlpha=orbit?(highlighted?1:.5+route.count*.055):(highlighted?1:.22+route.count*.1);
       ctx.shadowColor=orbit?"#78d9ff":"#1877f2";
-      ctx.shadowBlur=orbit?(selected?17:8+route.count*.7):(selected?10:0);
+      ctx.shadowBlur=orbit?(highlighted?18:8+route.count*.7):(highlighted?12:0);
       ctx.setLineDash([]);ctx.stroke();
       routeHitAreas.push({route,points:segment});
     });
@@ -698,9 +705,9 @@ function drawAirports() {
     if(p.z<=0)return;
     const selected=state.selectedAirport===code,hub=state.hubs.has(code);
     const radius=selected?5.5:hub?4.7:state.mapMode==="airport"?3.8:2.7;
-    ctx.beginPath();ctx.arc(p.x,p.y,radius+(hub?4:3),0,Math.PI*2);ctx.fillStyle=hub?"rgba(255,122,26,.22)":selected?"rgba(24,119,242,.16)":"rgba(24,119,242,.08)";ctx.fill();
-    if(hub){ctx.beginPath();ctx.arc(p.x,p.y,radius+2.2,0,Math.PI*2);ctx.strokeStyle="#ff7a1a";ctx.lineWidth=1;ctx.stroke();}
-    ctx.beginPath();ctx.arc(p.x,p.y,radius,0,Math.PI*2);ctx.fillStyle=hub?"#ff7a1a":selected?"#0b5fc9":"#1877f2";ctx.fill();
+    ctx.beginPath();ctx.arc(p.x,p.y,radius+(hub?4:3),0,Math.PI*2);ctx.fillStyle=hub?"rgba(112,20,48,.24)":selected?"rgba(24,119,242,.22)":"rgba(24,119,242,.08)";ctx.fill();
+    if(hub){ctx.beginPath();ctx.arc(p.x,p.y,radius+2.2,0,Math.PI*2);ctx.strokeStyle="#701430";ctx.lineWidth=1.2;ctx.stroke();}
+    ctx.beginPath();ctx.arc(p.x,p.y,radius,0,Math.PI*2);ctx.fillStyle=hub?"#701430":selected?"#0b5fc9":"#1877f2";ctx.fill();
     if(selected||hub||state.mapMode==="airport"){
       ctx.font="600 9px DM Sans";ctx.fillStyle=state.globeStyle==="orbit"?"#dcecf0":"#3e4b5f";ctx.fillText(code,p.x+8,p.y-6);
     }
@@ -732,7 +739,7 @@ function drawGlobe(time=performance.now()) {
   }
   ctx.fillRect(centerX-globeR,centerY-globeR,globeR*2,globeR*2);
   drawLand();drawSurfaceReflection();drawNightLights();
-  if(state.mapMode==="route")drawRoutes();else routeHitAreas=[];
+  if(state.mapMode==="route"||state.selectedAirport)drawRoutes();else routeHitAreas=[];
   drawAirports();
   ctx.restore();
   ctx.beginPath();ctx.arc(centerX,centerY,globeR,0,Math.PI*2);
@@ -765,8 +772,10 @@ canvas.addEventListener("pointermove",e=>{
   if(dragging){
     const dx=pos.x-lastPointer.x,dy=pos.y-lastPointer.y;
     if(Math.abs(dx)+Math.abs(dy)>2)moved=true;
-    rotation.lon+=dx*.3;
-    rotation.lat=Math.max(-72,Math.min(72,rotation.lat+dy*.25));
+    const baseRadius=Math.min(cw,ch)*.43;
+    const dragScale=Math.max(.22,Math.min(1,baseRadius/globeR));
+    rotation.lon+=dx*.3*dragScale;
+    rotation.lat=Math.max(-72,Math.min(72,rotation.lat+dy*.25*dragScale));
     lastPointer=pos;drawGlobe();return;
   }
   const airportHit=hitAirport(pos),routeHit=state.mapMode==="route"?hitRoute(pos):null,tooltip=document.getElementById("hoverTooltip");
@@ -788,7 +797,7 @@ canvas.addEventListener("pointerleave",()=>document.getElementById("hoverTooltip
 canvas.addEventListener("wheel",e=>{
   e.preventDefault();
   const viewportSize=Math.min(cw,ch);
-  globeR=Math.max(viewportSize*.31,Math.min(viewportSize*1.35,globeR-e.deltaY*.14));
+  globeR=Math.max(viewportSize*.31,Math.min(viewportSize*1.35,globeR-e.deltaY*.22));
   drawGlobe();
 },{passive:false});
 let lastFrame=0;
