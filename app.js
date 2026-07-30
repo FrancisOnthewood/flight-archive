@@ -620,8 +620,9 @@ function drawBackground() {
   const orbit=state.globeStyle==="orbit";
   ctx.fillStyle=orbit?"#02070b":"#081d35";ctx.fillRect(0,0,cw,ch);
   if(orbit){
-    // Keep the star field visually locked to the globe's drag/auto-spin direction.
-    const shiftX=rotation.lon/360*cw,shiftY=rotation.lat/180*ch*.18;
+    // Projection reverses the apparent screen direction, so the background offsets
+    // use the inverse rotation to move with the visible globe surface.
+    const shiftX=-rotation.lon/360*cw,shiftY=-rotation.lat/180*ch*.18;
     stars.forEach((star,index)=>{
       const x=((star.u*cw+shiftX)%cw+cw)%cw;
       const y=((star.v*ch+shiftY)%ch+ch)%ch;
