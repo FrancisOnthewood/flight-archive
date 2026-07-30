@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f4f6f8" />
     <title>Flight Archive</title>
-    <link rel="stylesheet" href="./styles.css?v=20260730-v17" />
+    <link rel="stylesheet" href="./styles.css?v=20260730-v18" />
   </head>
   <body>
     <div class="app-shell" id="appShell">
@@ -207,6 +207,10 @@
 
     <div class="modal-backdrop" id="detailModal">
       <section class="modal detail-modal" role="dialog" aria-modal="true" aria-labelledby="detailTitle">
+        <button class="modal-back stats-return-button" id="detailBackToStats" hidden>
+          <svg viewBox="0 0 24 24"><path d="m14.5 6-6 6 6 6"/></svg>
+          <span id="detailBackToStatsLabel"></span>
+        </button>
         <button class="modal-close" data-close-modal aria-label="Close">
           <svg viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17"/></svg>
         </button>
@@ -234,7 +238,6 @@
           <svg viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17"/></svg>
         </button>
         <header class="stats-detail-head">
-          <span id="statsDetailKicker"></span>
           <h2 id="statsDetailTitle"></h2>
           <p id="statsDetailSummary"></p>
         </header>
@@ -299,6 +302,6 @@
     <div class="toast" id="toast"><span>✓</span><div><strong data-i18n="actionComplete">Completed</strong><small data-i18n="recordUpdated">Record updated</small></div></div>
     <script src="./flight-data.js?v=20260730-v2"></script>
     <script src="./incoming-data.js?v=20260730-v1"></script>
-    <script src="./app.js?v=20260730-v17"></script>
+    <script src="./app.js?v=20260730-v18"></script>
   </body>
 </html>

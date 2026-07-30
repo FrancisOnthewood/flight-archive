@@ -126,13 +126,9 @@ const translations = {
     aircraftIllustrationChinaSouthern737:"China Southern Airlines Boeing 737-800 side illustration",
     aircraftIllustrationChinaSouthern787:"China Southern Airlines Boeing 787-9 side illustration", registration:"Registration",
     cabin:"Cabin", seat:"Seat", gate:"Gate", notes:"Notes", noNotes:"No notes", close:"Close", editRecord:"Edit record",
+    backToStatisticsDetail:"Back to",
     totalTime:"Total flight time", totalDistance:"Total distance", aircraftTypes:"Aircraft types", airlinesFlown:"Airlines flown",
     countriesRegions:"Countries / regions", directedRoutes:"Routes flown", citiesVisited:"Cities visited", totalFare:"Total fare",
-    flightTimeDetail:"Flights sorted from longest to shortest.", distanceDetail:"Distance comparisons and flights sorted from longest to shortest.",
-    aircraftDetail:"Aircraft are grouped by family; exact variants remain in each flight record.",
-    countriesDetail:"Endpoint visits grouped by country or region.", routesDetail:"Outbound and return directions are counted separately.",
-    citiesDetail:"Endpoint visits grouped by city.", airlinesDetail:"Flights grouped by operating airline.",
-    fareDetail:"Known fares sorted from highest to lowest; bundled tickets are grouped.",
     hours:"h", minutes:"min", flightUnit:"flights", typeUnit:"types", countryUnit:"countries / regions",
     airlineUnit:"airlines", routeUnit:"directed routes", cityUnit:"cities", knownFares:"known fares", longestFirst:"Longest first", highestFirst:"Highest first",
     earthCircumference:"Earth circumferences", moonDistance:"Earth–Moon distances", sunDistance:"Earth–Sun distances",
@@ -186,13 +182,9 @@ const translations = {
     aircraftIllustrationChinaSouthern737:"中国南方航空 Boeing 737-800 侧面示意图",
     aircraftIllustrationChinaSouthern787:"中国南方航空 Boeing 787-9 侧面示意图", registration:"注册号",
     cabin:"舱位", seat:"座位", gate:"登机口", notes:"备注", noNotes:"无备注", close:"关闭", editRecord:"编辑记录",
+    backToStatisticsDetail:"返回",
     totalTime:"总飞行时间", totalDistance:"总飞行里程", aircraftTypes:"坐过的机型", airlinesFlown:"乘坐过的航司",
     countriesRegions:"去过的国家 / 地区", directedRoutes:"飞过的航线", citiesVisited:"去过的城市", totalFare:"总票价",
-    flightTimeDetail:"航班按飞行时长由长到短排列。", distanceDetail:"显示距离换算，航班按里程由长到短排列。",
-    aircraftDetail:"按机型大类归并；每次飞行仍保留具体子型号。",
-    countriesDetail:"按航段端点统计国家或地区访问次数。", routesDetail:"去程与回程分别统计。",
-    citiesDetail:"按航段端点统计城市访问次数。", airlinesDetail:"按实际承运航空公司统计航班次数。",
-    fareDetail:"已知票价由高到低排列；联票成组显示。",
     hours:"小时", minutes:"分", flightUnit:"次飞行", typeUnit:"种机型", countryUnit:"个国家 / 地区",
     airlineUnit:"家航司", routeUnit:"条有向航线", cityUnit:"座城市", knownFares:"条已知票价", longestFirst:"由长到短", highestFirst:"由高到低",
     earthCircumference:"圈地球周长", moonDistance:"倍地月距离", sunDistance:"倍地日距离",
@@ -225,7 +217,7 @@ const savedHubs = (() => {
 const state = {
   activeView:"atlas", yearFilter:"all", scopeFilter:"all", mapMode:"route", globeStyle:"light", lang:"en",
   selectedRoute:null, selectedAirport:null, activeFlightId:null, editingFlightId:null,
-  hubs:new Set(savedHubs.filter(code => airports[code])), hubEditorOpen:false, incomingMode:false
+  hubs:new Set(savedHubs.filter(code => airports[code])), hubEditorOpen:false, incomingMode:false, statsReturnType:null
 };
 const visitedCountries = new Set([
   "China", "Japan", "Cambodia", "Singapore", "Australia", "Indonesia", "Malaysia",
@@ -481,10 +473,17 @@ function renderFlights() {
   document.querySelectorAll("[data-flight-id]").forEach(el => el.addEventListener("click", () => openFlight(Number(el.dataset.flightId))));
 }
 
-function openFlight(id) {
+function openFlight(id,{returnStatsType=null}={}) {
   const f = flights.find(item => item.id === id);
   if (!f) return;
   state.activeFlightId=id;
+  state.statsReturnType=returnStatsType;
+  const statsBackButton=document.getElementById("detailBackToStats");
+  statsBackButton.hidden=!returnStatsType;
+  if(returnStatsType){
+    const returnTitle={time:t("totalTime"),distance:t("totalDistance"),aircraft:t("aircraftTypes"),airlines:t("airlinesFlown"),countries:t("countriesRegions"),routes:t("directedRoutes"),cities:t("citiesVisited"),fare:t("totalFare")}[returnStatsType];
+    document.getElementById("detailBackToStatsLabel").textContent=state.lang==="zh"?`${t("backToStatisticsDetail")}${returnTitle}`:`${t("backToStatisticsDetail")} ${returnTitle}`;
+  }
   const from = airports[f.from], to = airports[f.to];
   const set = (id, value) => document.getElementById(id).textContent = value;
   document.getElementById("detailLogo").innerHTML = airlineIcons[f.airlineShort] ? `<img src="${airlineIcons[f.airlineShort]}" alt="${f.airline} logo" />` : f.airlineShort;
@@ -555,12 +554,12 @@ function incomingRemainingLabel(f) {
   const days=Math.max(0,Math.ceil((departureDateTime(f)-new Date())/86400000));
   if(days===0)return t("today");
   if(days===1)return t("tomorrow");
-  return `${days} ${t("daysRemaining")}`;
+  return `${days} ${t("days")}`;
 }
 function incomingFlightMarkup(f,index) {
   return `<button class="incoming-flight" data-incoming-index="${index}">
-    <div class="incoming-flight-top">${iconMarkup(f,"incoming-airline-icon")}<span><strong>${f.flightNo}</strong><small>${f.airline}</small></span><b>${incomingRemainingLabel(f)}</b></div>
-    <div class="incoming-flight-route"><strong>${f.from}</strong><i></i><strong>${f.to}</strong></div>
+    <div class="incoming-flight-top">${iconMarkup(f,"incoming-airline-icon")}<span><strong>${f.flightNo}</strong><small>${f.airline}</small></span></div>
+    <div class="incoming-flight-route"><strong>${f.from}</strong><i></i><strong>${f.to}</strong><b>${incomingRemainingLabel(f)}</b></div>
     <p>${formatDate(f.date)} · ${f.depart || "—"}</p>
   </button>`;
 }
@@ -721,11 +720,11 @@ function aggregateBy(items,keyFn) {
 function durationText(minutes) {
   return `${Math.floor(minutes/60).toLocaleString()} ${t("hours")} ${minutes%60} ${t("minutes")}`;
 }
-function flightDetailRow(f,value) {
-  return `<button class="stats-flight-row" data-flight-id="${f.id}">
+function flightDetailRow(f,value,emphasized=false) {
+  return `<button class="stats-flight-row${emphasized?" metric-row":""}" data-flight-id="${f.id}">
     ${iconMarkup(f,"stats-airline-icon")}
-    <span><strong>${f.flightNo}</strong><small>${formatDate(f.date)} · ${f.from} → ${f.to}</small></span>
-    <b>${value}</b><i>›</i>
+    <span class="stats-flight-copy"><strong>${f.flightNo}</strong><small><span>${formatDate(f.date)}</span><span class="stats-route-codes"><b>${f.from}</b><i>→</i><b>${f.to}</b></span></small></span>
+    <b class="stats-flight-value">${value}</b><i class="stats-flight-arrow">›</i>
   </button>`;
 }
 function statIcon(type) {
@@ -795,20 +794,37 @@ function featuredFlightMarkup(f,value) {
 function statsBarMarkup(rows) {
   const sorted=[...rows].sort((a,b)=>b.count-a.count||a.label.localeCompare(b.label));
   const maximum=Math.max(1,...sorted.map(row=>row.count));
-  return sorted.map((row,index)=>`
-    <div class="stats-bar-row${row.image?" has-image":""}">
-      ${row.icon||`<span class="stats-rank-index">${String(index+1).padStart(2,"0")}</span>`}
+  return sorted.map((row,index)=>{
+    const hasLeading=row.icon!==undefined||row.showRank!==false;
+    const leading=row.icon!==undefined?row.icon:`<span class="stats-rank-index">${String(index+1).padStart(2,"0")}</span>`;
+    return `
+    <div class="stats-bar-row${row.image?" has-image":""}${hasLeading?"":" no-leading"}">
+      ${hasLeading?leading:""}
       <div class="stats-bar-main">
         <div class="stats-bar-head"><span><strong>${row.label}</strong>${row.note?`<small>${row.note}</small>`:""}</span><b>${row.count} ${row.unit||t("times")}</b></div>
         <div class="stats-bar-track"><i style="width:${Math.max(5,row.count/maximum*100)}%"></i></div>
       </div>
       ${row.image?`<div class="stats-aircraft-visual">${row.image}</div>`:""}
-    </div>`).join("");
+    </div>`;
+  }).join("");
+}
+function flagEmoji(countryCode) {
+  const code=String(countryCode||"").toUpperCase();
+  if(!/^[A-Z]{2}$/.test(code))return "◎";
+  return String.fromCodePoint(...[...code].map(letter=>127397+letter.charCodeAt(0)));
+}
+function flagIconForAirport(airport) {
+  return `<span class="stats-flag" aria-hidden="true">${flagEmoji(airport?.countryCode)}</span>`;
+}
+function airportForCountryLabel(label) {
+  return Object.values(airports).find(airport=>airportCountry(airport)===label);
+}
+function airportForCityLabel(label) {
+  return Object.values(airports).find(airport=>airportCity(airport)===label);
 }
 function openStatsDetail(type) {
   const scopedFlights=filteredFlights(),s=statsSnapshot(scopedFlights);
   const title={time:t("totalTime"),distance:t("totalDistance"),aircraft:t("aircraftTypes"),airlines:t("airlinesFlown"),countries:t("countriesRegions"),routes:t("directedRoutes"),cities:t("citiesVisited"),fare:t("totalFare")}[type];
-  const description={time:t("flightTimeDetail"),distance:t("distanceDetail"),aircraft:t("aircraftDetail"),airlines:t("airlinesDetail"),countries:t("countriesDetail"),routes:t("routesDetail"),cities:t("citiesDetail"),fare:t("fareDetail")}[type];
   let summary="",content="";
   if(!scopedFlights.length){
     summary="0";
@@ -823,7 +839,7 @@ function openStatsDetail(type) {
         {symbol:"30",value:s.totalMinutes/43830,label:t("months")},
         {symbol:"365",value:s.totalMinutes/525960,label:t("years")}
       ])}
-      <div class="detail-sort-label">${t("longestFirst")}</div>${sorted.map(f=>flightDetailRow(f,durationText(f.durationMinutes))).join("")}`;
+      <div class="detail-sort-label">${t("longestFirst")}</div>${sorted.map(f=>flightDetailRow(f,durationText(f.durationMinutes),true)).join("")}`;
   }else if(type==="distance"){
     summary=`${s.totalDistance.toLocaleString()} km`;
     const sorted=[...scopedFlights].sort((a,b)=>b.distance-a.distance);
@@ -833,12 +849,12 @@ function openStatsDetail(type) {
         {symbol:"◐",value:s.totalDistance/384400,label:t("moonDistance")},
         {symbol:"☉",value:s.totalDistance/149597870.7,label:t("sunDistance")}
       ])}
-      <div class="detail-sort-label">${t("longestFirst")}</div>${sorted.map(f=>flightDetailRow(f,`${f.distance.toLocaleString()} km`)).join("")}`;
+      <div class="detail-sort-label">${t("longestFirst")}</div>${sorted.map(f=>flightDetailRow(f,`${f.distance.toLocaleString()} km`,true)).join("")}`;
   }else if(type==="aircraft"){
     summary=`${s.aircraft.size} ${t("typeUnit")}`;
     content=statsBarMarkup([...s.aircraft.entries()].map(([family,items])=>{
       const visualFlight=items.find(aircraftVisualForFlight);
-      return {label:family,count:items.length,image:visualFlight?aircraftImageMarkup(visualFlight,"stats-aircraft-image"):genericAircraftMarkup(family)};
+      return {label:family,count:items.length,showRank:false,image:visualFlight?aircraftImageMarkup(visualFlight,"stats-aircraft-image"):genericAircraftMarkup(family)};
     }));
   }else if(type==="airlines"){
     summary=`${s.airlines.size} ${t("airlineUnit")}`;
@@ -847,13 +863,13 @@ function openStatsDetail(type) {
     })));
   }else if(type==="countries"){
     summary=`${s.countries.size} ${t("countryUnit")}`;
-    content=statsBarMarkup([...s.countries.entries()].map(([name,count])=>({label:name,count,unit:t("visits")})));
+    content=statsBarMarkup([...s.countries.entries()].map(([name,count])=>({label:name,count,unit:t("visits"),icon:flagIconForAirport(airportForCountryLabel(name))})));
   }else if(type==="routes"){
     summary=`${s.directedRoutes.size} ${t("routeUnit")}`;
-    content=statsBarMarkup([...s.directedRoutes.entries()].map(([name,items])=>({label:name.replace(">"," → "),count:items.length})));
+    content=statsBarMarkup([...s.directedRoutes.entries()].map(([name,items])=>({label:name.replace(">"," → "),count:items.length,showRank:false})));
   }else if(type==="cities"){
     summary=`${s.cities.size} ${t("cityUnit")}`;
-    content=statsBarMarkup([...s.cities.entries()].map(([name,count])=>({label:name,count,unit:t("visits")})));
+    content=statsBarMarkup([...s.cities.entries()].map(([name,count])=>({label:name,count,unit:t("visits"),icon:flagIconForAirport(airportForCityLabel(name))})));
   }else if(type==="fare"){
     summary=formatFare(s.totalFare);
     const fareGroups=new Map();
@@ -868,11 +884,10 @@ function openStatsDetail(type) {
         </section>`;
       }).join("")}`;
   }
-  document.getElementById("statsDetailKicker").textContent=description;
   document.getElementById("statsDetailTitle").textContent=title;
   document.getElementById("statsDetailSummary").textContent=summary;
   document.getElementById("statsDetailContent").innerHTML=content;
-  document.querySelectorAll("#statsDetailContent [data-flight-id]").forEach(el=>el.addEventListener("click",()=>{closeModals();openFlight(Number(el.dataset.flightId));}));
+  document.querySelectorAll("#statsDetailContent [data-flight-id]").forEach(el=>el.addEventListener("click",()=>{closeModals();openFlight(Number(el.dataset.flightId),{returnStatsType:type});}));
   openModal("statsDetailModal");
 }
 function persistHubs(){localStorage.setItem("flightArchiveHubs",JSON.stringify([...state.hubs]));}
@@ -1357,6 +1372,13 @@ document.querySelectorAll("[data-stats-scope]").forEach(el=>el.addEventListener(
 }));
 document.querySelectorAll("[data-open-add]").forEach(el=>el.addEventListener("click",prepareAddForm));
 document.getElementById("importButton").addEventListener("click",()=>openModal("importModal"));
+document.getElementById("detailBackToStats").addEventListener("click",()=>{
+  const returnType=state.statsReturnType;
+  if(!returnType)return;
+  state.statsReturnType=null;
+  closeModals();
+  openStatsDetail(returnType);
+});
 document.getElementById("editFlightButton").addEventListener("click",()=>{closeModals();prepareEditForm(state.activeFlightId);});
 document.querySelectorAll("[data-close-modal]").forEach(el=>el.addEventListener("click",closeModals));
 document.querySelectorAll(".modal-backdrop").forEach(el=>el.addEventListener("click",e=>{if(e.target===el)closeModals();}));
