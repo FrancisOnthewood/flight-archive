@@ -937,30 +937,31 @@ let flatView = { zoom:1.08, panX:0, panY:0 };
 
 const rad = value => value * Math.PI / 180;
 function flatViewport() {
-  const mapAspect=1.92;
+  const mapAspect=2;
   let mapWidth=cw,mapHeight=mapWidth/mapAspect;
   if(mapHeight<ch){mapHeight=ch;mapWidth=mapHeight*mapAspect;}
   return {x:0,y:0,width:cw,height:ch,mapWidth,mapHeight};
 }
-function naturalEarthPoint(lat,lon) {
-  const phi=rad(Math.max(-90,Math.min(90,lat))),lambda=rad(lon),phi2=phi*phi,phi4=phi2*phi2;
-  const x=lambda*(.8707-.131979*phi2+phi4*(-.013791+phi4*(.003971*phi2-.001529*phi4)));
-  const y=phi*(1.007226+phi2*(.015085+phi4*(-.044475+.028874*phi2-.005916*phi4)));
-  return {x:x/(Math.PI*.8707),y:y/1.4224};
+function cylindricalPoint(lat,lon) {
+  return {x:lon/180,y:Math.max(-90,Math.min(90,lat))/90};
 }
 function projectFlat(lat,lon) {
-  const viewport=flatViewport(),point=naturalEarthPoint(lat,lon);
+  const viewport=flatViewport(),point=cylindricalPoint(lat,lon);
   return {
     x:centerX+point.x*viewport.mapWidth*.5*flatView.zoom+flatView.panX,
     y:centerY-point.y*viewport.mapHeight*.5*flatView.zoom+flatView.panY,
     z:1
   };
 }
+function normalizeFlatPanX() {
+  const worldWidth=flatViewport().mapWidth*flatView.zoom;
+  if(!worldWidth)return;
+  flatView.panX=((flatView.panX+worldWidth*.5)%worldWidth+worldWidth)%worldWidth-worldWidth*.5;
+}
 function clampFlatPan() {
   const viewport=flatViewport();
-  const maxX=Math.max(0,(viewport.mapWidth*flatView.zoom-cw)/2);
   const maxY=Math.max(0,(viewport.mapHeight*flatView.zoom-ch)/2);
-  flatView.panX=Math.max(-maxX,Math.min(maxX,flatView.panX));
+  normalizeFlatPanX();
   flatView.panY=Math.max(-maxY,Math.min(maxY,flatView.panY));
 }
 function project(lat, lon, altitude = 0) {
@@ -1038,6 +1039,21 @@ function unwrapRing(ring) {
     return [unwrapped,lat];
   });
 }
+function rotateRingAtDateline(ring) {
+  if(ring.length<3)return ring;
+  let seamIndex=0,largestJump=0;
+  for(let index=1;index<ring.length;index++){
+    const jump=Math.abs(ring[index][0]-ring[index-1][0]);
+    if(jump>largestJump){largestJump=jump;seamIndex=index;}
+  }
+  if(largestJump<180)return ring;
+  const closed=ring[0][0]===ring[ring.length-1][0]&&ring[0][1]===ring[ring.length-1][1];
+  const openRing=closed?ring.slice(0,-1):ring;
+  const start=Math.min(seamIndex,openRing.length-1);
+  const rotated=[...openRing.slice(start),...openRing.slice(0,start)];
+  if(closed)rotated.push(rotated[0]);
+  return rotated;
+}
 function pointsIntersectViewport(points,viewport,padding=0) {
   let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
   points.forEach(point=>{
@@ -1052,9 +1068,15 @@ function drawFlatLand() {
   landFeatures.forEach(feature=>{
     const visited=visitedCountries.has(feature.name);
     feature.rings.forEach(ring=>{
-      const continuous=unwrapRing(ring);
+      const continuous=unwrapRing(rotateRingAtDateline(ring));
+      const longitudes=continuous.map(point=>point[0]);
+      const closesAtSouthPole=feature.name==="Antarctica"&&Math.max(...longitudes)-Math.min(...longitudes)>300;
       [-360,0,360].forEach(shift=>{
         const points=continuous.map(([lon,lat])=>projectFlat(lat,lon+shift));
+        if(closesAtSouthPole){
+          points.push(projectFlat(-90,continuous[continuous.length-1][0]+shift));
+          points.push(projectFlat(-90,continuous[0][0]+shift));
+        }
         if(!points.length)return;
         if(!pointsIntersectViewport(points,viewport,8))return;
         ctx.beginPath();
@@ -1201,20 +1223,25 @@ function drawAirports() {
   const codes=new Set(activeMapRoutes().flatMap(r=>[r.from,r.to]));
   if(!state.incomingMode)codes.add("PKX");
   codes.forEach(code=>{
-    const airport=airports[code], p=project(airport.lat,airport.lon);
-    if(p.z<=0)return;
-    if(state.globeStyle==="flat"){
-      const viewport=flatViewport();
-      if(p.x<viewport.x||p.x>viewport.x+viewport.width||p.y<viewport.y||p.y>viewport.y+viewport.height)return;
-    }
+    const airport=airports[code],flat=state.globeStyle==="flat";
+    const positions=flat
+      ? [-360,0,360].map(shift=>projectFlat(airport.lat,airport.lon+shift))
+      : [project(airport.lat,airport.lon)];
     const selected=state.selectedAirport===code,hub=state.hubs.has(code);
     const radius=selected?5.5:state.mapMode==="airport"?3.8:2.7;
-    ctx.beginPath();ctx.arc(p.x,p.y,radius+3,0,Math.PI*2);ctx.fillStyle=hub?"rgba(230,75,46,.19)":selected?"rgba(24,119,242,.22)":"rgba(24,119,242,.08)";ctx.fill();
-    ctx.beginPath();ctx.arc(p.x,p.y,radius,0,Math.PI*2);ctx.fillStyle=hub?"#e64b2e":selected?"#0b5fc9":"#1877f2";ctx.fill();
-    if(selected||state.mapMode==="airport"){
-      ctx.font="600 9px DM Sans";ctx.fillStyle=state.globeStyle==="orbit"?"#dcecf0":"#3e4b5f";ctx.fillText(code,p.x+8,p.y-6);
-    }
-    airportHitAreas.push({code,x:p.x,y:p.y});
+    positions.forEach(p=>{
+      if(!flat&&p.z<=0)return;
+      if(flat){
+        const viewport=flatViewport();
+        if(p.x<viewport.x||p.x>viewport.x+viewport.width||p.y<viewport.y||p.y>viewport.y+viewport.height)return;
+      }
+      ctx.beginPath();ctx.arc(p.x,p.y,radius+3,0,Math.PI*2);ctx.fillStyle=hub?"rgba(230,75,46,.19)":selected?"rgba(24,119,242,.22)":"rgba(24,119,242,.08)";ctx.fill();
+      ctx.beginPath();ctx.arc(p.x,p.y,radius,0,Math.PI*2);ctx.fillStyle=hub?"#e64b2e":selected?"#0b5fc9":"#1877f2";ctx.fill();
+      if(selected||state.mapMode==="airport"){
+        ctx.font="600 9px DM Sans";ctx.fillStyle=state.globeStyle==="orbit"?"#dcecf0":"#3e4b5f";ctx.fillText(code,p.x+8,p.y-6);
+      }
+      airportHitAreas.push({code,x:p.x,y:p.y});
+    });
   });
 }
 function drawFlatMap() {
