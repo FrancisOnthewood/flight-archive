@@ -20,10 +20,27 @@ $cityNames = @{
   CGO = "郑州"; HAK = "海口"
 }
 
+$cityNamesEn = @{
+  SHA = "Shanghai"; CAN = "Guangzhou"; PKX = "Beijing"; WUH = "Wuhan"; PEK = "Beijing"
+  KTI = "Phnom Penh"; XMN = "Xiamen"; SZX = "Shenzhen"; SIN = "Singapore"; HKG = "Hong Kong"
+  SYD = "Sydney"; MEL = "Melbourne"; DPS = "Denpasar"; KUL = "Kuala Lumpur"; SGN = "Ho Chi Minh City"
+  BWN = "Bandar Seri Begawan"; HLD = "Hailar"; SJW = "Shijiazhuang"; BKI = "Kota Kinabalu"; PVG = "Shanghai"
+  DXB = "Dubai"; MAD = "Madrid"; STR = "Stuttgart"; BCN = "Barcelona"; MUC = "Munich"
+  OKA = "Okinawa"; LHW = "Lanzhou"; XNN = "Xining"; HUZ = "Huizhou"; NKG = "Nanjing"
+  TNA = "Jinan"; WUX = "Wuxi"; CKG = "Chongqing"; YIH = "Yichang"; XIY = "Xi'an"
+  CGO = "Zhengzhou"; HAK = "Haikou"
+}
+
 $countryNames = @{
   CN = "中国"; HK = "中国香港"; KH = "柬埔寨"; SG = "新加坡"; AU = "澳大利亚"
   ID = "印度尼西亚"; MY = "马来西亚"; VN = "越南"; BN = "文莱"; JP = "日本"
   AE = "阿联酋"; ES = "西班牙"; DE = "德国"
+}
+
+$countryNamesEn = @{
+  CN = "China"; HK = "Hong Kong SAR"; KH = "Cambodia"; SG = "Singapore"; AU = "Australia"
+  ID = "Indonesia"; MY = "Malaysia"; VN = "Vietnam"; BN = "Brunei"; JP = "Japan"
+  AE = "United Arab Emirates"; ES = "Spain"; DE = "Germany"
 }
 
 $airlineNames = @{
@@ -68,6 +85,10 @@ function Parse-Duration {
     $hours = [int]$Matches[1]
     $minutes = [int]$Matches[2]
     return [ordered]@{ text = "${hours}h ${minutes}m"; minutes = $hours * 60 + $minutes }
+  }
+  if ($Value -match "^\s*(\d+)\s*min\s*$") {
+    $minutes = [int]$Matches[1]
+    return [ordered]@{ text = "${minutes}min"; minutes = $minutes }
   }
   return [ordered]@{ text = $Value; minutes = 0 }
 }
@@ -120,8 +141,14 @@ foreach ($code in ($codes | Sort-Object)) {
   $airports[$code] = [ordered]@{
     code = $code
     city = if ($cityNames.ContainsKey($code)) { $cityNames[$code] } else { $airport.municipality }
+    cityZh = if ($cityNames.ContainsKey($code)) { $cityNames[$code] } else { $airport.municipality }
+    cityEn = if ($cityNamesEn.ContainsKey($code)) { $cityNamesEn[$code] } else { $airport.municipality }
     name = if ($labelByCode.ContainsKey($code)) { $labelByCode[$code] } else { $airport.name }
+    nameZh = if ($labelByCode.ContainsKey($code)) { $labelByCode[$code] } else { $airport.name }
+    nameEn = $airport.name
     country = if ($countryNames.ContainsKey($countryCode)) { $countryNames[$countryCode] } else { $countryCode }
+    countryZh = if ($countryNames.ContainsKey($countryCode)) { $countryNames[$countryCode] } else { $countryCode }
+    countryEn = if ($countryNamesEn.ContainsKey($countryCode)) { $countryNamesEn[$countryCode] } else { $countryCode }
     countryCode = $countryCode
     lat = [math]::Round([double]$airport.latitude_deg, 6)
     lon = [math]::Round([double]$airport.longitude_deg, 6)
@@ -143,6 +170,8 @@ foreach ($row in $completeRows) {
   $date = [datetime]::Parse($row.Date, [System.Globalization.CultureInfo]::InvariantCulture)
   $distance = [int][double]$row.'Distance(km)'
   $scope = if ($airports[$from.code].countryCode -eq $airports[$to.code].countryCode) { "domestic" } else { "international" }
+  $fareRaw = if ([string]::IsNullOrWhiteSpace($row.Price)) { $null } else { $row.Price.Trim() }
+  $fareGroup = if ($fareRaw -and $fareRaw -match "/") { $fareRaw } else { $null }
   $flights += [ordered]@{
     id = $id
     routeId = $routeId
@@ -164,9 +193,9 @@ foreach ($row in $completeRows) {
     seat = if ([string]::IsNullOrWhiteSpace($row.Seat)) { "—" } else { $row.Seat }
     cabin = $row.Class
     fare = Parse-Fare $row.Price
-    booking = "—"
+    fareRaw = $fareRaw
+    fareGroup = $fareGroup
     gate = "—"
-    status = "Recorded"
     note = $row.notes
     scope = $scope
   }
@@ -219,7 +248,3 @@ Set-Content -LiteralPath $resolvedOutput -Value $javascript -Encoding UTF8
 
 Write-Output "Imported $($flights.Count) complete flights; excluded $($sourceRows.Count - $flights.Count) incomplete/blank rows."
 Write-Output "Airports: $($airports.Count); routes: $($routes.Count); output: $resolvedOutput"
-
-
-
-

@@ -1,17 +1,17 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f4f6f8" />
     <title>Flight Archive</title>
-    <link rel="stylesheet" href="./styles.css?v=20260730-data" />
+    <link rel="stylesheet" href="./styles.css?v=20260730-v2" />
   </head>
   <body>
     <div class="app-shell" id="appShell">
       <aside class="sidebar" id="sidebar">
         <div class="sidebar-head">
-          <a class="brand" href="#" data-view-link="atlas" aria-label="Flight Archive 首页">
+          <a class="brand" href="#" data-view-link="atlas" aria-label="Flight Archive home">
             <span class="brand-mark">
               <svg viewBox="0 0 40 40" aria-hidden="true">
                 <circle cx="20" cy="20" r="12.5"/>
@@ -25,45 +25,45 @@
               <small>PERSONAL FLIGHT RECORDS</small>
             </span>
           </a>
-          <button class="collapse-button" id="collapseButton" aria-label="收起侧栏" title="收起侧栏">
+          <button class="collapse-button" id="collapseButton" aria-label="Collapse sidebar" title="Collapse sidebar">
             <svg viewBox="0 0 24 24"><path d="m14 7-5 5 5 5"/></svg>
           </button>
         </div>
 
-        <nav class="main-nav" aria-label="主导航">
+        <nav class="main-nav" aria-label="Main navigation">
           <button class="nav-item active" data-view="atlas">
             <span class="nav-icon">
               <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.7 10h16.6M3.7 14h16.6M12 3.5c2.1 2.2 3.2 5 3.2 8.5s-1.1 6.3-3.2 8.5M12 3.5C9.9 5.7 8.8 8.5 8.8 12s1.1 6.3 3.2 8.5"/></svg>
             </span>
-            <span class="nav-label" data-i18n="navMap">航迹地图</span>
+            <span class="nav-label" data-i18n="navMap">Flight Map</span>
           </button>
           <button class="nav-item" data-view="records">
             <span class="nav-icon">
               <svg viewBox="0 0 24 24"><path d="M7 3.5h10l2 2v15H5v-15l2-2Z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
             </span>
-            <span class="nav-label" data-i18n="navRecords">飞行记录</span>
+            <span class="nav-label" data-i18n="navRecords">Flight Records</span>
           </button>
           <button class="nav-item" data-view="stats">
             <span class="nav-icon">
               <svg viewBox="0 0 24 24"><path d="M4 19V9m5 10V5m5 14v-7m5 7V3"/></svg>
             </span>
-            <span class="nav-label" data-i18n="navStats">数据统计</span>
+            <span class="nav-label" data-i18n="navStats">Statistics</span>
           </button>
           <button class="nav-item" data-view="memories">
             <span class="nav-icon">
               <svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="m5.5 17 4.3-4.2 2.7 2.4 2.4-2 3.6 3.8"/></svg>
             </span>
-            <span class="nav-label" data-i18n="navMedia">旅途相册</span>
+            <span class="nav-label" data-i18n="navMedia">Media</span>
           </button>
         </nav>
 
         <section class="map-control" id="mapControl">
-          <span class="section-label" data-i18n="mapSelection">地图选择</span>
+          <span class="section-label" data-i18n="mapSelection">Map content</span>
           <div class="segmented-control">
-            <button class="active" id="routeMode" data-i18n="routes">航线</button>
-            <button id="airportMode" data-i18n="airports">机场</button>
+            <button class="active" id="routeMode" data-i18n="routes">Routes</button>
+            <button id="airportMode" data-i18n="airports">Airports</button>
           </div>
-          <p data-i18n="mapHelp">拖拽旋转，滚轮缩放；点击航线或机场查看详情。</p>
+          <p data-i18n="mapHelp">Drag to rotate, scroll to zoom, and select a route or airport for details.</p>
         </section>
 
         <div class="sidebar-spacer"></div>
@@ -71,44 +71,52 @@
         <div class="settings-area">
           <div class="settings-panel" id="settingsPanel" aria-hidden="true">
             <div class="settings-head">
-              <strong data-i18n="settings">设置</strong>
-              <button id="settingsClose" aria-label="关闭设置">
+              <strong data-i18n="settings">Settings</strong>
+              <button id="settingsClose" aria-label="Close settings">
                 <svg viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17"/></svg>
               </button>
             </div>
-            <span class="settings-label" data-i18n="language">语言</span>
+            <span class="settings-label" data-i18n="language">Language</span>
             <div class="segmented-control">
-              <button class="active" id="langZh">中文</button>
-              <button id="langEn">EN</button>
+              <button id="langZh">中文</button>
+              <button class="active" id="langEn">EN</button>
+            </div>
+            <div class="hub-settings">
+              <span class="settings-label" data-i18n="hubs">Hub airports</span>
+              <div class="hub-picker">
+                <select id="hubAirportSelect" aria-label="Hub airport"></select>
+                <button id="addHubButton" data-i18n="add">Add</button>
+              </div>
+              <div class="hub-chips" id="hubChips"></div>
             </div>
             <div class="author-contact">
-              <span data-i18n="authorEmail">作者邮箱</span>
-              <strong data-i18n="emailNotPublic">邮箱未公开</strong>
+              <span data-i18n="authorEmail">Author email</span>
+              <strong data-i18n="emailNotPublic">Email not public</strong>
             </div>
           </div>
           <button class="settings-button" id="settingsButton" aria-expanded="false">
             <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.8 1.8 0 0 0 .36 1.98l.06.06-2.78 2.78-.06-.06A1.8 1.8 0 0 0 15 19.4a1.8 1.8 0 0 0-1.08 1.65V21H10v-.08A1.8 1.8 0 0 0 8.95 19.3a1.8 1.8 0 0 0-1.98.36l-.06.06-2.78-2.78.06-.06A1.8 1.8 0 0 0 4.6 15a1.8 1.8 0 0 0-1.65-1.08H3V10h.08A1.8 1.8 0 0 0 4.7 8.95a1.8 1.8 0 0 0-.36-1.98l-.06-.06 2.78-2.78.06.06A1.8 1.8 0 0 0 9 4.6a1.8 1.8 0 0 0 1.08-1.65V3H14v.08A1.8 1.8 0 0 0 15.05 4.7a1.8 1.8 0 0 0 1.98-.36l.06-.06 2.78 2.78-.06.06A1.8 1.8 0 0 0 19.4 9a1.8 1.8 0 0 0 1.65 1.08H21V14h-.08A1.8 1.8 0 0 0 19.4 15Z"/></svg>
-            <span data-i18n="settings">设置</span>
+            <span data-i18n="settings">Settings</span>
           </button>
         </div>
       </aside>
 
       <main class="main-content">
         <section class="view atlas-view active" id="atlasView">
-          <canvas id="globeCanvas" aria-label="可拖拽的世界飞行航迹地球"></canvas>
-          <div class="globe-style-switch" aria-label="地球风格">
-            <button class="active" id="styleLight" aria-label="浅色地球">
+          <canvas id="globeCanvas" aria-label="Interactive flight-route globe"></canvas>
+          <div class="globe-style-switch" aria-label="Globe style">
+            <button class="active" id="styleLight" aria-label="Light globe">
               <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.5"/><path d="M4.8 10.5h14.4M7.3 6.8c2.8 2.1 6.6 2.1 9.4 0M7.3 17.2c2.8-2.1 6.6-2.1 9.4 0"/></svg>
             </button>
-            <button id="styleOrbit" aria-label="星空地球">
+            <button id="styleOrbit" aria-label="Space globe">
               <svg viewBox="0 0 24 24"><path d="M16.8 16.5A7.5 7.5 0 0 1 8.1 5.1a7.5 7.5 0 1 0 8.7 11.4Z"/><path d="m17.5 4 .45 1.05L19 5.5l-1.05.45L17.5 7l-.45-1.05L16 5.5l1.05-.45L17.5 4Z"/></svg>
             </button>
           </div>
-          <div class="globe-loading" id="globeLoading"><span></span>正在载入地理数据</div>
+          <div class="globe-loading" id="globeLoading"><span></span><b data-i18n="loadingGeography">Loading geographic data</b></div>
           <div class="hover-tooltip" id="hoverTooltip"></div>
 
           <aside class="info-drawer" id="infoDrawer" aria-live="polite">
-            <button class="drawer-close" id="drawerClose" aria-label="关闭信息面板">
+            <button class="drawer-close" id="drawerClose" aria-label="Close information panel">
               <svg viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17"/></svg>
             </button>
             <div id="drawerContent"></div>
@@ -117,19 +125,18 @@
 
         <section class="view page-view" id="recordsView">
           <header class="page-header">
-            <div>
-              <span class="page-kicker">FLIGHT LOG</span>
-              <h1 data-i18n="recordsTitle">飞行记录</h1>
-              <p data-i18n="recordsDesc">按日期倒序展示已保存的航段。</p>
+            <div class="records-heading">
+              <h1 data-i18n="recordsTitle">Flight Records</h1>
+              <div class="flight-total"><strong id="recordTotal">50</strong><span data-i18n="totalFlights">total flights</span></div>
             </div>
             <div class="record-actions">
               <button class="subtle-button" id="importButton">
                 <svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M5 19h14"/></svg>
-                <span data-i18n="import">批量导入</span>
+                <span data-i18n="import">Import</span>
               </button>
               <button class="primary-button page-add" data-open-add>
                 <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-                <span data-i18n="addFlight">添加飞行</span>
+                <span data-i18n="addFlight">Add Flight</span>
               </button>
             </div>
           </header>
@@ -137,16 +144,16 @@
           <div class="filter-bar">
             <label class="search-field">
               <svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4 4"/></svg>
-              <input id="recordSearch" placeholder="搜索航班号、航司、城市或机场" data-i18n-placeholder="searchPlaceholder" />
+              <input id="recordSearch" placeholder="Search flight, airline, or airport" data-i18n-placeholder="searchPlaceholder" />
             </label>
-            <button class="filter-chip active" data-filter="all" data-i18n="all">全部</button>
+            <button class="filter-chip active" data-filter="all" data-i18n="all">All</button>
             <button class="filter-chip" data-filter="2026">2026</button>
-            <button class="filter-chip" data-filter="international" data-i18n="international">国际 / 地区</button>
-            <button class="filter-chip" data-filter="domestic" data-i18n="domestic">国内</button>
+            <button class="filter-chip" data-filter="international" data-i18n="international">International</button>
+            <button class="filter-chip" data-filter="domestic" data-i18n="domestic">Domestic</button>
           </div>
 
           <div class="record-table-head" aria-hidden="true">
-            <span data-i18n="flight">航班</span><span data-i18n="date">日期</span><span data-i18n="routeTime">航线与时间</span><span data-i18n="flightInfo">飞行信息</span><span data-i18n="fare">票价</span><span></span>
+            <span data-i18n="flight">Flight</span><span data-i18n="date">Date</span><span data-i18n="airportTime">Airports &amp; time</span><span data-i18n="flightInfo">Flight information</span><span data-i18n="fare">Fare</span><span></span>
           </div>
           <div class="flight-list" id="flightList"></div>
         </section>
@@ -154,46 +161,24 @@
         <section class="view page-view" id="statsView">
           <header class="page-header">
             <div>
-              <span class="page-kicker">SUMMARY</span>
-              <h1 data-i18n="statsTitle">飞行数据统计</h1>
-              <p data-i18n="statsDesc">根据当前记录汇总里程、时间、支出、航线、机场与机型。</p>
+              <h1 data-i18n="statsTitle">Flight Statistics</h1>
             </div>
           </header>
-
-          <div class="stats-kpis" id="statsKpis"></div>
-
-          <div class="stats-grid">
-            <article class="data-card">
-              <div class="card-head"><div><span>ROUTES</span><h2 data-i18n="routeFrequency">航线次数</h2></div><b id="routeCountBadge"></b></div>
-              <div id="routeRanking"></div>
-            </article>
-            <article class="data-card">
-              <div class="card-head"><div><span>AIRCRAFT</span><h2 data-i18n="aircraftDistribution">机型分布</h2></div><b id="aircraftCountBadge"></b></div>
-              <div class="aircraft-summary" id="aircraftSummary"></div>
-            </article>
-            <article class="data-card">
-              <div class="card-head"><div><span>AIRPORTS</span><h2 data-i18n="airportVisits">机场访问次数</h2></div><b id="airportCountBadge"></b></div>
-              <div class="airport-bars" id="airportBars"></div>
-            </article>
-            <article class="data-card countries-card">
-              <div class="card-head"><div><span>GEOGRAPHY</span><h2 data-i18n="countriesRegions">国家与地区</h2></div><b id="countriesCountBadge"></b></div>
-              <div class="country-list" id="countryList"></div>
-            </article>
-          </div>
+          <div class="stats-list" id="statsList"></div>
         </section>
 
         <section class="view page-view" id="memoriesView">
           <header class="page-header">
             <div>
               <span class="page-kicker">MEDIA</span>
-              <h1 data-i18n="mediaTitle">旅途相册</h1>
-              <p data-i18n="mediaDesc">与飞行记录关联的照片和登机资料。</p>
+              <h1 data-i18n="mediaTitle">Travel Media</h1>
+              <p data-i18n="mediaDesc">Photos and boarding materials linked to flight records.</p>
             </div>
           </header>
           <div class="memory-grid">
-            <article class="memory-card sunset"><span>2026.06.18 · MU721</span><h2>舷窗日落</h2><p>上海 → 香港</p></article>
-            <article class="memory-card wing"><span>2026.03.09 · CX368</span><h2>巡航阶段</h2><p>香港 → 上海</p></article>
-            <article class="memory-card night"><span>2025.12.24 · SQ827</span><h2>夜间进近</h2><p>上海 → 新加坡</p></article>
+            <article class="memory-card sunset"><span>2026.06.18 · MU721</span><h2 data-i18n="memorySunset">Window sunset</h2><p data-i18n="memoryShanghaiHongKong">Shanghai → Hong Kong</p></article>
+            <article class="memory-card wing"><span>2026.03.09 · CX368</span><h2 data-i18n="memoryCruise">Cruise</h2><p data-i18n="memoryHongKongShanghai">Hong Kong → Shanghai</p></article>
+            <article class="memory-card night"><span>2025.12.24 · SQ827</span><h2 data-i18n="memoryNightApproach">Night approach</h2><p data-i18n="memoryShanghaiSingapore">Shanghai → Singapore</p></article>
           </div>
         </section>
       </main>
@@ -201,7 +186,7 @@
 
     <div class="modal-backdrop" id="detailModal">
       <section class="modal detail-modal" role="dialog" aria-modal="true" aria-labelledby="detailTitle">
-        <button class="modal-close" data-close-modal aria-label="关闭">
+        <button class="modal-close" data-close-modal aria-label="Close">
           <svg viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17"/></svg>
         </button>
         <div class="modal-title-row">
@@ -214,61 +199,75 @@
           <div class="align-right"><strong id="detailToCode"></strong><span id="detailToCity"></span><small id="detailArrival"></small></div>
         </div>
         <div class="detail-info-grid" id="detailInfoGrid"></div>
-        <div class="detail-note"><span>备注</span><p id="detailNote"></p></div>
-        <div class="modal-actions"><button class="subtle-button" data-close-modal>关闭</button><button class="primary-button" id="editFlightButton">编辑记录</button></div>
+        <div class="detail-note"><span data-i18n="notes">Notes</span><p id="detailNote"></p></div>
+        <div class="modal-actions"><button class="subtle-button" data-close-modal data-i18n="close">Close</button><button class="primary-button" id="editFlightButton" data-i18n="editRecord">Edit record</button></div>
+      </section>
+    </div>
+
+    <div class="modal-backdrop" id="statsDetailModal">
+      <section class="modal stats-detail-modal" role="dialog" aria-modal="true" aria-labelledby="statsDetailTitle">
+        <button class="modal-close" data-close-modal aria-label="Close">
+          <svg viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17"/></svg>
+        </button>
+        <header class="stats-detail-head">
+          <span id="statsDetailKicker"></span>
+          <h2 id="statsDetailTitle"></h2>
+          <p id="statsDetailSummary"></p>
+        </header>
+        <div class="stats-detail-content" id="statsDetailContent"></div>
+        <div class="modal-actions"><button class="subtle-button" data-close-modal data-i18n="close">Close</button></div>
       </section>
     </div>
 
     <div class="modal-backdrop" id="addModal">
       <section class="modal form-modal" role="dialog" aria-modal="true" aria-labelledby="addTitle">
-        <button class="modal-close" data-close-modal aria-label="关闭">
+        <button class="modal-close" data-close-modal aria-label="Close">
           <svg viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17"/></svg>
         </button>
-        <header class="modal-header"><span>FLIGHT ENTRY</span><h2 id="addTitle">添加飞行记录</h2><p>先填写核心字段，其他资料可以稍后补充。</p></header>
+        <header class="modal-header"><span data-i18n="flightEntry">FLIGHT ENTRY</span><h2 id="addTitle" data-i18n="addFlightRecord">Add flight record</h2><p data-i18n="entryHelp">Enter the core fields first; other details can be added later.</p></header>
         <form id="flightForm">
           <div class="smart-lookup">
-            <div><strong>自动查询航班资料</strong><span>根据日期和航班号补全计划时间、航站楼和机型。</span></div>
+            <div><strong data-i18n="autoLookup">Automatic flight lookup</strong><span data-i18n="autoLookupHelp">Use the date and flight number to complete times, terminals, and aircraft.</span></div>
             <label class="switch"><input type="checkbox" checked /><span></span></label>
           </div>
           <div class="form-grid">
-            <label><span>航班日期</span><input type="date" value="2026-07-29" required /></label>
-            <label><span>航班号</span><input placeholder="例如 MU721" required /></label>
-            <label><span>出发机场</span><input placeholder="PVG / 上海浦东" required /></label>
-            <label><span>到达机场</span><input placeholder="HKG / 香港国际" required /></label>
-            <label><span>航空公司</span><input placeholder="航空公司" /></label>
-            <label><span>机型</span><input placeholder="例如 Airbus A320neo" /></label>
-            <label><span>起飞时间</span><input type="time" /></label>
-            <label><span>到达时间</span><input type="time" /></label>
-            <label><span>座位号</span><input placeholder="例如 34A" /></label>
-            <label><span>舱位</span><select><option>经济舱</option><option>超级经济舱</option><option>商务舱</option><option>头等舱</option></select></label>
-            <label><span>票价</span><input type="number" placeholder="人民币" /></label>
-            <label><span>预订渠道</span><input placeholder="例如 航司官网" /></label>
+            <label><span data-i18n="flightDate">Flight date</span><input type="date" value="2026-07-29" required /></label>
+            <label><span data-i18n="flightNumber">Flight number</span><input placeholder="e.g. MU721" data-i18n-placeholder="flightNumberPlaceholder" required /></label>
+            <label><span data-i18n="departureAirport">Departure airport</span><input placeholder="PVG / Shanghai Pudong" data-i18n-placeholder="departurePlaceholder" required /></label>
+            <label><span data-i18n="arrivalAirport">Arrival airport</span><input placeholder="HKG / Hong Kong International" data-i18n-placeholder="arrivalPlaceholder" required /></label>
+            <label><span data-i18n="airline">Airline</span><input placeholder="Airline" data-i18n-placeholder="airline" /></label>
+            <label><span data-i18n="aircraft">Aircraft</span><input placeholder="e.g. Airbus A320neo" data-i18n-placeholder="aircraftPlaceholder" /></label>
+            <label><span data-i18n="departureTime">Departure time</span><input type="time" /></label>
+            <label><span data-i18n="arrivalTime">Arrival time</span><input type="time" /></label>
+            <label><span data-i18n="seat">Seat</span><input placeholder="e.g. 34A" data-i18n-placeholder="seatPlaceholder" /></label>
+            <label><span data-i18n="cabin">Cabin</span><select id="cabinSelect"></select></label>
+            <label><span data-i18n="fare">Fare</span><input type="number" placeholder="CNY" data-i18n-placeholder="farePlaceholder" /></label>
           </div>
-          <label class="full-field"><span>备注</span><textarea placeholder="填写与本次飞行相关的信息"></textarea></label>
-          <label class="photo-upload"><input type="file" accept="image/*" multiple /><span>+</span><strong>上传照片或登机牌</strong><small>JPG / PNG，单张不超过 10 MB</small></label>
-          <div class="modal-actions"><button type="button" class="subtle-button" data-close-modal>取消</button><button type="submit" class="primary-button">保存记录</button></div>
+          <label class="full-field"><span data-i18n="notes">Notes</span><textarea placeholder="Add notes about this flight" data-i18n-placeholder="notesPlaceholder"></textarea></label>
+          <label class="photo-upload"><input type="file" accept="image/*" multiple /><span>+</span><strong data-i18n="uploadPhotos">Upload photos or boarding passes</strong><small data-i18n="photoLimit">JPG / PNG, up to 10 MB each</small></label>
+          <div class="modal-actions"><button type="button" class="subtle-button" data-close-modal data-i18n="cancel">Cancel</button><button type="submit" class="primary-button" data-i18n="saveRecord">Save record</button></div>
         </form>
       </section>
     </div>
 
     <div class="modal-backdrop" id="importModal">
       <section class="modal import-modal" role="dialog" aria-modal="true" aria-labelledby="importTitle">
-        <button class="modal-close" data-close-modal aria-label="关闭">
+        <button class="modal-close" data-close-modal aria-label="Close">
           <svg viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17"/></svg>
         </button>
-        <header class="modal-header"><span>BULK IMPORT</span><h2 id="importTitle">Excel 批量导入</h2><p>使用标准字段导入既有飞行记录。</p></header>
-        <div class="import-steps"><span><b>01</b>下载模板</span><span><b>02</b>填写记录</span><span><b>03</b>上传校验</span></div>
+        <header class="modal-header"><span data-i18n="bulkImport">BULK IMPORT</span><h2 id="importTitle" data-i18n="excelImport">Excel bulk import</h2><p data-i18n="importHelp">Import existing records with the standard fields.</p></header>
+        <div class="import-steps"><span><b>01</b><i data-i18n="downloadTemplate">Download template</i></span><span><b>02</b><i data-i18n="fillRecords">Fill records</i></span><span><b>03</b><i data-i18n="uploadValidate">Upload and validate</i></span></div>
         <label class="drop-zone">
           <input type="file" accept=".xlsx,.xls,.csv" />
           <svg viewBox="0 0 24 24"><path d="M12 16V5m0 0 4 4m-4-4L8 9"/><path d="M5 15v4h14v-4"/></svg>
-          <strong>点击选择或拖入 Excel 文件</strong>
-          <span>.xlsx / .xls / .csv，最大 20 MB</span>
+          <strong data-i18n="selectExcel">Select or drop an Excel file</strong>
+          <span data-i18n="excelLimit">.xlsx / .xls / .csv, up to 20 MB</span>
         </label>
       </section>
     </div>
 
-    <div class="toast" id="toast"><span>✓</span><div><strong>操作已完成</strong><small>记录已更新</small></div></div>
-    <script src="./flight-data.js?v=20260730-data"></script>
-    <script src="./app.js?v=20260730-data"></script>
+    <div class="toast" id="toast"><span>✓</span><div><strong data-i18n="actionComplete">Completed</strong><small data-i18n="recordUpdated">Record updated</small></div></div>
+    <script src="./flight-data.js?v=20260730-v2"></script>
+    <script src="./app.js?v=20260730-v2"></script>
   </body>
 </html>
