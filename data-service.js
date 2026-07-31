@@ -172,8 +172,11 @@
       if(typeof profile.onboardingCompleted==="boolean")values.onboarding_completed=profile.onboardingCompleted;
       const {data,error}=await supabase.from("profiles").upsert(values).select().single();
       if(error)throw error;
-      if(typeof profile.displayName==="string"){
-        const {error:authError}=await supabase.auth.updateUser({data:{display_name:values.display_name || ""}});
+      if(typeof profile.displayName==="string" || typeof profile.username==="string"){
+        const {error:authError}=await supabase.auth.updateUser({data:{
+          display_name:values.display_name || values.username || "",
+          username:values.username || ""
+        }});
         if(authError)throw authError;
       }
       return {...data,avatar_url:profile.avatarUrl || null};

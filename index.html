@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#f4f6f8" />
     <title>Flight Archive</title>
     <link rel="icon" href="./logo.svg?v=20260730-v3" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css?v=20260731-remember-v1" />
+    <link rel="stylesheet" href="./styles.css?v=20260731-favourites-v1" />
   </head>
   <body>
     <section class="auth-gate" id="authGate" aria-live="polite" hidden>
@@ -28,8 +28,8 @@
         </div>
         <form class="auth-form" id="authForm">
           <label id="authNameField" hidden>
-            <span data-auth-i18n="displayName">Display name</span>
-            <input id="authDisplayName" type="text" autocomplete="name" maxlength="80" />
+            <span data-auth-i18n="username">Username</span>
+            <input id="authDisplayName" type="text" autocomplete="username" maxlength="30" pattern="[A-Za-z0-9_.-]{3,30}" />
           </label>
           <label id="authEmailField">
             <span data-auth-i18n="email">Email</span>
@@ -147,8 +147,7 @@
             <div class="hub-settings">
               <div class="hub-settings-head">
                 <span class="settings-label" data-i18n="hubs">Hub airports</span>
-                <button class="hub-edit-button" id="editHubsButton">
-                  <svg viewBox="0 0 24 24"><path d="m4 16.5-.5 4 4-.5L18.8 8.7l-3.5-3.5L4 16.5Z"/><path d="m13.8 6.7 3.5 3.5"/></svg>
+                <button class="settings-edit-button" id="editHubsButton" type="button">
                   <span id="hubEditLabel" data-i18n="edit">Edit</span>
                 </button>
               </div>
@@ -169,10 +168,6 @@
                 <div><strong id="accountDisplayName"></strong><small id="accountEmail"></small></div>
               </div>
               <div class="settings-editor" id="accountEditor" hidden>
-                <label class="settings-field">
-                  <span class="settings-label" data-i18n="displayName">Display name</span>
-                  <input id="profileDisplayName" type="text" maxlength="80" autocomplete="name" />
-                </label>
                 <label class="settings-field">
                   <span class="settings-label" data-i18n="username">Username</span>
                   <input id="profileUsername" type="text" maxlength="30" autocomplete="username" pattern="[A-Za-z0-9_.-]{3,30}" />
@@ -201,12 +196,11 @@
               </div>
               <div class="favourite-summary" id="favouriteSummary"></div>
               <div class="settings-editor favourite-editor" id="favouriteEditor" hidden>
-                <label class="settings-field"><span data-i18n="airline">Airline</span><select id="favouriteAirlineInput"></select></label>
-                <label class="settings-field"><span data-i18n="aircraft">Aircraft</span><select id="favouriteAircraftInput"></select></label>
-                <label class="settings-field"><span data-i18n="airport">Airport</span><input id="favouriteAirportInput" list="airportCodeOptions" maxlength="3" placeholder="HKG" /></label>
-                <label class="settings-field"><span data-i18n="country">Country / region</span><select id="favouriteCountrySelect"></select></label>
-                <label class="settings-field"><span data-i18n="cityCountry">City country / region</span><select id="favouriteCityCountrySelect"></select></label>
-                <label class="settings-field"><span data-i18n="city">City</span><input id="favouriteCityInput" list="favouriteCityOptions" placeholder="Hong Kong" /></label>
+                <label class="settings-field"><span data-i18n="airline">Airline</span><input id="favouriteAirlineInput" list="favouriteAirlineOptions" autocomplete="off" placeholder="CX" /></label>
+                <label class="settings-field"><span data-i18n="aircraft">Aircraft</span><input id="favouriteAircraftInput" list="favouriteAircraftOptions" autocomplete="off" placeholder="Airbus A350-900" /></label>
+                <label class="settings-field"><span data-i18n="airport">Airport</span><input id="favouriteAirportInput" list="airportCodeOptions" autocomplete="off" placeholder="HKG" /></label>
+                <label class="settings-field"><span data-i18n="destinationRegion">Destination region</span><input id="favouriteCountrySelect" list="favouriteRegionOptions" autocomplete="off" placeholder="Hong Kong / HK" /></label>
+                <label class="settings-field"><span data-i18n="destinationCity">Destination city</span><input id="favouriteCityInput" list="favouriteCityOptions" autocomplete="off" placeholder="Hong Kong" /></label>
                 <button class="settings-save-button" id="saveFavouritesButton" type="button" data-i18n="saveFavourites">Save favourites</button>
               </div>
             </div>
@@ -537,12 +531,11 @@
             <div class="hub-options" id="onboardingHubResults"></div>
           </div>
           <div class="onboarding-grid onboarding-favourites">
-            <label><span data-i18n="favouriteAirline">Favourite airline</span><select id="onboardingFavouriteAirline"></select></label>
-            <label><span data-i18n="favouriteAircraft">Favourite aircraft</span><select id="onboardingFavouriteAircraft"></select></label>
-            <label><span data-i18n="favouriteAirport">Favourite airport</span><input id="onboardingFavouriteAirport" maxlength="3" placeholder="HKG" /></label>
-            <label><span data-i18n="favouriteCountry">Favourite country / region</span><select id="onboardingFavouriteCountry"></select></label>
-            <label><span data-i18n="cityCountry">City country / region</span><select id="onboardingFavouriteCityCountry"></select></label>
-            <label><span data-i18n="favouriteCity">Favourite city</span><input id="onboardingFavouriteCity" list="onboardingCityOptions" placeholder="Hong Kong" /></label>
+            <label><span data-i18n="favouriteAirline">Favourite airline</span><input id="onboardingFavouriteAirline" list="favouriteAirlineOptions" autocomplete="off" placeholder="CX" /></label>
+            <label><span data-i18n="favouriteAircraft">Favourite aircraft</span><input id="onboardingFavouriteAircraft" list="favouriteAircraftOptions" autocomplete="off" placeholder="Airbus A350-900" /></label>
+            <label><span data-i18n="favouriteAirport">Favourite airport</span><input id="onboardingFavouriteAirport" list="airportCodeOptions" autocomplete="off" placeholder="HKG" /></label>
+            <label><span data-i18n="destinationRegion">Destination region</span><input id="onboardingFavouriteCountry" list="favouriteRegionOptions" autocomplete="off" placeholder="Hong Kong / HK" /></label>
+            <label><span data-i18n="destinationCity">Destination city</span><input id="onboardingFavouriteCity" list="onboardingCityOptions" autocomplete="off" placeholder="Hong Kong" /></label>
           </div>
           <div class="modal-actions">
             <button class="subtle-button" id="onboardingSkip" type="button" data-i18n="skipForNow">Skip for now</button>
@@ -553,14 +546,17 @@
     </div>
 
     <datalist id="airportCodeOptions"></datalist>
+    <datalist id="favouriteAirlineOptions"></datalist>
+    <datalist id="favouriteAircraftOptions"></datalist>
+    <datalist id="favouriteRegionOptions"></datalist>
     <datalist id="favouriteCityOptions"></datalist>
     <datalist id="onboardingCityOptions"></datalist>
     <script src="./backend-config.js?v=20260731-feedback-v1"></script>
-    <script src="./auth.js?v=20260731-remember-v1"></script>
+    <script src="./auth.js?v=20260731-username-v1"></script>
     <script src="./flight-data.js?v=20260731-private-v1"></script>
-    <script src="./data-service.js?v=20260731-friends-v1"></script>
+    <script src="./data-service.js?v=20260731-username-v1"></script>
     <script src="./global-airports.js?v=20260730-v1"></script>
     <script src="./reference-data.js?v=20260731-v1"></script>
-    <script src="./app.js?v=20260731-feedback-v1"></script>
+    <script src="./app.js?v=20260731-favourites-v1"></script>
   </body>
 </html>

@@ -9,7 +9,6 @@
   const accountEmail=document.getElementById("accountEmail");
   const accountAvatar=document.getElementById("accountAvatar");
   const accountDisplayName=document.getElementById("accountDisplayName");
-  const profileDisplayName=document.getElementById("profileDisplayName");
   const sidebarAccountSummary=document.getElementById("sidebarAccountSummary");
   const sidebarAccountAvatar=document.getElementById("sidebarAccountAvatar");
   const sidebarAccountName=document.getElementById("sidebarAccountName");
@@ -37,6 +36,8 @@
       createAccount:"Create account",
       createAccountHelp:"Create a private archive for your own flight data.",
       displayName:"Display name",
+      username:"Username",
+      usernameUnavailable:"This username is unavailable.",
       email:"Email",
       password:"Password",
       rememberMe:"Remember me",
@@ -61,6 +62,8 @@
       createAccount:"注册账户",
       createAccountHelp:"为自己的飞行数据创建私人档案。",
       displayName:"显示名称",
+      username:"用户名",
+      usernameUnavailable:"该用户名不可用。",
       email:"邮箱",
       password:"密码",
       rememberMe:"保持登录",
@@ -190,6 +193,7 @@
   const setMode=nextMode=>{
     mode=nextMode;
     nameField.hidden=mode!=="signup";
+    nameInput.required=mode==="signup";
     emailField.hidden=mode==="recovery";
     tabs.hidden=mode==="recovery";
     forgotButton.hidden=mode==="recovery";
@@ -207,11 +211,10 @@
   const renderAccount=(profile={})=>{
     if(!session?.user)return;
     const email=session.user.email || "";
-    const displayName=(profile.display_name || session.user.user_metadata?.display_name || email.split("@")[0] || "Flight Archive").trim();
+    const displayName=(profile.username || profile.display_name || session.user.user_metadata?.username || session.user.user_metadata?.display_name || email.split("@")[0] || "Flight Archive").trim();
     const initial=displayName.charAt(0).toUpperCase() || "?";
     accountEmail.textContent=email;
     accountDisplayName.textContent=displayName;
-    profileDisplayName.value=displayName;
     sidebarAccountName.textContent=displayName;
     sidebarAccountEmail.textContent=email;
     avatarMarkup(accountAvatar,profile.avatar_url,initial);
@@ -269,12 +272,16 @@
     let authenticatedRequest=false;
     try{
       if(mode==="signup"){
+        const username=nameInput.value.trim();
+        const {data:usernameAvailable,error:usernameError}=await client.rpc("is_flight_archive_username_available",{candidate:username});
+        if(usernameError)throw usernameError;
+        if(!usernameAvailable)throw new Error(text("usernameUnavailable"));
         const {data,error}=await client.auth.signUp({
           email:emailInput.value.trim(),
           password:passwordInput.value,
           options:{
             emailRedirectTo:redirectUrl(),
-            data:{display_name:nameInput.value.trim()}
+            data:{username,display_name:username}
           }
         });
         if(error)throw error;
