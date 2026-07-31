@@ -187,6 +187,9 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
 .author-contact a + span { margin-top: 8px; }
 .author-contact strong, .author-contact a { color: var(--text); font-size: 12px; font-weight: 500; text-decoration: none; }
 .author-contact a:hover { color: var(--blue); }
+.author-github { width: fit-content; display: inline-flex; align-items: center; gap: 8px; }
+.author-github img { width: 28px; height: 28px; display: block; border: 1px solid rgba(35,51,72,.18); border-radius: 50%; object-fit: cover; box-shadow: 0 2px 7px rgba(35,51,72,.09); }
+.author-github strong { color: inherit; font: inherit; }
 .hub-settings { margin-top: 14px; padding-top: 13px; border-top: 1px solid var(--line); }
 .hub-settings-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .hub-settings-head .settings-label { margin-bottom: 0; }
