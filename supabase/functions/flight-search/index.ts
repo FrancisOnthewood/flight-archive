@@ -4,6 +4,8 @@ const DAILY_EXTERNAL_REQUEST_LIMIT = 20;
 const MONTHLY_API_UNIT_LIMIT = 480;
 const FLIGHT_NUMBER_API_UNITS = 2;
 const ROUTE_API_UNITS = 4;
+const TEST_ACCOUNT_EMAIL = "flightarchive.test@example.com";
+const EFFECTIVELY_UNLIMITED_DAILY_REQUESTS = 2147483647;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -161,8 +163,9 @@ Deno.serve(async request => {
       .gt("expires_at", new Date().toISOString())
       .maybeSingle();
     if (cacheReadError) throw cacheReadError;
-    if (cached) {
-      return json({ provider: cached.provider, results: cached.results || [], cached: true });
+    const cachedResults = Array.isArray(cached?.results) ? cached.results : [];
+    if (cached && cachedResults.length) {
+      return json({ provider: cached.provider, results: cachedResults, cached: true });
     }
 
     const apiKey = Deno.env.get("AERODATABOX_API_KEY");
@@ -172,10 +175,11 @@ Deno.serve(async request => {
     }
 
     const requestedUnits = queryKind === "number" ? FLIGHT_NUMBER_API_UNITS : ROUTE_API_UNITS;
+    const isTestAccount = String(authData.user.email || "").toLowerCase() === TEST_ACCOUNT_EMAIL;
     const { data: capacityRows, error: capacityError } = await admin.rpc("reserve_flight_search_capacity", {
       target_user_id: authData.user.id,
       requested_units: requestedUnits,
-      daily_limit: DAILY_EXTERNAL_REQUEST_LIMIT,
+      daily_limit: isTestAccount ? EFFECTIVELY_UNLIMITED_DAILY_REQUESTS : DAILY_EXTERNAL_REQUEST_LIMIT,
       monthly_limit: MONTHLY_API_UNIT_LIMIT
     });
     if (capacityError) throw capacityError;
@@ -227,19 +231,24 @@ Deno.serve(async request => {
       .sort((a, b) => `${a.date}T${a.departTime}`.localeCompare(`${b.date}T${b.departTime}`))
       .slice(0, 25);
 
-    const { error: cacheWriteError } = await admin.from("flight_search_cache").upsert({
-      cache_key: cacheKey,
-      query_kind: queryKind,
-      flight_date: date,
-      flight_number: flightNumber || null,
-      departure_iata: flightNumber ? null : from,
-      arrival_iata: flightNumber ? null : to,
-      provider: "AeroDataBox",
-      results,
-      created_at: new Date().toISOString(),
-      expires_at: cacheExpiry(date)
-    });
-    if (cacheWriteError) console.error("Unable to write flight-search cache", cacheWriteError);
+    // Empty provider responses are deliberately not cached. Schedules can be
+    // published or corrected later, and a temporary empty response should not
+    // prevent a subsequent real lookup.
+    if (results.length) {
+      const { error: cacheWriteError } = await admin.from("flight_search_cache").upsert({
+        cache_key: cacheKey,
+        query_kind: queryKind,
+        flight_date: date,
+        flight_number: flightNumber || null,
+        departure_iata: flightNumber ? null : from,
+        arrival_iata: flightNumber ? null : to,
+        provider: "AeroDataBox",
+        results,
+        created_at: new Date().toISOString(),
+        expires_at: cacheExpiry(date)
+      });
+      if (cacheWriteError) console.error("Unable to write flight-search cache", cacheWriteError);
+    }
 
     return json({ provider: "AeroDataBox", results, cached: false, usage: capacity });
   } catch (error) {

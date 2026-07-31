@@ -49,6 +49,9 @@ Cache hits consume neither a daily user request nor API Units. Past-flight
 cache entries remain valid for one year; current and future schedules are
 refreshed after 12 hours. When a limit is reached, the frontend opens the
 manual-entry form and keeps the user's date, flight number, and airport codes.
+Empty provider results are not cached. The internal
+`flightarchive.test@example.com` account bypasses only the per-user daily
+limit; its searches still consume and respect the shared 480-Unit ceiling.
 
 1. Subscribe to an AeroDataBox plan on RapidAPI and copy the RapidAPI key.
 2. In Supabase, add the Edge Function secret `AERODATABOX_API_KEY`.
