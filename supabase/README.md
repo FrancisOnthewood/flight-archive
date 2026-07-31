@@ -30,3 +30,23 @@ Add the production frontend URL and local development URL to the Supabase Auth
 redirect allow list. The intended production frontend will be hosted on
 Cloudflare Pages.
 
+## Real-flight lookup
+
+Flight Archive queries AeroDataBox through the `flight-search` Edge Function.
+The browser never receives the provider API key.
+
+1. Subscribe to an AeroDataBox plan on RapidAPI and copy the RapidAPI key.
+2. In Supabase, add the Edge Function secret `AERODATABOX_API_KEY`.
+3. Optionally add `AERODATABOX_API_HOST` with the value
+   `aerodatabox.p.rapidapi.com` (the function already uses this by default).
+4. Deploy the function:
+
+   ```powershell
+   supabase functions deploy flight-search --project-ref syoveioaykftjukhduwx
+   ```
+
+The function requires a signed-in Supabase user. Date plus flight number uses
+the single-flight endpoint. Date plus departure and arrival airport uses two
+12-hour airport schedule requests and filters the results by destination.
+Provider coverage and free-plan quota still apply, so the UI always keeps a
+manual-entry path available.

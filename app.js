@@ -125,6 +125,11 @@ const translations = {
     flightEntry:"FLIGHT ENTRY", addFlightRecord:"Add flight record", editFlightRecord:"Edit flight record",
     entryHelp:"Enter the core fields first; other details can be added later.", autoLookup:"Automatic flight lookup",
     autoLookupHelp:"Use the date and flight number to complete times, terminals, and aircraft.", flightDate:"Flight date",
+    findRealFlight:"Find a real flight", lookupRequirement:"Date is required. Enter a flight number, or both departure and arrival airports.",
+    flightNumberOptional:"Flight number (optional)", departureAirportOptional:"Departure airport (optional)", arrivalAirportOptional:"Arrival airport (optional)",
+    manualAdd:"Add manually", searchFlights:"Search flights", searchingFlights:"Searching flight schedules…", lookupNoResults:"No matching flights were found. You can add the flight manually.",
+    lookupUnavailable:"Flight lookup is not configured yet. You can add the flight manually.", lookupInvalid:"Enter a date and either a flight number or both airport codes.",
+    addThisFlight:"Add this flight", flightAdded:"Flight added", continueFlightDetails:"Continue adding seat, fare, and other details", scheduleTime:"Schedule", actualTime:"Actual",
     flightNumber:"Flight number", flightNumberPlaceholder:"e.g. MU721", departureAirport:"Departure airport",
     departurePlaceholder:"PVG / Shanghai Pudong", arrivalAirport:"Arrival airport", arrivalPlaceholder:"HKG / Hong Kong International",
     departureTerminal:"Departure terminal", arrivalTerminal:"Arrival terminal", terminalPlaceholder:"e.g. T3",
@@ -192,6 +197,11 @@ const translations = {
     flightEntry:"飞行记录", addFlightRecord:"添加飞行记录", editFlightRecord:"编辑飞行记录",
     entryHelp:"先填写核心字段，其他资料可以稍后补充。", autoLookup:"自动查询航班资料",
     autoLookupHelp:"根据日期和航班号补全计划时间、航站楼和机型。", flightDate:"航班日期",
+    findRealFlight:"查找真实航班", lookupRequirement:"日期为必填项；请输入航班号，或同时输入出发和到达机场。",
+    flightNumberOptional:"航班号（可选）", departureAirportOptional:"出发机场（可选）", arrivalAirportOptional:"到达机场（可选）",
+    manualAdd:"手动添加", searchFlights:"查找航班", searchingFlights:"正在查询航班计划…", lookupNoResults:"未找到符合条件的航班，你可以手动添加。",
+    lookupUnavailable:"航班查询尚未配置，你可以先手动添加。", lookupInvalid:"请填写日期，并输入航班号或同时输入两个机场代码。",
+    addThisFlight:"添加此航班", flightAdded:"航班已添加", continueFlightDetails:"继续添加座位号、票价等信息", scheduleTime:"计划", actualTime:"实际",
     flightNumber:"航班号", flightNumberPlaceholder:"例如 MU721", departureAirport:"出发机场",
     departurePlaceholder:"PVG / 上海浦东", arrivalAirport:"到达机场", arrivalPlaceholder:"HKG / 香港国际",
     departureTerminal:"出发航站楼", arrivalTerminal:"到达航站楼", terminalPlaceholder:"例如 T3",
@@ -298,9 +308,13 @@ const savedRegion="CN";
 const savedCurrency="CNY";
 const state = {
   activeView:"atlas", yearFilter:"all", scopeFilter:"all", mapMode:"route", globeStyle:"orbit", lang:"en",
-  selectedRoute:null, selectedAirport:null, activeFlightId:null, editingFlightId:null,
+  selectedRoute:null, selectedAirport:null, activeFlightId:null, editingFlightId:null, editingIncomingId:null,
   hubs:new Set(savedHubs.filter(code => airports[code])), hubEditorOpen:false, hubSearch:"", incomingMode:false, statsReturnType:null,
   region:savedRegion, currency:savedCurrency, friends:[],friendSearchResults:[],friendRecords:null
+};
+const flightLookupState={
+  completed:{candidates:[],addedId:null},
+  incoming:{candidates:[],addedId:null}
 };
 let currentProfile={};
 const onboardingHubs=new Set();
@@ -344,6 +358,7 @@ function renderPreferenceSettings() {
   regionSelect.setAttribute("aria-label",t("region"));
   currencySelect.setAttribute("aria-label",t("currency"));
   document.getElementById("formFare").placeholder=state.currency;
+  document.getElementById("incomingFare").placeholder=state.currency;
   renderFavouriteSettings();
   renderOnboardingOptions();
 }
@@ -363,6 +378,8 @@ function applyRegionalPreferences() {
   renderFlights();
   renderStats();
   renderIncomingFlights();
+  if(flightLookupState.completed.candidates.length)renderFlightLookupCandidates("completed");
+  if(flightLookupState.incoming.candidates.length)renderFlightLookupCandidates("incoming");
   if(state.selectedRoute)openRouteDrawer(state.selectedRoute);
   if(state.selectedAirport)openAirportDrawer(state.selectedAirport);
 }
@@ -603,7 +620,9 @@ function applyLanguage(lang) {
   document.getElementById("langZh").classList.toggle("active", lang === "zh");
   document.getElementById("langEn").classList.toggle("active", lang === "en");
   renderPreferenceSettings();
-  document.getElementById("cabinSelect").innerHTML = ["economy","premiumEconomy","business","first"].map(key => `<option>${t(key)}</option>`).join("");
+  ["cabinSelect","incomingCabinSelect"].forEach(id=>{
+    document.getElementById(id).innerHTML=["economy","premiumEconomy","business","first"].map(key=>`<option>${t(key)}</option>`).join("");
+  });
   const years=[...new Set(flights.map(f=>f.date.slice(0,4)))].sort((a,b)=>b.localeCompare(a));
   ["yearFilter","statsYearFilter"].forEach(id=>{
     const yearFilter=document.getElementById(id);
@@ -616,6 +635,8 @@ function applyLanguage(lang) {
   renderHubSettings();
   renderFavouriteSettings();
   renderIncomingFlights();
+  if(flightLookupState.completed.candidates.length)renderFlightLookupCandidates("completed");
+  if(flightLookupState.incoming.candidates.length)renderFlightLookupCandidates("incoming");
   if(state.activeView==="friends")loadFriends();
   updateMapHelp();
   if (state.selectedRoute) openRouteDrawer(state.selectedRoute);
@@ -671,14 +692,182 @@ function rebuildRoutes() {
 function setFormValue(id,value) {
   document.getElementById(id).value=value??"";
 }
+function inputDateValue(date) {
+  return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
+}
+function lookupElements(kind) {
+  const prefix=kind==="completed"?"completed":"incoming";
+  return {
+    panel:document.getElementById(`${prefix}LookupPanel`),
+    success:document.getElementById(`${prefix}LookupSuccess`),
+    form:document.getElementById(kind==="completed"?"flightForm":"incomingFlightForm"),
+    date:document.getElementById(`${prefix}LookupDate`),
+    flightNo:document.getElementById(`${prefix}LookupFlightNo`),
+    from:document.getElementById(`${prefix}LookupFrom`),
+    to:document.getElementById(`${prefix}LookupTo`),
+    search:document.getElementById(`${prefix}LookupSearch`),
+    status:document.getElementById(`${prefix}LookupStatus`),
+    results:document.getElementById(`${prefix}LookupResults`),
+    successSummary:document.getElementById(`${prefix}LookupSuccessSummary`)
+  };
+}
+function showFlightEntryStep(kind,step) {
+  const elements=lookupElements(kind);
+  elements.panel.hidden=step!=="lookup";
+  elements.success.hidden=step!=="success";
+  elements.form.hidden=step!=="manual";
+}
+function resetFlightLookup(kind,date) {
+  const elements=lookupElements(kind);
+  const today=inputDateValue(new Date());
+  flightLookupState[kind].candidates=[];
+  flightLookupState[kind].addedId=null;
+  elements.date.min=kind==="incoming"?today:"";
+  elements.date.max=kind==="completed"?today:"";
+  elements.date.value=date;
+  elements.flightNo.value="";
+  elements.from.value="";
+  elements.to.value="";
+  elements.status.textContent="";
+  elements.status.classList.remove("error");
+  elements.results.innerHTML="";
+  showFlightEntryStep(kind,"lookup");
+}
+function lookupCandidateLogo(candidate) {
+  const source=airlineIconSource(candidate.airlineCode||"");
+  return source
+    ? `<span class="flight-candidate-logo"><img src="${source}" alt="" /></span>`
+    : `<span class="flight-candidate-logo">${escapeHtml(candidate.airlineCode||"—")}</span>`;
+}
+function renderFlightLookupCandidates(kind) {
+  const elements=lookupElements(kind);
+  const candidates=flightLookupState[kind].candidates;
+  if(!elements?.results)return;
+  elements.results.innerHTML=candidates.map((candidate,index)=>`
+    <button class="flight-candidate" type="button" data-lookup-candidate="${index}">
+      ${lookupCandidateLogo(candidate)}
+      <span class="flight-candidate-main">
+        <span><strong>${escapeHtml(candidate.flightNumber||"—")}</strong><b>${escapeHtml(candidate.from||"—")}</b><i></i><b>${escapeHtml(candidate.to||"—")}</b></span>
+        <small>${escapeHtml(candidate.departTime||"—")} → ${escapeHtml(candidate.arriveTime||"—")} · ${escapeHtml(candidate.airline||candidate.airlineCode||"—")}${candidate.aircraft?` · ${escapeHtml(candidate.aircraft)}`:""}</small>
+      </span>
+      <span class="flight-candidate-action">${t("addThisFlight")}</span>
+    </button>`).join("");
+  elements.results.querySelectorAll("[data-lookup-candidate]").forEach(button=>button.addEventListener("click",()=>addFlightLookupCandidate(kind,Number(button.dataset.lookupCandidate))));
+}
+function flightDurationLabel(minutes) {
+  const value=Math.max(0,Number(minutes)||0);
+  if(!value)return "—";
+  if(value<60)return `${value}min`;
+  return `${Math.floor(value/60)}h ${value%60}m`;
+}
+function flightFromLookupCandidate(candidate,recordStatus) {
+  const from=String(candidate.from||"").toUpperCase(),to=String(candidate.to||"").toUpperCase();
+  const flightNo=String(candidate.flightNumber||"").toUpperCase();
+  const durationMinutes=Math.max(0,Number(candidate.durationMinutes)||0);
+  const distance=Math.max(0,Math.round(Number(candidate.distanceKm)||estimateAirportDistance(from,to)));
+  return {
+    id:crypto.randomUUID(),from,to,date:candidate.date,
+    airline:candidate.airline||candidate.airlineCode||"Unknown airline",
+    airlineShort:candidate.airlineCode||(flightNo.match(/^([A-Z0-9]{2})/)||[])[1]||"",
+    flightNo,aircraft:candidate.aircraft||"—",registration:candidate.registration||"—",
+    depart:candidate.departTime||"—",arrive:candidate.arriveTime||"—",
+    duration:flightDurationLabel(durationMinutes),durationMinutes,distance,
+    terminalFrom:candidate.departureTerminal||"—",terminalTo:candidate.arrivalTerminal||"—",
+    seat:"—",cabin:t("economy"),fare:null,fareCurrency:state.currency,fareRaw:null,fareGroup:null,booking:"",
+    gate:candidate.departureGate||"—",status:candidate.status||"",note:"",
+    scope:airports[from]?.countryCode===airports[to]?.countryCode?"domestic":"international",
+    recordStatus,metadata:{source:"aerodatabox",provider_id:candidate.id||null}
+  };
+}
+async function addFlightLookupCandidate(kind,index) {
+  const candidate=flightLookupState[kind].candidates[index];
+  if(!candidate)return;
+  const recordStatus=kind==="completed"?"completed":"upcoming";
+  let flight=flightFromLookupCandidate(candidate,recordStatus);
+  if(!airports[flight.from]||!airports[flight.to]){
+    showToast(t("saveFailed"),t("invalidAirportCode"));
+    return;
+  }
+  if(kind==="incoming"&&departureDateTime(flight)<=new Date()){
+    showToast(t("addIncomingFlight"),t("futureFlightRequired"));
+    return;
+  }
+  const elements=lookupElements(kind);
+  elements.results.querySelectorAll("button").forEach(button=>button.disabled=true);
+  try{
+    if(window.flightArchiveData?.enabled){
+      const saved=await window.flightArchiveData.saveFlight(flight,recordStatus);
+      flight={...flight,...saved,metadata:flight.metadata};
+    }
+    (kind==="completed"?flights:plannedIncomingFlights).push(flight);
+    if(kind==="completed"){
+      flights.sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+      rebuildRoutes();renderFlights();renderStats();
+    }else renderIncomingFlights();
+    drawGlobe();
+    flightLookupState[kind].addedId=flight.id;
+    elements.successSummary.textContent=`${flight.flightNo} · ${flight.from} → ${flight.to} · ${formatDate(flight.date)}`;
+    showFlightEntryStep(kind,"success");
+  }catch(error){
+    elements.results.querySelectorAll("button").forEach(button=>button.disabled=false);
+    showToast(t("saveFailed"),error?.message||String(error));
+  }
+}
+function openManualFlightEntry(kind) {
+  const elements=lookupElements(kind);
+  if(kind==="completed"){
+    setFormValue("formDate",elements.date.value);
+    setFormValue("formFlightNo",elements.flightNo.value.trim().toUpperCase());
+    setFormValue("formFrom",elements.from.value.trim().toUpperCase());
+    setFormValue("formTo",elements.to.value.trim().toUpperCase());
+  }else{
+    setFormValue("incomingDate",elements.date.value);
+    setFormValue("incomingFlightNo",elements.flightNo.value.trim().toUpperCase());
+    setFormValue("incomingFrom",elements.from.value.trim().toUpperCase());
+    setFormValue("incomingTo",elements.to.value.trim().toUpperCase());
+  }
+  showFlightEntryStep(kind,"manual");
+}
+async function searchFlightLookup(kind) {
+  const elements=lookupElements(kind);
+  const date=elements.date.value;
+  const flightNumber=elements.flightNo.value.trim().toUpperCase().replace(/\s+/g,"");
+  const from=airportCodeFromInput(elements.from.value,"");
+  const to=airportCodeFromInput(elements.to.value,"");
+  if(!date||(!flightNumber&&(!from||!to))){
+    elements.status.textContent=t("lookupInvalid");
+    elements.status.classList.add("error");
+    return;
+  }
+  elements.search.disabled=true;
+  elements.status.textContent=t("searchingFlights");
+  elements.status.classList.remove("error");
+  elements.results.innerHTML="";
+  flightLookupState[kind].candidates=[];
+  try{
+    if(typeof window.flightArchiveData?.searchFlights!=="function")throw new Error("Flight lookup is not configured.");
+    const candidates=await window.flightArchiveData.searchFlights({date,flightNumber,from:flightNumber?"":from,to:flightNumber?"":to});
+    flightLookupState[kind].candidates=Array.isArray(candidates)?candidates:[];
+    elements.status.textContent=candidates.length?"":t("lookupNoResults");
+    renderFlightLookupCandidates(kind);
+  }catch(error){
+    const message=error?.message||String(error);
+    elements.status.textContent=/not configured|not found|non-2xx/i.test(message)?t("lookupUnavailable"):message;
+    elements.status.classList.add("error");
+  }finally{
+    elements.search.disabled=false;
+  }
+}
 function prepareAddForm() {
   state.editingFlightId=null;
   const form=document.getElementById("flightForm");
   form.reset();
   document.getElementById("addTitle").dataset.i18n="addFlightRecord";
   document.getElementById("addTitle").textContent=t("addFlightRecord");
-  setFormValue("formDate",new Date().toISOString().slice(0,10));
+  const today=inputDateValue(new Date());
+  setFormValue("formDate",today);
   document.getElementById("cabinSelect").value=t("economy");
+  resetFlightLookup("completed",today);
   openModal("addModal");
 }
 function prepareEditForm(id) {
@@ -705,6 +894,7 @@ function prepareEditForm(id) {
   setFormValue("formFare",Number.isFinite(f.fare)?f.fare:"");
   setFormValue("formNote",f.note);
   document.getElementById("cabinSelect").value=displayCabin(f.cabin);
+  showFlightEntryStep("completed","manual");
   openModal("addModal");
 }
 function saveEditedFlight() {
@@ -1024,14 +1214,44 @@ function inferDuration(depart,arrive) {
   return {text:`${Math.floor(minutes/60)}h ${minutes%60}m`,minutes};
 }
 function prepareIncomingForm() {
+  state.editingIncomingId=null;
   const form=document.getElementById("incomingFlightForm");
   form.reset();
   const today=new Date(),tomorrow=new Date();
   tomorrow.setDate(tomorrow.getDate()+1);
-  const inputDate=date=>`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
-  document.getElementById("incomingDate").min=inputDate(today);
-  document.getElementById("incomingDate").value=inputDate(tomorrow);
+  document.getElementById("incomingDate").min=inputDateValue(today);
+  document.getElementById("incomingDate").value=inputDateValue(tomorrow);
   document.getElementById("incomingDepart").value="09:00";
+  document.getElementById("incomingCabinSelect").value=t("economy");
+  resetFlightLookup("incoming",inputDateValue(tomorrow));
+  openModal("incomingAddModal");
+}
+function prepareIncomingEditForm(id) {
+  const flight=plannedIncomingFlights.find(item=>String(item.id)===String(id));
+  if(!flight)return;
+  state.editingIncomingId=flight.id;
+  const form=document.getElementById("incomingFlightForm");
+  form.reset();
+  document.getElementById("incomingDate").min=inputDateValue(new Date());
+  setFormValue("incomingDate",flight.date);
+  setFormValue("incomingFlightNo",flight.flightNo);
+  setFormValue("incomingFrom",flight.from);
+  setFormValue("incomingTo",flight.to);
+  setFormValue("incomingDepart",timeInputValue(flight.depart));
+  setFormValue("incomingArrive",timeInputValue(flight.arrive));
+  setFormValue("incomingAirline",flight.airline);
+  setFormValue("incomingAircraft",flight.aircraft==="—"?"":flight.aircraft);
+  setFormValue("incomingRegistration",flight.registration==="—"?"":flight.registration);
+  setFormValue("incomingDuration",flight.duration);
+  setFormValue("incomingDistance",flight.distance);
+  setFormValue("incomingTerminalFrom",flight.terminalFrom==="—"?"":flight.terminalFrom);
+  setFormValue("incomingTerminalTo",flight.terminalTo==="—"?"":flight.terminalTo);
+  setFormValue("incomingGate",flight.gate==="—"?"":flight.gate);
+  setFormValue("incomingSeat",flight.seat==="—"?"":flight.seat);
+  setFormValue("incomingFare",Number.isFinite(flight.fare)?flight.fare:"");
+  setFormValue("incomingNote",flight.note);
+  document.getElementById("incomingCabinSelect").value=displayCabin(flight.cabin);
+  showFlightEntryStep("incoming","manual");
   openModal("incomingAddModal");
 }
 function saveIncomingFlight() {
@@ -1057,8 +1277,10 @@ function saveIncomingFlight() {
   const duration=durationInput||inferred.text;
   const durationMinutes=durationInput?parseDurationMinutes(durationInput):inferred.minutes;
   const distanceInput=Number(document.getElementById("incomingDistance").value);
+  const fareValue=document.getElementById("incomingFare").value;
+  const existing=plannedIncomingFlights.find(item=>String(item.id)===String(state.editingIncomingId));
   const flight={
-    id:`custom-incoming-${Date.now()}`,
+    id:existing?.id||crypto.randomUUID(),
     from,to,date,depart,arrive:arrive||"—",
     airline:document.getElementById("incomingAirline").value.trim()||knownAirline||airlineShort,
     airlineShort,flightNo,
@@ -1068,17 +1290,21 @@ function saveIncomingFlight() {
     distance:distanceInput>0?Math.round(distanceInput):estimateAirportDistance(from,to),
     terminalFrom:document.getElementById("incomingTerminalFrom").value.trim()||"—",
     terminalTo:document.getElementById("incomingTerminalTo").value.trim()||"—",
-    seat:"—",cabin:"Economy",fare:null,gate:"—",
+    seat:document.getElementById("incomingSeat").value.trim()||"—",
+    cabin:document.getElementById("incomingCabinSelect").value||t("economy"),
+    fare:fareValue===""?null:Math.max(0,Number(fareValue)),fareCurrency:state.currency,fareRaw:fareValue||null,fareGroup:null,
+    gate:document.getElementById("incomingGate").value.trim()||"—",
     note:document.getElementById("incomingNote").value.trim(),
     scope:airports[from].countryCode===airports[to].countryCode?"domestic":"international",
-    custom:true
+    custom:true,recordStatus:"upcoming",metadata:existing?.metadata||{}
   };
-  plannedIncomingFlights.push(flight);
+  if(existing)Object.assign(existing,flight);else plannedIncomingFlights.push(flight);
   if(window.flightArchiveData?.enabled){
-    window.flightArchiveData.saveFlight(flight,"upcoming")
-      .then(savedFlight=>Object.assign(flight,savedFlight))
+    window.flightArchiveData.saveFlight(existing||flight,"upcoming")
+      .then(savedFlight=>Object.assign(existing||flight,savedFlight))
       .catch(error=>showToast(state.lang==="zh"?"同步失败":"Sync failed",error.message));
   }
+  state.editingIncomingId=null;
   renderIncomingFlights();drawGlobe();
   return true;
 }
@@ -2464,6 +2690,19 @@ document.getElementById("incomingCollapseButton").addEventListener("click",()=>{
   button.setAttribute("aria-label",button.title);
 });
 document.getElementById("addIncomingButton").addEventListener("click",prepareIncomingForm);
+document.getElementById("completedManualAdd").addEventListener("click",()=>openManualFlightEntry("completed"));
+document.getElementById("incomingManualAdd").addEventListener("click",()=>openManualFlightEntry("incoming"));
+document.getElementById("completedLookupSearch").addEventListener("click",()=>searchFlightLookup("completed"));
+document.getElementById("incomingLookupSearch").addEventListener("click",()=>searchFlightLookup("incoming"));
+document.getElementById("completedLookupDone").addEventListener("click",closeModals);
+document.getElementById("incomingLookupDone").addEventListener("click",closeModals);
+document.getElementById("completedLookupContinue").addEventListener("click",()=>prepareEditForm(flightLookupState.completed.addedId));
+document.getElementById("incomingLookupContinue").addEventListener("click",()=>prepareIncomingEditForm(flightLookupState.incoming.addedId));
+["completedLookupPanel","incomingLookupPanel"].forEach(id=>document.getElementById(id).addEventListener("keydown",event=>{
+  if(event.key!=="Enter"||!event.target.matches("input"))return;
+  event.preventDefault();
+  searchFlightLookup(id.startsWith("completed")?"completed":"incoming");
+}));
 document.getElementById("collapseButton").addEventListener("click",()=>{document.getElementById("appShell").classList.toggle("sidebar-collapsed");});
 document.getElementById("settingsButton").addEventListener("click",()=>{
   setSettingsOpen(!document.getElementById("settingsPanel").classList.contains("open"));

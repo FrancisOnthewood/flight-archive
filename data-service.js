@@ -266,6 +266,19 @@
       if(error)throw error;
       return (data || []).map(flightFromRow);
     },
+    async searchFlights(query){
+      const supabase=requireClient();
+      const {data,error}=await supabase.functions.invoke("flight-search",{body:query});
+      if(error){
+        let message=error.message || "Flight lookup failed.";
+        try{
+          const detail=await error.context?.json();
+          message=detail?.error || detail?.message || message;
+        }catch{}
+        throw new Error(message);
+      }
+      return data?.results || [];
+    },
     async saveFlight(flight,recordStatus=flight.recordStatus || "completed"){
       const supabase=requireClient();
       const values=rowFromFlight(flight,recordStatus);

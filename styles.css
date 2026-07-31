@@ -1074,6 +1074,35 @@ body.auth-required .app-shell { visibility: hidden; }
 .form-modal { width: min(750px,100%); }
 .form-modal form { margin-top: 20px; }
 .incoming-form-modal form { margin-top: 20px; }
+.flight-lookup { margin-top: 20px; }
+.flight-lookup-heading { padding: 14px 15px; border: 1px solid #d2e3fa; border-radius: 10px; background: #f6faff; }
+.flight-lookup-heading strong { display: block; font-size: 13px; }
+.flight-lookup-heading span { display: block; margin-top: 4px; color: var(--muted); font-size: 10px; line-height: 1.5; }
+.flight-lookup-grid { margin-top: 13px; display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; }
+.flight-lookup-grid label { display: grid; gap: 5px; color: var(--muted); font-size: 10px; }
+.flight-lookup-grid input { width: 100%; height: 40px; padding: 0 11px; border: 1px solid var(--line); border-radius: 8px; outline: 0; color: var(--text); background: white; font-size: 11px; }
+.flight-lookup-grid input:focus { border-color: #8bbaf8; box-shadow: 0 0 0 3px rgba(24,119,242,.08); }
+.flight-lookup-actions { margin-top: 14px; display: flex; justify-content: flex-end; gap: 8px; }
+.flight-lookup-status { min-height: 18px; margin: 12px 0 0; color: var(--muted); font-size: 10px; }
+.flight-lookup-status.error { color: #b42318; }
+.flight-lookup-results { display: grid; gap: 9px; }
+.flight-candidate { width: 100%; padding: 14px; display: grid; grid-template-columns: 44px minmax(0,1fr) auto; align-items: center; gap: 12px; border: 1px solid var(--line); border-radius: 11px; color: var(--text); background: white; text-align: left; }
+.flight-candidate:hover { border-color: #9bc2f7; background: #f8fbff; }
+.flight-candidate-logo { width: 44px; height: 36px; display: grid; place-items: center; overflow: hidden; color: var(--blue); font-size: 11px; font-weight: 700; }
+.flight-candidate-logo img { width: 100%; height: 100%; object-fit: contain; }
+.flight-candidate-main { min-width: 0; }
+.flight-candidate-main > span { display: flex; align-items: baseline; gap: 9px; }
+.flight-candidate-main strong { font-size: 14px; }
+.flight-candidate-main b { font-size: 16px; }
+.flight-candidate-main i { flex: 1; height: 1px; background: #bdd5f5; }
+.flight-candidate-main small { display: block; margin-top: 6px; overflow: hidden; color: var(--muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.flight-candidate-action { color: var(--blue); font-size: 10px; font-weight: 700; white-space: nowrap; }
+.flight-added { margin-top: 24px; padding: 34px 22px; border: 1px solid #bcd8fb; border-radius: 13px; background: #f7fbff; text-align: center; }
+.flight-added-check { width: 52px; height: 52px; margin: 0 auto 14px; display: grid; place-items: center; border-radius: 50%; color: white; background: var(--blue); font-size: 24px; }
+.flight-added h3 { margin: 0; font-size: 26px; }
+.flight-added p { margin: 9px 0 0; color: var(--muted); font-size: 12px; }
+.flight-added-actions { margin-top: 22px; display: flex; align-items: center; justify-content: center; gap: 14px; }
+.flight-added .detail-link { border: 0; color: var(--blue); background: transparent; font-size: 10px; font-weight: 650; cursor: pointer; }
 .smart-lookup { margin-bottom: 16px; padding: 12px 13px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #d2e3fa; border-radius: 8px; background: #f6faff; }
 .smart-lookup strong { display: block; font-size: 9px; }
 .smart-lookup div > span { color: #7b899c; font-size: 8px; }
@@ -1493,7 +1522,10 @@ body.auth-required .app-shell { visibility: hidden; }
   .country-map-legend { justify-content: flex-start; }
   #countryStatsMap { height: 300px; }
   .aircraft-summary { gap: 15px; }
-  .form-grid { grid-template-columns: 1fr; }
+  .form-grid, .flight-lookup-grid { grid-template-columns: 1fr; }
+  .flight-candidate { grid-template-columns: 38px minmax(0,1fr); }
+  .flight-candidate-action { grid-column: 2; }
+  .flight-added-actions { flex-direction: column; }
   .modal-backdrop { padding: 0; align-items: flex-end; }
   .modal { max-height: 94vh; border-radius: 14px 14px 0 0; }
 }

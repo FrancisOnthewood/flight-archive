@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#f4f6f8" />
     <title>Flight Archive</title>
     <link rel="icon" href="./logo.svg?v=20260730-v3" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css?v=20260731-favourites-v1" />
+    <link rel="stylesheet" href="./styles.css?v=20260731-flight-search-v1" />
   </head>
   <body>
     <section class="auth-gate" id="authGate" aria-live="polite" hidden>
@@ -417,11 +417,33 @@
           <svg viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17"/></svg>
         </button>
         <header class="modal-header"><span data-i18n="flightEntry">FLIGHT ENTRY</span><h2 id="addTitle" data-i18n="addFlightRecord">Add flight record</h2><p data-i18n="entryHelp">Enter the core fields first; other details can be added later.</p></header>
-        <form id="flightForm">
-          <div class="smart-lookup">
-            <div><strong data-i18n="autoLookup">Automatic flight lookup</strong><span data-i18n="autoLookupHelp">Use the date and flight number to complete times, terminals, and aircraft.</span></div>
-            <label class="switch"><input type="checkbox" checked /><span></span></label>
+        <section class="flight-lookup" id="completedLookupPanel">
+          <div class="flight-lookup-heading">
+            <div><strong data-i18n="findRealFlight">Find a real flight</strong><span data-i18n="lookupRequirement">Date is required. Enter a flight number, or both departure and arrival airports.</span></div>
           </div>
+          <div class="flight-lookup-grid">
+            <label><span data-i18n="flightDate">Flight date</span><input id="completedLookupDate" type="date" required /></label>
+            <label><span data-i18n="flightNumberOptional">Flight number (optional)</span><input id="completedLookupFlightNo" placeholder="e.g. CX830" data-i18n-placeholder="flightNumberPlaceholder" /></label>
+            <label><span data-i18n="departureAirportOptional">Departure airport (optional)</span><input id="completedLookupFrom" list="airportCodeOptions" maxlength="3" placeholder="HKG" /></label>
+            <label><span data-i18n="arrivalAirportOptional">Arrival airport (optional)</span><input id="completedLookupTo" list="airportCodeOptions" maxlength="3" placeholder="JFK" /></label>
+          </div>
+          <div class="flight-lookup-actions">
+            <button class="subtle-button" id="completedManualAdd" type="button" data-i18n="manualAdd">Add manually</button>
+            <button class="primary-button" id="completedLookupSearch" type="button" data-i18n="searchFlights">Search flights</button>
+          </div>
+          <p class="flight-lookup-status" id="completedLookupStatus"></p>
+          <div class="flight-lookup-results" id="completedLookupResults"></div>
+        </section>
+        <section class="flight-added" id="completedLookupSuccess" hidden>
+          <span class="flight-added-check">✓</span>
+          <h3 data-i18n="flightAdded">Flight added</h3>
+          <p id="completedLookupSuccessSummary"></p>
+          <div class="flight-added-actions">
+            <button class="subtle-button" id="completedLookupDone" type="button" data-i18n="done">Done</button>
+            <button class="detail-link" id="completedLookupContinue" type="button" data-i18n="continueFlightDetails">Continue adding seat, fare, and other details</button>
+          </div>
+        </section>
+        <form id="flightForm" hidden>
           <div class="form-grid">
             <label><span data-i18n="flightDate">Flight date</span><input id="formDate" type="date" required /></label>
             <label><span data-i18n="flightNumber">Flight number</span><input id="formFlightNo" placeholder="e.g. MU721" data-i18n-placeholder="flightNumberPlaceholder" required /></label>
@@ -474,7 +496,33 @@
           <h2 id="incomingAddTitle" data-i18n="addIncomingFlight">Add incoming flight</h2>
           <p data-i18n="incomingEntryHelp">Add a planned flight to the incoming list and map.</p>
         </header>
-        <form id="incomingFlightForm">
+        <section class="flight-lookup" id="incomingLookupPanel">
+          <div class="flight-lookup-heading">
+            <div><strong data-i18n="findRealFlight">Find a real flight</strong><span data-i18n="lookupRequirement">Date is required. Enter a flight number, or both departure and arrival airports.</span></div>
+          </div>
+          <div class="flight-lookup-grid">
+            <label><span data-i18n="flightDate">Flight date</span><input id="incomingLookupDate" type="date" required /></label>
+            <label><span data-i18n="flightNumberOptional">Flight number (optional)</span><input id="incomingLookupFlightNo" placeholder="e.g. CX830" data-i18n-placeholder="flightNumberPlaceholder" /></label>
+            <label><span data-i18n="departureAirportOptional">Departure airport (optional)</span><input id="incomingLookupFrom" list="airportCodeOptions" maxlength="3" placeholder="HKG" /></label>
+            <label><span data-i18n="arrivalAirportOptional">Arrival airport (optional)</span><input id="incomingLookupTo" list="airportCodeOptions" maxlength="3" placeholder="JFK" /></label>
+          </div>
+          <div class="flight-lookup-actions">
+            <button class="subtle-button" id="incomingManualAdd" type="button" data-i18n="manualAdd">Add manually</button>
+            <button class="primary-button" id="incomingLookupSearch" type="button" data-i18n="searchFlights">Search flights</button>
+          </div>
+          <p class="flight-lookup-status" id="incomingLookupStatus"></p>
+          <div class="flight-lookup-results" id="incomingLookupResults"></div>
+        </section>
+        <section class="flight-added" id="incomingLookupSuccess" hidden>
+          <span class="flight-added-check">✓</span>
+          <h3 data-i18n="flightAdded">Flight added</h3>
+          <p id="incomingLookupSuccessSummary"></p>
+          <div class="flight-added-actions">
+            <button class="subtle-button" id="incomingLookupDone" type="button" data-i18n="done">Done</button>
+            <button class="detail-link" id="incomingLookupContinue" type="button" data-i18n="continueFlightDetails">Continue adding seat, fare, and other details</button>
+          </div>
+        </section>
+        <form id="incomingFlightForm" hidden>
           <div class="form-grid">
             <label><span data-i18n="flightDate">Flight date</span><input id="incomingDate" type="date" required /></label>
             <label><span data-i18n="flightNumber">Flight number</span><input id="incomingFlightNo" placeholder="e.g. CX830" data-i18n-placeholder="flightNumberPlaceholder" required /></label>
@@ -489,6 +537,10 @@
             <label><span data-i18n="distance">Distance</span><input id="incomingDistance" type="number" min="0" placeholder="km" /></label>
             <label><span data-i18n="departureTerminal">Departure terminal</span><input id="incomingTerminalFrom" placeholder="e.g. T1" data-i18n-placeholder="terminalPlaceholder" /></label>
             <label><span data-i18n="arrivalTerminal">Arrival terminal</span><input id="incomingTerminalTo" placeholder="e.g. T8" data-i18n-placeholder="terminalPlaceholder" /></label>
+            <label><span data-i18n="gate">Gate</span><input id="incomingGate" placeholder="e.g. 25" data-i18n-placeholder="gatePlaceholder" /></label>
+            <label><span data-i18n="seat">Seat</span><input id="incomingSeat" placeholder="e.g. 34A" data-i18n-placeholder="seatPlaceholder" /></label>
+            <label><span data-i18n="cabin">Cabin</span><select id="incomingCabinSelect"></select></label>
+            <label><span data-i18n="fare">Fare</span><input id="incomingFare" type="number" min="0" placeholder="CNY" data-i18n-placeholder="farePlaceholder" /></label>
           </div>
           <label class="full-field"><span data-i18n="notes">Notes</span><textarea id="incomingNote" data-i18n-placeholder="notesPlaceholder" placeholder="Add notes about this flight"></textarea></label>
           <div class="modal-actions">
@@ -552,11 +604,11 @@
     <datalist id="favouriteCityOptions"></datalist>
     <datalist id="onboardingCityOptions"></datalist>
     <script src="./backend-config.js?v=20260731-feedback-v1"></script>
-    <script src="./auth.js?v=20260731-username-v1"></script>
+    <script src="./auth.js?v=20260731-flight-search-v1"></script>
     <script src="./flight-data.js?v=20260731-private-v1"></script>
-    <script src="./data-service.js?v=20260731-username-v1"></script>
+    <script src="./data-service.js?v=20260731-flight-search-v1"></script>
     <script src="./global-airports.js?v=20260730-v1"></script>
     <script src="./reference-data.js?v=20260731-v1"></script>
-    <script src="./app.js?v=20260731-favourites-v1"></script>
+    <script src="./app.js?v=20260731-flight-search-v1"></script>
   </body>
 </html>

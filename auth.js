@@ -196,7 +196,7 @@
     nameInput.required=mode==="signup";
     emailField.hidden=mode==="recovery";
     tabs.hidden=mode==="recovery";
-    forgotButton.hidden=mode==="recovery";
+    forgotButton.hidden=mode!=="signin";
     rememberField.hidden=mode!=="signin";
     passwordInput.autocomplete=mode==="signin"?"current-password":"new-password";
     document.querySelectorAll("[data-auth-mode]").forEach(button=>button.classList.toggle("active",button.dataset.authMode===mode));
