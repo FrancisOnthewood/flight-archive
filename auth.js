@@ -1,6 +1,10 @@
 (() => {
   const config=window.FLIGHT_ARCHIVE_BACKEND || {};
   const gate=document.getElementById("authGate");
+  const boardingGate=document.getElementById("boardingGate");
+  const boardingTitle=document.getElementById("boardingTitle");
+  const boardingSubtitle=document.getElementById("boardingSubtitle");
+  const boardingRetryButton=document.getElementById("boardingRetryButton");
   const accountSettings=document.getElementById("accountSettings");
   const accountEmail=document.getElementById("accountEmail");
   const accountAvatar=document.getElementById("accountAvatar");
@@ -71,11 +75,33 @@
       configurationError:"身份验证服务尚未配置。"
     }
   };
+  Object.assign(copy.en,{
+    preparingBoarding:"Preparing for boarding",
+    verifyingAccount:"Verifying your account and preparing your private archive.",
+    loadingArchive:"Loading your flights, settings, and map.",
+    takingLonger:"Your archive is still being prepared. This may take a few more seconds.",
+    unableToPrepare:"Unable to prepare your archive",
+    loadingTimeout:"The loading process timed out. Please return to sign in and try again.",
+    returnToSignIn:"Return to sign in",
+    serviceStillLoading:"The authentication service is still loading. Please try again in a moment."
+  });
+  Object.assign(copy.zh,{
+    preparingBoarding:"正在准备登机",
+    verifyingAccount:"正在验证账户并准备你的私人飞行档案。",
+    loadingArchive:"正在载入航班、设置与地图数据。",
+    takingLonger:"仍在准备你的飞行档案，可能还需要几秒钟。",
+    unableToPrepare:"暂时无法准备飞行档案",
+    loadingTimeout:"载入时间过长，请返回登录页面后重试。",
+    returnToSignIn:"返回登录",
+    serviceStillLoading:"身份验证服务仍在载入，请稍后再试。"
+  });
 
   let language="en";
   let mode="signin";
   let client=null;
   let session=null;
+  let boardingSlowTimer=null;
+  let boardingTimeoutTimer=null;
 
   const text=key=>copy[language][key] || key;
   const redirectUrl=()=>`${window.location.origin}${window.location.pathname}`;
@@ -86,6 +112,43 @@
   const setBusy=busy=>{
     submitButton.disabled=busy;
     submitButton.textContent=busy?text("saving"):text(mode==="signin"?"signIn":mode==="signup"?"createAccount":"resetPassword");
+  };
+  const clearBoardingTimers=()=>{
+    clearTimeout(boardingSlowTimer);
+    clearTimeout(boardingTimeoutTimer);
+    boardingSlowTimer=null;
+    boardingTimeoutTimer=null;
+  };
+  const showBoarding=(subtitleKey="verifyingAccount")=>{
+    clearBoardingTimers();
+    boardingGate.hidden=false;
+    boardingGate.classList.remove("error");
+    boardingRetryButton.hidden=true;
+    boardingTitle.textContent=text("preparingBoarding");
+    boardingSubtitle.textContent=text(subtitleKey);
+    document.body.classList.add("auth-required");
+    boardingSlowTimer=setTimeout(()=>{
+      boardingSubtitle.textContent=text("takingLonger");
+    },12000);
+    boardingTimeoutTimer=setTimeout(()=>{
+      showBoardingError(text("loadingTimeout"));
+    },45000);
+  };
+  const hideBoarding=()=>{
+    clearBoardingTimers();
+    boardingGate.hidden=true;
+    boardingGate.classList.remove("error");
+    boardingRetryButton.hidden=true;
+  };
+  const showBoardingError=error=>{
+    clearBoardingTimers();
+    boardingGate.hidden=false;
+    boardingGate.classList.add("error");
+    boardingTitle.textContent=text("unableToPrepare");
+    boardingSubtitle.textContent=error || text("loadingTimeout");
+    boardingRetryButton.hidden=false;
+    gate.hidden=true;
+    document.body.classList.add("auth-required");
   };
   const applyCopy=()=>{
     document.querySelectorAll("[data-auth-i18n]").forEach(element=>{
@@ -127,14 +190,21 @@
     avatarMarkup(sidebarAccountAvatar,profile.avatar_url,initial);
   };
   const syncSession=nextSession=>{
+    const previousUserId=session?.user?.id || null;
     session=nextSession;
     const authenticated=Boolean(session?.user);
-    document.body.classList.toggle("auth-required",!authenticated);
-    gate.hidden=authenticated;
     accountSettings.hidden=!authenticated;
     sidebarAccountSummary.hidden=!authenticated;
     if(authenticated){
+      gate.hidden=true;
       renderAccount();
+      if(previousUserId!==session.user.id || document.body.classList.contains("auth-required")){
+        showBoarding("loadingArchive");
+      }
+    }else{
+      hideBoarding();
+      gate.hidden=false;
+      document.body.classList.add("auth-required");
     }
     window.dispatchEvent(new CustomEvent("flightarchive:session-changed",{detail:{session}}));
   };
@@ -160,9 +230,15 @@
   });
   form.addEventListener("submit",async event=>{
     event.preventDefault();
-    if(!client)return;
+    if(!client){
+      setMessage(text("serviceStillLoading"),true);
+      return;
+    }
+    const showTransition=mode==="signin";
+    if(showTransition)showBoarding("verifyingAccount");
     setBusy(true);
     setMessage("");
+    let authenticatedRequest=false;
     try{
       if(mode==="signup"){
         const {data,error}=await client.auth.signUp({
@@ -187,16 +263,40 @@
           password:passwordInput.value
         });
         if(error)throw error;
+        authenticatedRequest=true;
         setMessage(text("signedIn"));
       }
     }catch(error){
+      if(showTransition){
+        hideBoarding();
+        gate.hidden=false;
+        document.body.classList.add("auth-required");
+      }
       setMessage(error?.message || String(error),true);
     }finally{
+      if(showTransition&&!authenticatedRequest)hideBoarding();
       setBusy(false);
     }
   });
   document.getElementById("signOutButton").addEventListener("click",async()=>{
     if(client)await client.auth.signOut();
+  });
+  boardingRetryButton.addEventListener("click",async()=>{
+    hideBoarding();
+    if(client && session)await client.auth.signOut();
+    gate.hidden=false;
+    document.body.classList.add("auth-required");
+    setMessage("");
+  });
+  window.addEventListener("flightarchive:data-ready",event=>{
+    if(!session?.user || event.detail?.userId!==session.user.id)return;
+    hideBoarding();
+    gate.hidden=true;
+    document.body.classList.remove("auth-required");
+  });
+  window.addEventListener("flightarchive:data-error",event=>{
+    if(!session?.user)return;
+    showBoardingError(event.detail?.message || text("loadingTimeout"));
   });
   window.flightArchiveBackend={
     get client(){return client;},
@@ -233,6 +333,7 @@
       client.auth.onAuthStateChange((event,nextSession)=>{
         syncSession(nextSession);
         if(event==="PASSWORD_RECOVERY"){
+          hideBoarding();
           setMode("recovery");
           gate.hidden=false;
           accountSettings.hidden=true;
@@ -240,6 +341,9 @@
         }
       });
     }catch(error){
+      hideBoarding();
+      gate.hidden=false;
+      document.body.classList.add("auth-required");
       setMessage(error?.message || String(error),true);
     }
   };

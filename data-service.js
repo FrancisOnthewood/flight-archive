@@ -87,6 +87,9 @@
   const notifyError=error=>{
     window.dispatchEvent(new CustomEvent("flightarchive:data-error",{detail:{message:error?.message || String(error)}}));
   };
+  const notifyReady=userId=>{
+    window.dispatchEvent(new CustomEvent("flightarchive:data-ready",{detail:{userId}}));
+  };
 
   const loadUserData=async userId=>{
     const supabase=client();
@@ -112,9 +115,11 @@
     }
     const completed=rows.filter(row=>row.record_status==="completed").map(flightFromRow);
     const upcoming=rows.filter(row=>row.record_status==="upcoming").map(flightFromRow);
-    const payload={flights:completed,incomingFlights:upcoming,settings,hubs,favourites,profile};
-    if(window.flightArchiveApp?.hydrateUserData)window.flightArchiveApp.hydrateUserData(payload);
-    else window.__FLIGHT_ARCHIVE_PENDING_USER_DATA__=payload;
+    const payload={flights:completed,incomingFlights:upcoming,settings,hubs,favourites,profile,userId};
+    if(window.flightArchiveApp?.hydrateUserData){
+      window.flightArchiveApp.hydrateUserData(payload);
+      notifyReady(userId);
+    }else window.__FLIGHT_ARCHIVE_PENDING_USER_DATA__=payload;
   };
   const beginLoad=session=>{
     if(!session?.user){
@@ -128,9 +133,11 @@
   window.addEventListener("flightarchive:session-changed",event=>beginLoad(event.detail.session));
   window.addEventListener("flightarchive:app-ready",()=>{
     if(window.__FLIGHT_ARCHIVE_PENDING_USER_DATA__){
-      window.flightArchiveApp.hydrateUserData(window.__FLIGHT_ARCHIVE_PENDING_USER_DATA__);
+      const payload=window.__FLIGHT_ARCHIVE_PENDING_USER_DATA__;
+      window.flightArchiveApp.hydrateUserData(payload);
       delete window.__FLIGHT_ARCHIVE_PENDING_USER_DATA__;
-    }else if(backend()?.session){
+      notifyReady(payload.userId);
+    }else if(backend()?.session && !loadingPromise){
       beginLoad(backend().session);
     }
   });

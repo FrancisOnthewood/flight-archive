@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#f4f6f8" />
     <title>Flight Archive</title>
     <link rel="icon" href="./logo.svg?v=20260730-v3" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css?v=20260731-profile-v1" />
+    <link rel="stylesheet" href="./styles.css?v=20260731-boarding-v1" />
   </head>
   <body>
     <section class="auth-gate" id="authGate" aria-live="polite" hidden>
@@ -43,6 +43,17 @@
         </form>
         <button class="auth-forgot" id="authForgot" type="button" data-auth-i18n="forgotPassword">Forgot password?</button>
         <p class="auth-message" id="authMessage" role="status"></p>
+      </div>
+    </section>
+
+    <section class="boarding-gate" id="boardingGate" aria-live="polite" aria-busy="true" hidden>
+      <div class="boarding-card">
+        <img class="boarding-logo" src="./logo.svg?v=20260730-v3" alt="" />
+        <div class="boarding-spinner" aria-hidden="true"><span></span></div>
+        <h1 id="boardingTitle" data-auth-i18n="preparingBoarding">Preparing for boarding</h1>
+        <p id="boardingSubtitle" data-auth-i18n="verifyingAccount">Verifying your account and preparing your private archive.</p>
+        <div class="boarding-progress" aria-hidden="true"><i></i></div>
+        <button id="boardingRetryButton" type="button" data-auth-i18n="returnToSignIn" hidden>Return to sign in</button>
       </div>
     </section>
 
@@ -481,9 +492,9 @@
 
     <datalist id="airlineCodeOptions"></datalist>
     <script src="./backend-config.js?v=20260731-profile-v1"></script>
-    <script src="./auth.js?v=20260731-profile-v1"></script>
+    <script src="./auth.js?v=20260731-boarding-v1"></script>
     <script src="./flight-data.js?v=20260731-private-v1"></script>
-    <script src="./data-service.js?v=20260731-profile-v1"></script>
+    <script src="./data-service.js?v=20260731-boarding-v1"></script>
     <script src="./global-airports.js?v=20260730-v1"></script>
     <script src="./app.js?v=20260731-profile-v1"></script>
   </body>

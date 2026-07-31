@@ -120,6 +120,64 @@ body.auth-required .app-shell { visibility: hidden; }
 }
 .auth-message { min-height: 18px; margin: 14px 0 0; color: #27804a; font-size: 11px; line-height: 1.45; text-align: center; }
 .auth-message.error { color: #bd3f36; }
+.boarding-gate {
+  position: fixed;
+  z-index: 1100;
+  inset: 0;
+  padding: 28px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 68% 24%, rgba(24,119,242,.16), transparent 34%),
+    linear-gradient(145deg,#edf2f7 0%,#f8fafc 52%,#e7edf5 100%);
+}
+.boarding-card {
+  width: min(100%,430px);
+  padding: 42px 34px 36px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border: 1px solid rgba(196,207,220,.92);
+  border-radius: 22px;
+  background: rgba(255,255,255,.96);
+  box-shadow: 0 30px 90px rgba(31,47,69,.17);
+  text-align: center;
+  backdrop-filter: blur(18px);
+}
+.boarding-logo { width: 48px; height: 48px; display: block; margin-bottom: 25px; filter: drop-shadow(0 7px 12px rgba(35,53,75,.15)); }
+.boarding-spinner {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  margin-bottom: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: conic-gradient(from 20deg,var(--blue),#80b7fa 42%,rgba(24,119,242,.08) 72%);
+  animation: boardingSpin 1.05s linear infinite;
+}
+.boarding-spinner::before { content: ""; position: absolute; inset: 6px; border-radius: 50%; background: white; }
+.boarding-spinner span { position: relative; width: 10px; height: 10px; border-radius: 50%; background: var(--blue); box-shadow: 0 0 0 5px rgba(24,119,242,.10); }
+.boarding-card h1 { margin: 0; color: var(--text); font-size: 27px; letter-spacing: -.04em; }
+.boarding-card p { max-width: 320px; min-height: 42px; margin: 10px 0 23px; color: var(--muted); font-size: 12px; line-height: 1.65; }
+.boarding-progress { width: 100%; height: 4px; overflow: hidden; border-radius: 3px; background: #e9eef4; }
+.boarding-progress i { width: 42%; height: 100%; display: block; border-radius: inherit; background: linear-gradient(90deg,#76b0fb,var(--blue)); animation: boardingProgress 1.45s ease-in-out infinite; }
+.boarding-card button { min-height: 38px; margin-top: 21px; padding: 0 17px; border: 1px solid #a9cafa; border-radius: 9px; color: var(--blue); background: white; font-size: 11px; font-weight: 600; cursor: pointer; }
+.boarding-card button:hover { color: white; background: var(--blue); }
+.boarding-gate.error .boarding-spinner { animation: none; background: #f5d7d4; }
+.boarding-gate.error .boarding-spinner span { background: #c43f35; box-shadow: none; }
+.boarding-gate.error .boarding-progress { display: none; }
+.boarding-gate.error .boarding-card p { color: #a43b33; }
+@keyframes boardingSpin { to { transform: rotate(360deg); } }
+@keyframes boardingProgress {
+  0% { transform: translateX(-110%); }
+  50% { transform: translateX(75%); }
+  100% { transform: translateX(240%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .boarding-spinner, .boarding-progress i { animation-duration: 2.8s; }
+}
 
 .app-shell { min-height: 100vh; }
 .sidebar {
@@ -1303,6 +1361,9 @@ body.auth-required .app-shell { visibility: hidden; }
   .auth-card { padding: 23px 20px; border-radius: 16px; }
   .auth-heading { margin: 26px 0 18px; }
   .auth-heading h1 { font-size: 27px; }
+  .boarding-gate { padding: 14px; }
+  .boarding-card { padding: 34px 23px 30px; border-radius: 18px; }
+  .boarding-card h1 { font-size: 24px; }
   .onboarding-grid, .onboarding-favourites { grid-template-columns: 1fr; }
   .app-shell { --sidebar-panel-width: 64px; --sidebar-rail-width: 64px; }
   .sidebar { padding: 16px 9px; }
