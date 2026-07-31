@@ -20,9 +20,9 @@ begin
   delete from public.flights where user_id = test_user_id;
   delete from public.user_hubs where user_id = test_user_id;
   delete from public.user_favourites where user_id = test_user_id;
-  delete from storage.objects
-  where bucket_id = 'flight-photos'
-    and (storage.foldername(name))[1] = test_user_id::text;
+  -- Supabase protects storage.objects from direct SQL deletion.
+  -- Clearing profiles.avatar_path below detaches the previous avatar. If the
+  -- physical object ever needs removal, delete it through the Storage UI/API.
 
   insert into public.user_settings (user_id, language, region, currency, map_style)
   values (test_user_id, 'en', 'CN', 'CNY', 'orbit')
