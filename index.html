@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#f4f6f8" />
     <title>Flight Archive</title>
     <link rel="icon" href="./logo.svg?v=20260730-v3" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css?v=20260731-airport-search-v3" />
+    <link rel="stylesheet" href="./styles.css?v=20260731-independent-city-v4" />
   </head>
   <body>
     <section class="auth-gate" id="authGate" aria-live="polite" hidden>
@@ -200,6 +200,7 @@
                 <label class="settings-field"><span data-i18n="aircraft">Aircraft</span><input id="favouriteAircraftInput" list="favouriteAircraftOptions" autocomplete="off" placeholder="Airbus A350-900" /></label>
                 <label class="settings-field"><span data-i18n="airport">Airport</span><input id="favouriteAirportInput" list="airportCodeOptions" autocomplete="off" placeholder="HKG" /></label>
                 <label class="settings-field"><span data-i18n="destinationRegion">Destination region</span><input id="favouriteCountrySelect" list="favouriteRegionOptions" autocomplete="off" placeholder="Hong Kong / HK" /></label>
+                <label class="settings-field"><span data-i18n="cityCountry">City country / region</span><input id="favouriteCityCountryInput" list="favouriteRegionOptions" autocomplete="off" placeholder="Hong Kong / HK" /></label>
                 <label class="settings-field"><span data-i18n="destinationCity">Destination city</span><input id="favouriteCityInput" list="favouriteCityOptions" autocomplete="off" placeholder="Hong Kong" /></label>
                 <button class="settings-save-button" id="saveFavouritesButton" type="button" data-i18n="saveFavourites">Save favourites</button>
               </div>
@@ -586,6 +587,7 @@
             <label><span data-i18n="aircraft">Aircraft</span><input id="onboardingFavouriteAircraft" list="favouriteAircraftOptions" autocomplete="off" placeholder="Airbus A350-900" /></label>
             <label><span data-i18n="airport">Airport</span><input id="onboardingFavouriteAirport" list="airportCodeOptions" autocomplete="off" placeholder="HKG" /></label>
             <label><span data-i18n="destinationRegion">Destination region</span><input id="onboardingFavouriteCountry" list="favouriteRegionOptions" autocomplete="off" placeholder="Hong Kong / HK" /></label>
+            <label><span data-i18n="cityCountry">City country / region</span><input id="onboardingFavouriteCityCountry" list="favouriteRegionOptions" autocomplete="off" placeholder="Hong Kong / HK" /></label>
             <label><span data-i18n="destinationCity">Destination city</span><input id="onboardingFavouriteCity" list="onboardingCityOptions" autocomplete="off" placeholder="Hong Kong" /></label>
           </div>
           <div class="modal-actions">
@@ -608,6 +610,6 @@
     <script src="./data-service.js?v=20260731-flight-search-quota-v1"></script>
     <script src="./global-airports.js?v=20260730-v1"></script>
     <script src="./reference-data.js?v=20260731-v1"></script>
-    <script src="./app.js?v=20260731-airport-search-v3"></script>
+    <script src="./app.js?v=20260731-independent-city-v4"></script>
   </body>
 </html>
