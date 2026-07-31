@@ -65,7 +65,9 @@ limit; its searches still consume and respect the shared 480-Unit ceiling.
 
 The function requires a signed-in Supabase user. Date plus flight number uses
 the single-flight endpoint. Date plus departure and arrival airport uses two
-12-hour airport schedule requests and filters the results by destination.
+12-hour airport schedule requests and filters the results by destination. The
+FIDS response may omit the requested airport from each departure record, so
+the function restores that known IATA code before normalizing candidates.
 Provider coverage and free-plan quota still apply, so the UI always keeps a
 manual-entry path available.
 

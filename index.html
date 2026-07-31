@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#f4f6f8" />
     <title>Flight Archive</title>
     <link rel="icon" href="./logo.svg?v=20260730-v3" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css?v=20260731-flight-search-ui-v2" />
+    <link rel="stylesheet" href="./styles.css?v=20260731-airport-search-v3" />
   </head>
   <body>
     <section class="auth-gate" id="authGate" aria-live="polite" hidden>
@@ -424,8 +424,8 @@
           <div class="flight-lookup-grid">
             <label><span data-i18n="flightDate">Flight date</span><input id="completedLookupDate" type="date" required /></label>
             <label><span data-i18n="flightNumber">Flight number</span><input id="completedLookupFlightNo" placeholder="e.g. CX830" data-i18n-placeholder="flightNumberPlaceholder" /></label>
-            <label><span data-i18n="departureAirport">Departure airport</span><input id="completedLookupFrom" list="airportCodeOptions" maxlength="3" placeholder="HKG" /></label>
-            <label><span data-i18n="arrivalAirport">Arrival airport</span><input id="completedLookupTo" list="airportCodeOptions" maxlength="3" placeholder="JFK" /></label>
+            <label><span data-i18n="departureAirport">Departure airport</span><input id="completedLookupFrom" list="airportCodeOptions" placeholder="HKG / Hong Kong International" data-i18n-placeholder="departurePlaceholder" /></label>
+            <label><span data-i18n="arrivalAirport">Arrival airport</span><input id="completedLookupTo" list="airportCodeOptions" placeholder="JFK / John F. Kennedy International" data-i18n-placeholder="arrivalPlaceholder" /></label>
           </div>
           <div class="flight-lookup-actions">
             <button class="subtle-button" id="completedManualAdd" type="button" data-i18n="manualAdd">Add manually</button>
@@ -447,8 +447,8 @@
           <div class="form-grid">
             <label><span data-i18n="flightDate">Flight date</span><input id="formDate" type="date" required /></label>
             <label><span data-i18n="flightNumber">Flight number</span><input id="formFlightNo" placeholder="e.g. MU721" data-i18n-placeholder="flightNumberPlaceholder" required /></label>
-            <label><span data-i18n="departureAirport">Departure airport</span><input id="formFrom" placeholder="PVG / Shanghai Pudong" data-i18n-placeholder="departurePlaceholder" required /></label>
-            <label><span data-i18n="arrivalAirport">Arrival airport</span><input id="formTo" placeholder="HKG / Hong Kong International" data-i18n-placeholder="arrivalPlaceholder" required /></label>
+            <label><span data-i18n="departureAirport">Departure airport</span><input id="formFrom" list="airportCodeOptions" placeholder="PVG / Shanghai Pudong" data-i18n-placeholder="departurePlaceholder" required /></label>
+            <label><span data-i18n="arrivalAirport">Arrival airport</span><input id="formTo" list="airportCodeOptions" placeholder="HKG / Hong Kong International" data-i18n-placeholder="arrivalPlaceholder" required /></label>
             <label><span data-i18n="departureTerminal">Departure terminal</span><input id="formTerminalFrom" placeholder="e.g. T3" data-i18n-placeholder="terminalPlaceholder" /></label>
             <label><span data-i18n="arrivalTerminal">Arrival terminal</span><input id="formTerminalTo" placeholder="e.g. T1" data-i18n-placeholder="terminalPlaceholder" /></label>
             <label><span data-i18n="airline">Airline</span><input id="formAirline" placeholder="Airline" data-i18n-placeholder="airline" /></label>
@@ -503,8 +503,8 @@
           <div class="flight-lookup-grid">
             <label><span data-i18n="flightDate">Flight date</span><input id="incomingLookupDate" type="date" required /></label>
             <label><span data-i18n="flightNumber">Flight number</span><input id="incomingLookupFlightNo" placeholder="e.g. CX830" data-i18n-placeholder="flightNumberPlaceholder" /></label>
-            <label><span data-i18n="departureAirport">Departure airport</span><input id="incomingLookupFrom" list="airportCodeOptions" maxlength="3" placeholder="HKG" /></label>
-            <label><span data-i18n="arrivalAirport">Arrival airport</span><input id="incomingLookupTo" list="airportCodeOptions" maxlength="3" placeholder="JFK" /></label>
+            <label><span data-i18n="departureAirport">Departure airport</span><input id="incomingLookupFrom" list="airportCodeOptions" placeholder="HKG / Hong Kong International" data-i18n-placeholder="departurePlaceholder" /></label>
+            <label><span data-i18n="arrivalAirport">Arrival airport</span><input id="incomingLookupTo" list="airportCodeOptions" placeholder="JFK / John F. Kennedy International" data-i18n-placeholder="arrivalPlaceholder" /></label>
           </div>
           <div class="flight-lookup-actions">
             <button class="subtle-button" id="incomingManualAdd" type="button" data-i18n="manualAdd">Add manually</button>
@@ -526,8 +526,8 @@
           <div class="form-grid">
             <label><span data-i18n="flightDate">Flight date</span><input id="incomingDate" type="date" required /></label>
             <label><span data-i18n="flightNumber">Flight number</span><input id="incomingFlightNo" placeholder="e.g. CX830" data-i18n-placeholder="flightNumberPlaceholder" required /></label>
-            <label><span data-i18n="departureAirport">Departure airport</span><input id="incomingFrom" maxlength="3" placeholder="HKG" required /></label>
-            <label><span data-i18n="arrivalAirport">Arrival airport</span><input id="incomingTo" maxlength="3" placeholder="JFK" required /></label>
+            <label><span data-i18n="departureAirport">Departure airport</span><input id="incomingFrom" list="airportCodeOptions" placeholder="HKG / Hong Kong International" data-i18n-placeholder="departurePlaceholder" required /></label>
+            <label><span data-i18n="arrivalAirport">Arrival airport</span><input id="incomingTo" list="airportCodeOptions" placeholder="JFK / John F. Kennedy International" data-i18n-placeholder="arrivalPlaceholder" required /></label>
             <label><span data-i18n="departureTime">Departure time</span><input id="incomingDepart" type="time" required /></label>
             <label><span data-i18n="arrivalTime">Arrival time</span><input id="incomingArrive" type="time" /></label>
             <label><span data-i18n="airline">Airline</span><input id="incomingAirline" placeholder="Cathay Pacific" /></label>
@@ -608,6 +608,6 @@
     <script src="./data-service.js?v=20260731-flight-search-quota-v1"></script>
     <script src="./global-airports.js?v=20260730-v1"></script>
     <script src="./reference-data.js?v=20260731-v1"></script>
-    <script src="./app.js?v=20260731-flight-search-ui-v2"></script>
+    <script src="./app.js?v=20260731-airport-search-v3"></script>
   </body>
 </html>

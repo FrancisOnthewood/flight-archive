@@ -219,7 +219,19 @@ Deno.serve(async request => {
       await new Promise(resolve => setTimeout(resolve, 1050));
       const second = await fetchProvider(`${base}/${date}T12:00/${date}T23:59?${query}`, apiKey, host);
       rawFlights = [...(first?.departures || []), ...(second?.departures || [])]
-        .filter(flight => String(flight.arrival?.airport?.iata || "").toUpperCase() === to);
+        .filter(flight => String(flight.arrival?.airport?.iata || flight.movement?.airport?.iata || "").toUpperCase() === to)
+        .map(flight => ({
+          ...flight,
+          departure: {
+            ...(flight.departure || {}),
+            // AeroDataBox omits the airport object when it is the same airport
+            // already identified by the FIDS request path.
+            airport: flight.departure?.airport?.iata
+              ? flight.departure.airport
+              : { ...(flight.departure?.airport || {}), iata: from }
+          },
+          arrival: flight.arrival || flight.movement || {}
+        }));
     }
 
     const unique = new Map<string, ReturnType<typeof normalizeFlight>>();

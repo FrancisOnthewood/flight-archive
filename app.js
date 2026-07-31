@@ -678,8 +678,19 @@ function parseDurationMinutes(value) {
   return 0;
 }
 function airportCodeFromInput(value,currentCode) {
-  const match=String(value||"").toUpperCase().match(/\b[A-Z]{3}\b/);
-  return match&&airports[match[0]]?match[0]:currentCode;
+  const text=String(value||"").trim();
+  if(!text)return currentCode;
+  const match=text.toUpperCase().match(/\b[A-Z]{3}\b/);
+  if(match&&airports[match[0]])return match[0];
+  const normalized=text.toLocaleLowerCase();
+  const searchable=airport=>[
+    airport.name,airport.nameEn,airport.nameZh,airportCity(airport),airportName(airport),
+    `${airportCity(airport)} ${airportName(airport)}`
+  ].map(item=>String(item||"").trim().toLocaleLowerCase()).filter(Boolean);
+  const exact=Object.values(airports).filter(airport=>searchable(airport).includes(normalized));
+  if(exact.length===1)return exact[0].code;
+  const partial=Object.values(airports).filter(airport=>searchable(airport).some(label=>label.includes(normalized)));
+  return partial.length===1?partial[0].code:currentCode;
 }
 function timeInputValue(value) {
   const match=String(value||"").match(/^(\d{1,2}):(\d{2})$/);
@@ -850,6 +861,8 @@ async function searchFlightLookup(kind) {
   const flightNumber=elements.flightNo.value.trim().toUpperCase().replace(/\s+/g,"");
   const from=airportCodeFromInput(elements.from.value,"");
   const to=airportCodeFromInput(elements.to.value,"");
+  if(from)elements.from.value=from;
+  if(to)elements.to.value=to;
   if(!date||(!flightNumber&&(!from||!to))){
     elements.status.textContent=t("lookupInvalid");
     elements.status.classList.add("error");
@@ -1286,12 +1299,14 @@ function prepareIncomingEditForm(id) {
   openModal("incomingAddModal");
 }
 function saveIncomingFlight() {
-  const from=document.getElementById("incomingFrom").value.trim().toUpperCase();
-  const to=document.getElementById("incomingTo").value.trim().toUpperCase();
+  const from=airportCodeFromInput(document.getElementById("incomingFrom").value,"");
+  const to=airportCodeFromInput(document.getElementById("incomingTo").value,"");
   if(!airports[from]||!airports[to]){
     showToast(t("addIncomingFlight"),t("invalidAirportCode"));
     return false;
   }
+  document.getElementById("incomingFrom").value=from;
+  document.getElementById("incomingTo").value=to;
   const date=document.getElementById("incomingDate").value;
   const depart=document.getElementById("incomingDepart").value;
   const candidate={date,depart};
