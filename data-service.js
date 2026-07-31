@@ -271,13 +271,23 @@
       const {data,error}=await supabase.functions.invoke("flight-search",{body:query});
       if(error){
         let message=error.message || "Flight lookup failed.";
+        let detail=null;
         try{
-          const detail=await error.context?.json();
+          detail=await error.context?.json();
           message=detail?.error || detail?.message || message;
         }catch{}
-        throw new Error(message);
+        const lookupError=new Error(message);
+        lookupError.code=detail?.code || "LOOKUP_FAILED";
+        lookupError.manualFallback=Boolean(detail?.manualFallback);
+        lookupError.usage=detail?.usage || null;
+        throw lookupError;
       }
-      return data?.results || [];
+      return {
+        results:data?.results || [],
+        cached:Boolean(data?.cached),
+        provider:data?.provider || "",
+        usage:data?.usage || null
+      };
     },
     async saveFlight(flight,recordStatus=flight.recordStatus || "completed"){
       const supabase=requireClient();

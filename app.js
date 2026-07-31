@@ -129,6 +129,9 @@ const translations = {
     flightNumberOptional:"Flight number (optional)", departureAirportOptional:"Departure airport (optional)", arrivalAirportOptional:"Arrival airport (optional)",
     manualAdd:"Add manually", searchFlights:"Search flights", searchingFlights:"Searching flight schedules…", lookupNoResults:"No matching flights were found. You can add the flight manually.",
     lookupUnavailable:"Flight lookup is not configured yet. You can add the flight manually.", lookupInvalid:"Enter a date and either a flight number or both airport codes.",
+    lookupCacheHit:"Loaded from the shared flight cache.", lookupManualFallback:"Switched to manual entry",
+    lookupDailyLimit:"You have reached today's limit of 20 external flight searches.", lookupMonthlyLimit:"The shared monthly allowance is paused at 480 API Units.",
+    lookupProviderLimit:"The external flight-data provider has reached its limit.", lookupFailedManual:"Automatic lookup is temporarily unavailable.",
     addThisFlight:"Add this flight", flightAdded:"Flight added", continueFlightDetails:"Continue adding seat, fare, and other details", scheduleTime:"Schedule", actualTime:"Actual",
     flightNumber:"Flight number", flightNumberPlaceholder:"e.g. MU721", departureAirport:"Departure airport",
     departurePlaceholder:"PVG / Shanghai Pudong", arrivalAirport:"Arrival airport", arrivalPlaceholder:"HKG / Hong Kong International",
@@ -201,6 +204,9 @@ const translations = {
     flightNumberOptional:"航班号（可选）", departureAirportOptional:"出发机场（可选）", arrivalAirportOptional:"到达机场（可选）",
     manualAdd:"手动添加", searchFlights:"查找航班", searchingFlights:"正在查询航班计划…", lookupNoResults:"未找到符合条件的航班，你可以手动添加。",
     lookupUnavailable:"航班查询尚未配置，你可以先手动添加。", lookupInvalid:"请填写日期，并输入航班号或同时输入两个机场代码。",
+    lookupCacheHit:"已从共享航班缓存载入。", lookupManualFallback:"已切换到手动添加",
+    lookupDailyLimit:"你今天已达到 20 次外部航班查询上限。", lookupMonthlyLimit:"全站本月已在 480 API Units 处暂停外部查询。",
+    lookupProviderLimit:"外部航班数据平台当前已达到额度上限。", lookupFailedManual:"自动航班查询暂时不可用。",
     addThisFlight:"添加此航班", flightAdded:"航班已添加", continueFlightDetails:"继续添加座位号、票价等信息", scheduleTime:"计划", actualTime:"实际",
     flightNumber:"航班号", flightNumberPlaceholder:"例如 MU721", departureAirport:"出发机场",
     departurePlaceholder:"PVG / 上海浦东", arrivalAirport:"到达机场", arrivalPlaceholder:"HKG / 香港国际",
@@ -858,14 +864,29 @@ async function searchFlightLookup(kind) {
   flightLookupState[kind].candidates=[];
   try{
     if(typeof window.flightArchiveData?.searchFlights!=="function")throw new Error("Flight lookup is not configured.");
-    const candidates=await window.flightArchiveData.searchFlights({date,flightNumber,from:flightNumber?"":from,to:flightNumber?"":to});
-    flightLookupState[kind].candidates=Array.isArray(candidates)?candidates:[];
-    elements.status.textContent=candidates.length?"":t("lookupNoResults");
+    const response=await window.flightArchiveData.searchFlights({date,flightNumber,from:flightNumber?"":from,to:flightNumber?"":to});
+    const candidates=Array.isArray(response)?response:(Array.isArray(response?.results)?response.results:[]);
+    flightLookupState[kind].candidates=candidates;
+    elements.status.textContent=response?.cached?t("lookupCacheHit"):(candidates.length?"":t("lookupNoResults"));
     renderFlightLookupCandidates(kind);
   }catch(error){
     const message=error?.message||String(error);
-    elements.status.textContent=/not configured|not found|non-2xx/i.test(message)?t("lookupUnavailable"):message;
+    const fallbackMessages={
+      DAILY_SEARCH_LIMIT:"lookupDailyLimit",
+      MONTHLY_UNIT_LIMIT:"lookupMonthlyLimit",
+      PROVIDER_LIMIT:"lookupProviderLimit",
+      LOOKUP_NOT_CONFIGURED:"lookupUnavailable",
+      PROVIDER_UNAVAILABLE:"lookupFailedManual",
+      LOOKUP_FAILED:"lookupFailedManual"
+    };
+    const fallbackKey=fallbackMessages[error?.code];
+    elements.status.textContent=fallbackKey?t(fallbackKey):(/not configured|not found|non-2xx/i.test(message)?t("lookupUnavailable"):message);
     elements.status.classList.add("error");
+    if(error?.manualFallback){
+      const fallbackMessage=elements.status.textContent;
+      openManualFlightEntry(kind);
+      showToast(t("lookupManualFallback"),fallbackMessage);
+    }
   }finally{
     elements.search.disabled=false;
   }

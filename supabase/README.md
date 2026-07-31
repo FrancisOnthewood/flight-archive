@@ -35,6 +35,21 @@ Cloudflare Pages.
 Flight Archive queries AeroDataBox through the `flight-search` Edge Function.
 The browser never receives the provider API key.
 
+Before deploying the function, apply
+`migrations/202607310005_flight_search_quota_cache.sql`. It adds:
+
+- a shared cache keyed by the canonical search query;
+- a limit of 20 external (cache-miss) searches per user per UTC day;
+- a global stop at 480 AeroDataBox API Units per UTC calendar month;
+- atomic quota reservations, so simultaneous requests cannot exceed either
+  limit.
+
+Flight-number searches reserve 2 Units and route searches reserve 4 Units.
+Cache hits consume neither a daily user request nor API Units. Past-flight
+cache entries remain valid for one year; current and future schedules are
+refreshed after 12 hours. When a limit is reached, the frontend opens the
+manual-entry form and keeps the user's date, flight number, and airport codes.
+
 1. Subscribe to an AeroDataBox plan on RapidAPI and copy the RapidAPI key.
 2. In Supabase, add the Edge Function secret `AERODATABOX_API_KEY`.
 3. Optionally add `AERODATABOX_API_HOST` with the value
@@ -50,3 +65,23 @@ the single-flight endpoint. Date plus departure and arrival airport uses two
 12-hour airport schedule requests and filters the results by destination.
 Provider coverage and free-plan quota still apply, so the UI always keeps a
 manual-entry path available.
+
+### Check current usage
+
+Run these read-only queries in the Supabase SQL Editor:
+
+```sql
+select *
+from public.flight_search_monthly_usage
+order by period_start desc;
+
+select usage_date, external_request_count, user_id
+from public.flight_search_daily_usage
+order by usage_date desc, external_request_count desc;
+
+select cache_key, provider, created_at, expires_at,
+       jsonb_array_length(results) as result_count
+from public.flight_search_cache
+order by created_at desc
+limit 50;
+```
