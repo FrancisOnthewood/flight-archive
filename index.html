@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#f4f6f8" />
     <title>Flight Archive</title>
     <link rel="icon" href="./logo.svg?v=20260730-v3" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css?v=20260731-v32" />
+    <link rel="stylesheet" href="./styles.css?v=20260731-v33" />
   </head>
   <body>
     <div class="app-shell" id="appShell">
@@ -75,6 +75,16 @@
             <div class="segmented-control">
               <button id="langZh">中文</button>
               <button class="active" id="langEn">EN</button>
+            </div>
+            <div class="settings-preferences">
+              <label class="settings-field">
+                <span class="settings-label" data-i18n="region">Region</span>
+                <select id="regionSelect" aria-label="Region"></select>
+              </label>
+              <label class="settings-field">
+                <span class="settings-label" data-i18n="currency">Currency</span>
+                <select id="currencySelect" aria-label="Currency"></select>
+              </label>
             </div>
             <div class="hub-settings">
               <div class="hub-settings-head">
@@ -347,6 +357,6 @@
     <script src="./flight-data.js?v=20260730-v2"></script>
     <script src="./incoming-data.js?v=20260730-v1"></script>
     <script src="./global-airports.js?v=20260730-v1"></script>
-    <script src="./app.js?v=20260730-v30"></script>
+    <script src="./app.js?v=20260731-v31"></script>
   </body>
 </html>

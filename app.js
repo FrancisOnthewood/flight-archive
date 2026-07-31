@@ -121,7 +121,7 @@ const translations = {
     mapSelection:"Map content", routes:"Routes", airports:"Airports", mapHelp:"Drag to rotate, scroll to zoom, and select a route or airport for details.",
     flatMapHelp:"Drag to pan, scroll to zoom, and select a route or airport for details.",
     mapStyle:"Map style", lightGlobe:"Light globe", spaceGlobe:"Space globe", flatMap:"Flat map",
-    language:"Language", settings:"Settings", authorGithub:"Author GitHub", authorEmail:"Author email",
+    language:"Language", region:"Region", currency:"Currency", settings:"Settings", authorGithub:"Author GitHub", authorEmail:"Author email",
     hubs:"Hub airports", edit:"Edit", done:"Done", noHubs:"No hub selected", selectedAirports:"selected airports", loadingGeography:"Loading geographic data",
     searchAirports:"Search IATA, ICAO, airport, city, or country", airportSearchHint:"Search {count} locally stored airports. Enter at least two characters.", noAirportMatches:"No airports match this search.", selectedHubAirports:"Selected hub airports",
     backToMap:"Back to map", upcomingTravel:"Upcoming travel", noIncoming:"No upcoming flights", upcomingCount:"upcoming flights",
@@ -188,7 +188,7 @@ const translations = {
     mapSelection:"地图内容", routes:"航线", airports:"机场", mapHelp:"拖拽旋转，滚轮缩放；点击航线或机场查看详情。",
     flatMapHelp:"拖拽平移，滚轮缩放；点击航线或机场查看详情。",
     mapStyle:"地图样式", lightGlobe:"浅色地球", spaceGlobe:"星空地球", flatMap:"平面地图",
-    language:"语言", settings:"设置", authorGithub:"作者 GitHub", authorEmail:"作者邮箱",
+    language:"语言", region:"地区", currency:"货币", settings:"设置", authorGithub:"作者 GitHub", authorEmail:"作者邮箱",
     hubs:"枢纽机场", edit:"编辑", done:"完成", noHubs:"未选择枢纽机场", selectedAirports:"个已选机场", loadingGeography:"正在载入地理数据",
     searchAirports:"搜索 IATA、ICAO、机场、城市或国家", airportSearchHint:"本地已存储 {count} 座机场，请输入至少两个字符。", noAirportMatches:"没有符合搜索条件的机场。", selectedHubAirports:"已选择的枢纽机场",
     backToMap:"返回首页", upcomingTravel:"未来行程", noIncoming:"暂无即将飞行的航班", upcomingCount:"个即将飞行",
@@ -256,10 +256,43 @@ const savedHubs = (() => {
   try { return JSON.parse(localStorage.getItem("flightArchiveHubs") || '["CAN","HKG"]'); }
   catch { return ["CAN", "HKG"]; }
 })();
+const regionOptions = [
+  { code:"CN", en:"Mainland China", zh:"中国大陆", localeEn:"en-CN", localeZh:"zh-CN" },
+  { code:"HK", en:"Hong Kong SAR", zh:"中国香港", localeEn:"en-HK", localeZh:"zh-HK" },
+  { code:"MO", en:"Macao SAR", zh:"中国澳门", localeEn:"en-MO", localeZh:"zh-MO" },
+  { code:"TW", en:"Taiwan", zh:"中国台湾", localeEn:"en-TW", localeZh:"zh-TW" },
+  { code:"SG", en:"Singapore", zh:"新加坡", localeEn:"en-SG", localeZh:"zh-SG" },
+  { code:"JP", en:"Japan", zh:"日本", localeEn:"en-JP", localeZh:"zh-JP" },
+  { code:"US", en:"United States", zh:"美国", localeEn:"en-US", localeZh:"zh-US" },
+  { code:"GB", en:"United Kingdom", zh:"英国", localeEn:"en-GB", localeZh:"zh-GB" },
+  { code:"EU", en:"Europe", zh:"欧洲", localeEn:"en-IE", localeZh:"zh-IE" },
+  { code:"AU", en:"Australia", zh:"澳大利亚", localeEn:"en-AU", localeZh:"zh-AU" },
+  { code:"CA", en:"Canada", zh:"加拿大", localeEn:"en-CA", localeZh:"zh-CA" }
+];
+const currencyOptions = [
+  { code:"CNY", en:"Chinese Yuan", zh:"人民币" },
+  { code:"HKD", en:"Hong Kong Dollar", zh:"港币" },
+  { code:"USD", en:"US Dollar", zh:"美元" },
+  { code:"EUR", en:"Euro", zh:"欧元" },
+  { code:"GBP", en:"British Pound", zh:"英镑" },
+  { code:"SGD", en:"Singapore Dollar", zh:"新加坡元" },
+  { code:"JPY", en:"Japanese Yen", zh:"日元" },
+  { code:"AUD", en:"Australian Dollar", zh:"澳元" },
+  { code:"CAD", en:"Canadian Dollar", zh:"加元" }
+];
+const savedPreferences = (() => {
+  try {
+    const value=JSON.parse(localStorage.getItem("flightArchivePreferences") || "{}");
+    return value&&typeof value==="object"?value:{};
+  } catch { return {}; }
+})();
+const savedRegion=regionOptions.some(option=>option.code===savedPreferences.region)?savedPreferences.region:"CN";
+const savedCurrency=currencyOptions.some(option=>option.code===savedPreferences.currency)?savedPreferences.currency:"CNY";
 const state = {
   activeView:"atlas", yearFilter:"all", scopeFilter:"all", mapMode:"route", globeStyle:"orbit", lang:"en",
   selectedRoute:null, selectedAirport:null, activeFlightId:null, editingFlightId:null,
-  hubs:new Set(savedHubs.filter(code => airports[code])), hubEditorOpen:false, hubSearch:"", incomingMode:false, statsReturnType:null
+  hubs:new Set(savedHubs.filter(code => airports[code])), hubEditorOpen:false, hubSearch:"", incomingMode:false, statsReturnType:null,
+  region:savedRegion, currency:savedCurrency
 };
 const visitedCountries = new Set([
   "China", "Japan", "Cambodia", "Singapore", "Australia", "Indonesia", "Malaysia",
@@ -269,6 +302,10 @@ let landFeatures = fallbackLand.map((ring, index) => ({ name: `fallback-${index}
 let countryStatsMapFlights = [];
 const t = key => translations[state.lang][key] || key;
 const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" })[char]);
+const activeLocale = () => {
+  const region=regionOptions.find(option=>option.code===state.region);
+  return state.lang==="zh"?(region?.localeZh||"zh-CN"):(region?.localeEn||"en-CA");
+};
 const airportName = airport => state.lang === "zh" ? (airport.nameZh || airport.name) : (airport.nameEn || airport.name);
 const airportCity = airport => state.lang === "zh" ? (airport.cityZh || airport.city) : (airport.cityEn || airport.city);
 const airportCountry = airport => state.lang === "zh" ? (airport.countryZh || airport.country) : (airport.countryEn || airport.country);
@@ -284,6 +321,32 @@ const displayCabin = value => {
   if (normalized.includes("premium") || normalized.includes("超级")) return t("premiumEconomy");
   return t("economy");
 };
+
+function renderPreferenceSettings() {
+  const regionSelect=document.getElementById("regionSelect");
+  const currencySelect=document.getElementById("currencySelect");
+  regionSelect.innerHTML=regionOptions.map(option=>`<option value="${option.code}">${option[state.lang]}</option>`).join("");
+  currencySelect.innerHTML=currencyOptions.map(option=>`<option value="${option.code}">${option.code} · ${option[state.lang]}</option>`).join("");
+  regionSelect.value=state.region;
+  currencySelect.value=state.currency;
+  regionSelect.setAttribute("aria-label",t("region"));
+  currencySelect.setAttribute("aria-label",t("currency"));
+  document.getElementById("formFare").placeholder=state.currency;
+}
+function persistPreferences() {
+  try {
+    localStorage.setItem("flightArchivePreferences",JSON.stringify({region:state.region,currency:state.currency}));
+  } catch {}
+}
+function applyRegionalPreferences() {
+  renderPreferenceSettings();
+  persistPreferences();
+  renderFlights();
+  renderStats();
+  renderIncomingFlights();
+  if(state.selectedRoute)openRouteDrawer(state.selectedRoute);
+  if(state.selectedAirport)openAirportDrawer(state.selectedAirport);
+}
 
 function applyLanguage(lang) {
   state.lang = lang;
@@ -306,6 +369,7 @@ function applyLanguage(lang) {
   });
   document.getElementById("langZh").classList.toggle("active", lang === "zh");
   document.getElementById("langEn").classList.toggle("active", lang === "en");
+  renderPreferenceSettings();
   document.getElementById("cabinSelect").innerHTML = ["economy","premiumEconomy","business","first"].map(key => `<option>${t(key)}</option>`).join("");
   const years=[...new Set(flights.map(f=>f.date.slice(0,4)))].sort((a,b)=>b.localeCompare(a));
   ["yearFilter","statsYearFilter"].forEach(id=>{
@@ -324,11 +388,15 @@ function applyLanguage(lang) {
 }
 
 function formatDate(date) {
-  const locale=state.lang==="zh"?"zh-CN":"en-CA";
-  return new Intl.DateTimeFormat(locale, { year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(`${date}T12:00:00`));
+  return new Intl.DateTimeFormat(activeLocale(), { year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(`${date}T12:00:00`));
 }
 function formatFare(value) {
-  return Number.isFinite(value) ? `¥${value.toLocaleString()}` : "—";
+  return Number.isFinite(value)
+    ? new Intl.NumberFormat(activeLocale(),{style:"currency",currency:state.currency,currencyDisplay:"narrowSymbol",maximumFractionDigits:0}).format(value)
+    : "—";
+}
+function formatNumber(value,options) {
+  return Number(value).toLocaleString(activeLocale(),options);
 }
 function parseDurationMinutes(value) {
   const text=String(value||"").trim();
@@ -469,7 +537,7 @@ function flightRowMarkup(f) {
       <div class="date-cell"><strong>${formatDate(f.date)}</strong></div>
       <div class="route-cell">
         <div class="route-point"><strong>${f.from}</strong><span>${airportCity(from)}</span><small>${f.depart}</small></div>
-        <div class="route-line"><span>${f.duration}</span><i></i><small>${f.distance.toLocaleString()} km</small></div>
+        <div class="route-line"><span>${f.duration}</span><i></i><small>${formatNumber(f.distance)} km</small></div>
         <div class="route-point"><strong>${f.to}</strong><span>${airportCity(to)}</span><small>${f.arrive}</small></div>
       </div>
       <div class="flight-meta">
@@ -536,7 +604,7 @@ function openFlight(id,{returnStatsType=null}={}) {
   set("detailAirline", f.airline); set("detailTitle", f.flightNo); set("detailDate", formatDate(f.date));
   set("detailFromCode", f.from); set("detailFromCity", `${compactAirportName(from)} · ${f.terminalFrom}`); set("detailDeparture", f.depart);
   set("detailToCode", f.to); set("detailToCity", `${compactAirportName(to)} · ${f.terminalTo}`); set("detailArrival", f.arrive);
-  set("detailDuration", f.duration); set("detailDistance", `${f.distance.toLocaleString()} km`); set("detailNote", f.note || t("noNotes"));
+  set("detailDuration", f.duration); set("detailDistance", `${formatNumber(f.distance)} km`); set("detailNote", f.note || t("noNotes"));
   const aircraftVisualData=aircraftVisualForFlight(f);
   const aircraftVisual=document.getElementById("detailAircraftVisual");
   aircraftVisual.hidden=!aircraftVisualData;
@@ -715,7 +783,7 @@ function openRouteDrawer(route) {
     <p class="drawer-subtitle">${route.from} / ${airportName(from)}<br>${route.to} / ${airportName(to)}</p>
     <div class="drawer-metrics">
       <div><strong>${route.count}</strong><span>${t("flightsRecorded")}</span></div>
-      <div><strong>${route.distance.toLocaleString()} km</strong><span>${t("oneWayDistance")}</span></div>
+      <div><strong>${formatNumber(route.distance)} km</strong><span>${t("oneWayDistance")}</span></div>
     </div>
     <h3 class="drawer-section-title">${t("relatedFlights")}</h3>
     ${related.map(f=>drawerFlightMarkup(f)).join("")}
@@ -829,7 +897,7 @@ function aggregateBy(items,keyFn) {
   return map;
 }
 function durationText(minutes) {
-  return `${Math.floor(minutes/60).toLocaleString()} ${t("hours")} ${minutes%60} ${t("minutes")}`;
+  return `${formatNumber(Math.floor(minutes/60))} ${t("hours")} ${minutes%60} ${t("minutes")}`;
 }
 function flightDetailRow(f,value,emphasized=false) {
   return `<button class="stats-flight-row${emphasized?" metric-row":""}" data-flight-id="${f.id}">
@@ -1007,16 +1075,16 @@ function renderStats() {
       {label:t("longestFlight"),value:`${longest.from} → ${longest.to}`,note:durationText(longest.durationMinutes),flight:longest},
       {label:t("shortestFlight"),value:`${shortest.from} → ${shortest.to}`,note:durationText(shortest.durationMinutes),flight:shortest}
     ]:[]},
-    {type:"distance",label:t("totalDistance"),value:`${s.totalDistance.toLocaleString()} km`,unit:`${(s.totalDistance/40075).toFixed(2)} ${t("earthCircumference")}`,highlights:farthest?[
-      {label:t("farthestFlight"),value:`${farthest.from} → ${farthest.to}`,note:`${farthest.distance.toLocaleString()} km`,flight:farthest},
-      {label:t("shortestFlight"),value:`${shortestDistance.from} → ${shortestDistance.to}`,note:`${shortestDistance.distance.toLocaleString()} km`,flight:shortestDistance}
+    {type:"distance",label:t("totalDistance"),value:`${formatNumber(s.totalDistance)} km`,unit:`${(s.totalDistance/40075).toFixed(2)} ${t("earthCircumference")}`,highlights:farthest?[
+      {label:t("farthestFlight"),value:`${farthest.from} → ${farthest.to}`,note:`${formatNumber(farthest.distance)} km`,flight:farthest},
+      {label:t("shortestFlight"),value:`${shortestDistance.from} → ${shortestDistance.to}`,note:`${formatNumber(shortestDistance.distance)} km`,flight:shortestDistance}
     ]:[]},
-    {type:"airlines",label:t("airlinesFlown"),value:s.airlines.size.toLocaleString(),unit:t("airlineUnit"),highlights:preferenceHighlights("airlines")},
-    {type:"aircraft",label:t("aircraftTypes"),value:s.aircraft.size.toLocaleString(),unit:t("typeUnit"),highlights:preferenceHighlights("aircraft")},
-    {type:"airports",label:t("airportsVisited"),value:s.airportVisits.size.toLocaleString(),unit:t("airportUnit"),highlights:preferenceHighlights("airports")},
-    {type:"countries",label:t("countriesRegions"),value:s.countries.size.toLocaleString(),unit:t("countryUnit"),highlights:preferenceHighlights("countries")},
-    {type:"cities",label:t("citiesVisited"),value:s.cities.size.toLocaleString(),unit:t("cityUnit"),highlights:preferenceHighlights("cities")},
-    {type:"routes",label:t("directedRoutes"),value:s.directedRoutes.size.toLocaleString(),unit:t("routeUnit"),highlights:[]},
+    {type:"airlines",label:t("airlinesFlown"),value:formatNumber(s.airlines.size),unit:t("airlineUnit"),highlights:preferenceHighlights("airlines")},
+    {type:"aircraft",label:t("aircraftTypes"),value:formatNumber(s.aircraft.size),unit:t("typeUnit"),highlights:preferenceHighlights("aircraft")},
+    {type:"airports",label:t("airportsVisited"),value:formatNumber(s.airportVisits.size),unit:t("airportUnit"),highlights:preferenceHighlights("airports")},
+    {type:"countries",label:t("countriesRegions"),value:formatNumber(s.countries.size),unit:t("countryUnit"),highlights:preferenceHighlights("countries")},
+    {type:"cities",label:t("citiesVisited"),value:formatNumber(s.cities.size),unit:t("cityUnit"),highlights:preferenceHighlights("cities")},
+    {type:"routes",label:t("directedRoutes"),value:formatNumber(s.directedRoutes.size),unit:t("routeUnit"),highlights:[]},
     {type:"fare",label:t("totalFare"),value:formatFare(s.totalFare),unit:`${s.knownFares.length} ${t("knownFares")}`,highlights:[]}
   ];
   document.getElementById("statsList").innerHTML=entries.map(item=>`
@@ -1029,7 +1097,7 @@ function renderStats() {
 }
 function ratioText(value) {
   const digits=value>=100?0:value>=10?1:value>=1?2:3;
-  return value.toLocaleString(undefined,{minimumFractionDigits:digits,maximumFractionDigits:digits});
+  return formatNumber(value,{minimumFractionDigits:digits,maximumFractionDigits:digits});
 }
 function equivalenceMarkup(label,items) {
   return `<section class="equivalence-section">
@@ -1228,18 +1296,18 @@ function openStatsDetail(type) {
       ])}
       <div class="detail-sort-label">${t("longestFirst")}</div>${sorted.map(f=>flightDetailRow(f,durationText(f.durationMinutes),true)).join("")}`;
   }else if(type==="distance"){
-    summary=`${s.totalDistance.toLocaleString()} km`;
+    summary=`${formatNumber(s.totalDistance)} km`;
     const sorted=[...scopedFlights].sort((a,b)=>b.distance-a.distance);
     content=`<div class="featured-flight-stack">
-        ${featuredFlightMarkup(sorted[0],`${sorted[0].distance.toLocaleString()} km`,t("farthestFlight"))}
-        ${featuredFlightMarkup(sorted.at(-1),`${sorted.at(-1).distance.toLocaleString()} km`,t("shortestFlight"))}
+        ${featuredFlightMarkup(sorted[0],`${formatNumber(sorted[0].distance)} km`,t("farthestFlight"))}
+        ${featuredFlightMarkup(sorted.at(-1),`${formatNumber(sorted.at(-1).distance)} km`,t("shortestFlight"))}
       </div>
       ${equivalenceMarkup(t("distanceEquivalent"),[
         {symbol:"◎",value:s.totalDistance/40075,label:t("earthCircumference")},
         {symbol:"◐",value:s.totalDistance/384400,label:t("moonDistance")},
         {symbol:"☉",value:s.totalDistance/149597870.7,label:t("sunDistance")}
       ])}
-      <div class="detail-sort-label">${t("longestFirst")}</div>${sorted.map(f=>flightDetailRow(f,`${f.distance.toLocaleString()} km`,true)).join("")}`;
+      <div class="detail-sort-label">${t("longestFirst")}</div>${sorted.map(f=>flightDetailRow(f,`${formatNumber(f.distance)} km`,true)).join("")}`;
   }else if(type==="aircraft"){
     summary=`${s.aircraft.size} ${t("typeUnit")}`;
     content=statsBarMarkup([...s.aircraft.entries()].map(([family,items])=>{
@@ -1345,10 +1413,10 @@ function renderHubSettings(){
     </details>`;
   }).join("");
   if(!state.hubEditorOpen)options.innerHTML="";
-  else if(query.length===1)options.innerHTML=`<p class="hub-search-status">${t("airportSearchHint").replace("{count}",available.length.toLocaleString())}</p>`;
-  else if(!query&&!matches.length)options.innerHTML=`<p class="hub-search-status">${t("airportSearchHint").replace("{count}",available.length.toLocaleString())}</p>`;
+  else if(query.length===1)options.innerHTML=`<p class="hub-search-status">${t("airportSearchHint").replace("{count}",formatNumber(available.length))}</p>`;
+  else if(!query&&!matches.length)options.innerHTML=`<p class="hub-search-status">${t("airportSearchHint").replace("{count}",formatNumber(available.length))}</p>`;
   else if(query.length>=2&&!matches.length)options.innerHTML=`<p class="hub-search-status">${t("noAirportMatches")}</p>`;
-  else options.innerHTML=`${!query?`<p class="hub-search-status">${t("selectedHubAirports")} · ${t("airportSearchHint").replace("{count}",available.length.toLocaleString())}</p>`:""}${groupsMarkup}`;
+  else options.innerHTML=`${!query?`<p class="hub-search-status">${t("selectedHubAirports")} · ${t("airportSearchHint").replace("{count}",formatNumber(available.length))}</p>`:""}${groupsMarkup}`;
   const editButton=document.getElementById("editHubsButton");
   editButton.classList.toggle("active",state.hubEditorOpen);
   document.getElementById("hubEditLabel").textContent=state.hubEditorOpen?t("done"):t("edit");
@@ -1821,6 +1889,18 @@ document.querySelectorAll("[data-map-style]").forEach(button=>button.addEventLis
 }));
 document.getElementById("langZh").addEventListener("click",()=>applyLanguage("zh"));
 document.getElementById("langEn").addEventListener("click",()=>applyLanguage("en"));
+document.getElementById("regionSelect").addEventListener("change",event=>{
+  if(regionOptions.some(option=>option.code===event.target.value)){
+    state.region=event.target.value;
+    applyRegionalPreferences();
+  }
+});
+document.getElementById("currencySelect").addEventListener("change",event=>{
+  if(currencyOptions.some(option=>option.code===event.target.value)){
+    state.currency=event.target.value;
+    applyRegionalPreferences();
+  }
+});
 document.getElementById("editHubsButton").addEventListener("click",()=>{
   state.hubEditorOpen=!state.hubEditorOpen;renderHubSettings();
 });
