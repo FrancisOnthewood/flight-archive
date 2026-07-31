@@ -572,7 +572,6 @@
             <b id="onboardingAvatarPreview" aria-hidden="true">F</b>
             <label class="avatar-upload"><span data-i18n="chooseAvatar">Choose avatar</span><input id="onboardingAvatarInput" type="file" accept="image/jpeg,image/png,image/webp" /></label>
           </div>
-          <label class="onboarding-username"><span data-i18n="username">Username</span><input id="onboardingUsername" type="text" maxlength="30" pattern="[A-Za-z0-9_.-]{3,30}" data-i18n-placeholder="usernamePlaceholder" placeholder="Used for friend search" /></label>
           <div class="onboarding-section">
             <span class="settings-label" data-i18n="hubs">Hub airports</span>
             <div class="hub-chips" id="onboardingHubChips"></div>
@@ -583,9 +582,9 @@
             <div class="hub-options" id="onboardingHubResults"></div>
           </div>
           <div class="onboarding-grid onboarding-favourites">
-            <label><span data-i18n="favouriteAirline">Favourite airline</span><input id="onboardingFavouriteAirline" list="favouriteAirlineOptions" autocomplete="off" placeholder="CX" /></label>
-            <label><span data-i18n="favouriteAircraft">Favourite aircraft</span><input id="onboardingFavouriteAircraft" list="favouriteAircraftOptions" autocomplete="off" placeholder="Airbus A350-900" /></label>
-            <label><span data-i18n="favouriteAirport">Favourite airport</span><input id="onboardingFavouriteAirport" list="airportCodeOptions" autocomplete="off" placeholder="HKG" /></label>
+            <label><span data-i18n="airline">Airline</span><input id="onboardingFavouriteAirline" list="favouriteAirlineOptions" autocomplete="off" placeholder="CX" /></label>
+            <label><span data-i18n="aircraft">Aircraft</span><input id="onboardingFavouriteAircraft" list="favouriteAircraftOptions" autocomplete="off" placeholder="Airbus A350-900" /></label>
+            <label><span data-i18n="airport">Airport</span><input id="onboardingFavouriteAirport" list="airportCodeOptions" autocomplete="off" placeholder="HKG" /></label>
             <label><span data-i18n="destinationRegion">Destination region</span><input id="onboardingFavouriteCountry" list="favouriteRegionOptions" autocomplete="off" placeholder="Hong Kong / HK" /></label>
             <label><span data-i18n="destinationCity">Destination city</span><input id="onboardingFavouriteCity" list="onboardingCityOptions" autocomplete="off" placeholder="Hong Kong" /></label>
           </div>
@@ -609,6 +608,6 @@
     <script src="./data-service.js?v=20260731-flight-search-v1"></script>
     <script src="./global-airports.js?v=20260730-v1"></script>
     <script src="./reference-data.js?v=20260731-v1"></script>
-    <script src="./app.js?v=20260731-flight-search-v1"></script>
+    <script src="./app.js?v=20260731-onboarding-v1"></script>
   </body>
 </html>

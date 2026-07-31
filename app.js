@@ -227,6 +227,7 @@ Object.assign(translations.en,{
   requiredPreferencesHelp:"Choose your region and currency. You can change them later in Settings.",
   optionalSetupHelp:"Avatar, hubs, and favourites are optional. Add them now or skip this step.",
   continue:"Continue", skipForNow:"Skip for now", finishSetup:"Finish setup", setupComplete:"Your archive is ready",
+  savingSetup:"Saving…",
   favouriteCountry:"Favourite country / region", collapseIncoming:"Collapse incoming flights", expandIncoming:"Expand incoming flights",
   avatarUpdated:"Avatar updated", uploadFailed:"Upload failed", saveFailed:"Save failed",
   navFriends:"Friends", friendsTitle:"Friends", friendsHelp:"Connect by username and share flight records with accepted friends.",
@@ -251,6 +252,7 @@ Object.assign(translations.zh,{
   requiredPreferencesHelp:"请选择地区和货币，之后仍可在设置中修改。",
   optionalSetupHelp:"头像、枢纽机场与个人偏好均为选填，可现在设置或暂时跳过。",
   continue:"继续", skipForNow:"暂时跳过", finishSetup:"完成设置", setupComplete:"你的飞行档案已准备好",
+  savingSetup:"正在保存…",
   favouriteCountry:"最喜欢的国家 / 地区", collapseIncoming:"收起即将飞行", expandIncoming:"展开即将飞行",
   avatarUpdated:"头像已更新", uploadFailed:"上传失败", saveFailed:"保存失败",
   navFriends:"好友", friendsTitle:"好友", friendsHelp:"通过用户名建立联系；双方成为好友后可互相查看飞行记录。",
@@ -459,7 +461,17 @@ function renderCityOptions(prefix="") {
   const datalist=document.getElementById(prefix?"onboardingCityOptions":"favouriteCityOptions");
   if(!country||!input||!datalist)return;
   const countryCode=normalizeRegionFavourite(country.value);
+  country.dataset.regionCode=countryCode;
   datalist.innerHTML=citiesForCountry(countryCode).map(city=>`<option value="${escapeHtml(city.value)}">${escapeHtml(city.label)}</option>`).join("");
+}
+function updateFavouriteRegionCities(prefix="") {
+  const country=document.getElementById(prefix?`${prefix}FavouriteCountry`:"favouriteCountrySelect");
+  const city=document.getElementById(prefix?`${prefix}FavouriteCity`:"favouriteCityInput");
+  if(!country||!city)return;
+  const normalized=normalizeRegionFavourite(country.value);
+  if(country.value.trim()&&!normalized)return;
+  if((country.dataset.regionCode||"")!==normalized)city.value="";
+  renderCityOptions(prefix);
 }
 function renderFavouriteSettings() {
   const airlineInput=document.getElementById("favouriteAirlineInput");
@@ -2199,8 +2211,8 @@ function openOnboarding(){
   document.getElementById("onboardingFavouriteCity").value=savedFavourites.cities || "";
   const city=storedCityParts(savedFavourites.cities || "");
   document.getElementById("onboardingFavouriteCity").value=city.city;
-  document.getElementById("onboardingUsername").value=currentProfile.username || window.flightArchiveBackend?.user?.user_metadata?.username || "";
   document.getElementById("onboardingAvatarInput").value="";
+  ["onboardingSkip","onboardingFinish"].forEach(id=>document.getElementById(id).disabled=false);
   renderOnboardingHubs();
   document.getElementById("onboardingModal").classList.add("open");
   document.body.style.overflow="hidden";
@@ -2214,9 +2226,16 @@ function acceptRequiredOnboardingPreferences(){
 }
 async function completeOnboarding(includeOptional){
   const data=window.flightArchiveData;
-  if(!data?.enabled)return;
-  const username=document.getElementById("onboardingUsername").value.trim();
-  const displayName=username || currentProfile.username || currentProfile.display_name || window.flightArchiveBackend?.user?.user_metadata?.username || "";
+  if(!data?.enabled){
+    showToast(t("saveFailed"),state.lang==="zh"?"账户数据服务尚未准备好，请稍后重试。":"Your account data is not ready yet. Please try again.");
+    return;
+  }
+  const skipButton=document.getElementById("onboardingSkip");
+  const finishButton=document.getElementById("onboardingFinish");
+  const activeButton=includeOptional?finishButton:skipButton;
+  skipButton.disabled=true;
+  finishButton.disabled=true;
+  activeButton.textContent=t("savingSetup");
   try{
     await data.saveSettings({language:state.lang,region:state.region,currency:state.currency,mapStyle:state.globeStyle});
     let profile=currentProfile;
@@ -2227,8 +2246,8 @@ async function completeOnboarding(includeOptional){
       const avatarFile=document.getElementById("onboardingAvatarInput").files[0];
       if(avatarFile)profile=await data.uploadAvatar(avatarFile);
     }
-    profile=await data.saveProfile({displayName,username,onboardingCompleted:true,avatarUrl:profile.avatar_url});
-    currentProfile={...currentProfile,...profile,username,onboarding_completed:true};
+    profile=await data.saveProfile({onboardingCompleted:true,avatarUrl:profile.avatar_url});
+    currentProfile={...currentProfile,...profile,onboarding_completed:true};
     renderProfile(currentProfile);
     closeOnboarding();
     applyLanguage(state.lang);
@@ -2237,6 +2256,11 @@ async function completeOnboarding(includeOptional){
     showToast(t("setupComplete"),t("setupComplete"));
   }catch(error){
     showToast(t("saveFailed"),error?.message || String(error));
+  }finally{
+    skipButton.disabled=false;
+    finishButton.disabled=false;
+    skipButton.textContent=t("skipForNow");
+    finishButton.textContent=t("finishSetup");
   }
 }
 
@@ -2715,8 +2739,10 @@ document.getElementById("saveProfileButton").addEventListener("click",saveProfil
 document.getElementById("changePasswordButton").addEventListener("click",changePassword);
 document.getElementById("editFavouritesButton").addEventListener("click",()=>setFavouritesEditing(true));
 document.getElementById("saveFavouritesButton").addEventListener("click",saveSettingsFavourites);
-document.getElementById("favouriteCountrySelect").addEventListener("change",()=>{document.getElementById("favouriteCityInput").value="";renderCityOptions();});
-document.getElementById("onboardingFavouriteCountry").addEventListener("change",()=>{document.getElementById("onboardingFavouriteCity").value="";renderCityOptions("onboarding");});
+document.getElementById("favouriteCountrySelect").addEventListener("input",()=>updateFavouriteRegionCities());
+document.getElementById("favouriteCountrySelect").addEventListener("change",()=>updateFavouriteRegionCities());
+document.getElementById("onboardingFavouriteCountry").addEventListener("input",()=>updateFavouriteRegionCities("onboarding"));
+document.getElementById("onboardingFavouriteCountry").addEventListener("change",()=>updateFavouriteRegionCities("onboarding"));
 document.getElementById("profileAvatarInput").addEventListener("change",event=>{
   const file=event.target.files[0];
   if(!file)return;
