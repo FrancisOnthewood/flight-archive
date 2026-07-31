@@ -55,56 +55,12 @@ const aircraftVisuals = {
   "A6EGR": { src: "./airplanes/emirates%2077w%20a6egr.png", altKey: "aircraftIllustrationEmirates777" }
 };
 
-const fallbackFlights = [
-  { id: 1, routeId: "sha-hkg", from: "PVG", to: "HKG", date: "2026-06-18", airline: "China Eastern Airlines", airlineShort: "MU", flightNo: "MU721", aircraft: "Airbus A320neo", depart: "08:20", arrive: "10:55", duration: "2h 35m", distance: 1256, terminalFrom: "T1", terminalTo: "T1", seat: "34A", cabin: "经济舱", fare: 1680, booking: "航司官网", gate: "H12", status: "准点", note: "天气良好，巡航阶段平稳。", scope: "international" },
-  { id: 2, routeId: "sha-hkg", from: "HKG", to: "PVG", date: "2026-03-09", airline: "Cathay Pacific", airlineShort: "CX", flightNo: "CX368", aircraft: "Airbus A330-300", depart: "09:15", arrive: "11:45", duration: "2h 30m", distance: 1256, terminalFrom: "T1", terminalTo: "T2", seat: "42K", cabin: "经济舱", fare: 1840, booking: "携程", gate: "28", status: "准点", note: "上午航班，实际到达时间与计划一致。", scope: "international" },
-  { id: 3, routeId: "sha-hkg", from: "PVG", to: "HKG", date: "2025-11-14", airline: "Hong Kong Airlines", airlineShort: "HX", flightNo: "HX237", aircraft: "Airbus A320", depart: "11:55", arrive: "14:40", duration: "2h 45m", distance: 1256, terminalFrom: "T2", terminalTo: "T1", seat: "21F", cabin: "经济舱", fare: 1320, booking: "飞猪", gate: "D75", status: "延误 15m", note: "实际起飞时间较计划晚 15 分钟。", scope: "international" },
-  { id: 4, routeId: "sha-hkg", from: "HKG", to: "PVG", date: "2025-09-21", airline: "China Eastern Airlines", airlineShort: "MU", flightNo: "MU506", aircraft: "Airbus A321", depart: "20:20", arrive: "22:50", duration: "2h 30m", distance: 1256, terminalFrom: "T1", terminalTo: "T1", seat: "16A", cabin: "超级经济舱", fare: 2180, booking: "航司官网", gate: "6", status: "准点", note: "夜间航班。", scope: "international" },
-  { id: 5, routeId: "sha-sfo", from: "PVG", to: "SFO", date: "2026-01-12", airline: "United Airlines", airlineShort: "UA", flightNo: "UA858", aircraft: "Boeing 787-9", depart: "13:10", arrive: "08:42", duration: "11h 32m", distance: 9880, terminalFrom: "T2", terminalTo: "I", seat: "47A", cabin: "经济舱", fare: 5280, booking: "航司官网", gate: "D69", status: "准点", note: "跨越日期变更线。", scope: "international" },
-  { id: 6, routeId: "sha-sin", from: "PVG", to: "SIN", date: "2025-12-24", airline: "Singapore Airlines", airlineShort: "SQ", flightNo: "SQ827", aircraft: "Airbus A350-900", depart: "08:05", arrive: "13:40", duration: "5h 35m", distance: 3807, terminalFrom: "T2", terminalTo: "T3", seat: "38K", cabin: "经济舱", fare: 2880, booking: "航司官网", gate: "D81", status: "准点", note: "日间航班。", scope: "international" },
-  { id: 7, routeId: "sha-pek", from: "SHA", to: "PEK", date: "2026-05-03", airline: "Air China", airlineShort: "CA", flightNo: "CA1518", aircraft: "Airbus A330-300", depart: "16:25", arrive: "18:45", duration: "2h 20m", distance: 1075, terminalFrom: "T2", terminalTo: "T3", seat: "31L", cabin: "经济舱", fare: 1240, booking: "国航 App", gate: "M6", status: "准点", note: "国内航段。", scope: "domestic" },
-  { id: 8, routeId: "sha-pek", from: "PKX", to: "SHA", date: "2026-05-06", airline: "China Eastern Airlines", airlineShort: "MU", flightNo: "MU5122", aircraft: "Boeing 787-9", depart: "19:05", arrive: "21:20", duration: "2h 15m", distance: 1066, terminalFrom: "主楼", terminalTo: "T2", seat: "29A", cabin: "经济舱", fare: 1160, booking: "东航 App", gate: "B25", status: "准点", note: "由北京大兴机场出发。", scope: "domestic" },
-  { id: 9, routeId: "sha-nrt", from: "PVG", to: "NRT", date: "2025-07-17", airline: "All Nippon Airways", airlineShort: "NH", flightNo: "NH920", aircraft: "Boeing 787-9", depart: "13:05", arrive: "17:10", duration: "3h 05m", distance: 1802, terminalFrom: "T2", terminalTo: "T1", seat: "26A", cabin: "经济舱", fare: 2420, booking: "ANA 官网", gate: "D73", status: "准点", note: "下午抵达成田机场。", scope: "international" },
-  { id: 10, routeId: "sha-can", from: "SHA", to: "CAN", date: "2025-05-29", airline: "China Southern Airlines", airlineShort: "CZ", flightNo: "CZ3526", aircraft: "Airbus A320neo", depart: "14:20", arrive: "16:45", duration: "2h 25m", distance: 1175, terminalFrom: "T2", terminalTo: "T2", seat: "18F", cabin: "经济舱", fare: 930, booking: "南航 App", gate: "51", status: "准点", note: "国内航段。", scope: "domestic" },
-  { id: 11, routeId: "sha-ctu", from: "PVG", to: "CTU", date: "2025-03-11", airline: "Sichuan Airlines", airlineShort: "3U", flightNo: "3U8962", aircraft: "Airbus A350-900", depart: "17:10", arrive: "20:25", duration: "3h 15m", distance: 1702, terminalFrom: "T2", terminalTo: "T2", seat: "45A", cabin: "经济舱", fare: 1060, booking: "携程", gate: "C69", status: "准点", note: "傍晚出发。", scope: "domestic" },
-  { id: 12, routeId: "sha-kix", from: "PVG", to: "KIX", date: "2024-10-03", airline: "Juneyao Air", airlineShort: "HO", flightNo: "HO1337", aircraft: "Boeing 787-9", depart: "16:40", arrive: "20:05", duration: "2h 25m", distance: 1307, terminalFrom: "T2", terminalTo: "T1", seat: "32L", cabin: "经济舱", fare: 2350, booking: "航司官网", gate: "D80", status: "准点", note: "晚间抵达关西机场。", scope: "international" }
-];
-
-const fallbackRoutes = [
-  { id: "sha-hkg", from: "PVG", to: "HKG", count: 6, distance: 1256 },
-  { id: "sha-pek", from: "SHA", to: "PEK", count: 4, distance: 1075 },
-  { id: "sha-sin", from: "PVG", to: "SIN", count: 2, distance: 3807 },
-  { id: "sha-nrt", from: "PVG", to: "NRT", count: 2, distance: 1802 },
-  { id: "sha-sfo", from: "PVG", to: "SFO", count: 1, distance: 9880 },
-  { id: "sha-can", from: "SHA", to: "CAN", count: 1, distance: 1175 },
-  { id: "sha-ctu", from: "PVG", to: "CTU", count: 1, distance: 1702 },
-  { id: "sha-kix", from: "PVG", to: "KIX", count: 1, distance: 1307 }
-];
-
 const archiveData = window.FLIGHT_ARCHIVE_DATA || {};
 const airports = archiveData.airports || fallbackAirports;
-const flights = archiveData.flights || fallbackFlights;
-const routes = archiveData.routes || fallbackRoutes;
-const savedIncomingFlights = (() => {
-  try {
-    const value=JSON.parse(localStorage.getItem("flightArchiveIncomingFlights") || "[]");
-    return Array.isArray(value)?value:[];
-  } catch { return []; }
-})();
-const plannedIncomingFlights = [...(archiveData.incomingFlights || []),...savedIncomingFlights];
-const savedFavourites = (() => {
-  try {
-    const value=JSON.parse(localStorage.getItem("flightArchiveFavourites") || "{}");
-    return value&&typeof value==="object"?value:{};
-  } catch { return {}; }
-})();
-const savedFlightEdits = (() => {
-  try { return JSON.parse(localStorage.getItem("flightArchiveEdits") || "{}"); }
-  catch { return {}; }
-})();
-flights.forEach(flight => {
-  if(savedFlightEdits[flight.id])Object.assign(flight,savedFlightEdits[flight.id]);
-});
+const flights = Array.isArray(archiveData.flights)?archiveData.flights:[];
+const routes = Array.isArray(archiveData.routes)?archiveData.routes:[];
+const plannedIncomingFlights = [];
+const savedFavourites = {};
 
 const fallbackLand = [
   [[-168,71],[-140,70],[-125,58],[-110,53],[-98,50],[-82,52],[-62,47],[-55,37],[-75,24],[-92,18],[-105,22],[-118,32],[-132,50],[-160,58]],
@@ -252,10 +208,7 @@ const translations = {
   }
 };
 
-const savedHubs = (() => {
-  try { return JSON.parse(localStorage.getItem("flightArchiveHubs") || '["CAN","HKG"]'); }
-  catch { return ["CAN", "HKG"]; }
-})();
+const savedHubs = [];
 const regionOptions = [
   { code:"CN", en:"Mainland China", zh:"中国大陆", localeEn:"en-CN", localeZh:"zh-CN" },
   { code:"HK", en:"Hong Kong SAR", zh:"中国香港", localeEn:"en-HK", localeZh:"zh-HK" },
@@ -280,24 +233,15 @@ const currencyOptions = [
   { code:"AUD", en:"Australian Dollar", zh:"澳元" },
   { code:"CAD", en:"Canadian Dollar", zh:"加元" }
 ];
-const savedPreferences = (() => {
-  try {
-    const value=JSON.parse(localStorage.getItem("flightArchivePreferences") || "{}");
-    return value&&typeof value==="object"?value:{};
-  } catch { return {}; }
-})();
-const savedRegion=regionOptions.some(option=>option.code===savedPreferences.region)?savedPreferences.region:"CN";
-const savedCurrency=currencyOptions.some(option=>option.code===savedPreferences.currency)?savedPreferences.currency:"CNY";
+const savedRegion="CN";
+const savedCurrency="CNY";
 const state = {
   activeView:"atlas", yearFilter:"all", scopeFilter:"all", mapMode:"route", globeStyle:"orbit", lang:"en",
   selectedRoute:null, selectedAirport:null, activeFlightId:null, editingFlightId:null,
   hubs:new Set(savedHubs.filter(code => airports[code])), hubEditorOpen:false, hubSearch:"", incomingMode:false, statsReturnType:null,
   region:savedRegion, currency:savedCurrency
 };
-const visitedCountries = new Set([
-  "China", "Japan", "Cambodia", "Singapore", "Australia", "Indonesia", "Malaysia",
-  "Vietnam", "Brunei", "United Arab Emirates", "Spain", "Germany"
-]);
+const visitedCountries = new Set();
 let landFeatures = fallbackLand.map((ring, index) => ({ name: `fallback-${index}`, rings: [ring] }));
 let countryStatsMapFlights = [];
 const t = key => translations[state.lang][key] || key;
@@ -334,9 +278,6 @@ function renderPreferenceSettings() {
   document.getElementById("formFare").placeholder=state.currency;
 }
 function persistPreferences() {
-  try {
-    localStorage.setItem("flightArchivePreferences",JSON.stringify({region:state.region,currency:state.currency}));
-  } catch {}
   if(window.flightArchiveData?.enabled){
     window.flightArchiveData.saveSettings({
       language:state.lang,
@@ -424,7 +365,12 @@ function timeInputValue(value) {
 }
 function rebuildRoutes() {
   const routeMap=new Map();
+  visitedCountries.clear();
   flights.forEach(f=>{
+    [f.from,f.to].forEach(code=>{
+      const country=geoCountryName(airports[code]);
+      if(country)visitedCountries.add(country);
+    });
     const codes=[f.from,f.to].sort(),id=codes.join("-").toLowerCase();
     f.routeId=id;
     if(!routeMap.has(id))routeMap.set(id,{id,from:f.from,to:f.to,count:0,distanceTotal:0});
@@ -504,10 +450,6 @@ function saveEditedFlight() {
   f.note=document.getElementById("formNote").value.trim();
   f.scope=airports[f.from].countryCode===airports[f.to].countryCode?"domestic":"international";
   rebuildRoutes();
-  const editableKeys=["date","flightNo","from","to","terminalFrom","terminalTo","airline","airlineShort","aircraft","registration","duration","durationMinutes","depart","arrive","distance","gate","seat","cabin","fare","fareRaw","fareGroup","note","scope","routeId"];
-  const edit=Object.fromEntries(editableKeys.map(key=>[key,f[key]]));
-  savedFlightEdits[f.id]=edit;
-  try{localStorage.setItem("flightArchiveEdits",JSON.stringify(savedFlightEdits));}catch{}
   if(window.flightArchiveData?.enabled){
     window.flightArchiveData.saveFlight(f,"completed")
       .catch(error=>showToast(state.lang==="zh"?"同步失败":"Sync failed",error.message));
@@ -813,8 +755,6 @@ function saveIncomingFlight() {
     custom:true
   };
   plannedIncomingFlights.push(flight);
-  savedIncomingFlights.push(flight);
-  try{localStorage.setItem("flightArchiveIncomingFlights",JSON.stringify(savedIncomingFlights));}catch{}
   if(window.flightArchiveData?.enabled){
     window.flightArchiveData.saveFlight(flight,"upcoming")
       .then(savedFlight=>Object.assign(flight,savedFlight))
@@ -1103,7 +1043,6 @@ function bindFavouriteEditor(type) {
   card.querySelector("[data-save-favourite]").addEventListener("click",()=>{
     const value=card.querySelector("[data-favourite-select]").value;
     if(value)savedFavourites[type]=value;else delete savedFavourites[type];
-    try{localStorage.setItem("flightArchiveFavourites",JSON.stringify(savedFavourites));}catch{}
     if(window.flightArchiveData?.enabled){
       window.flightArchiveData.saveFavourite(type,value)
         .catch(error=>showToast(state.lang==="zh"?"同步失败":"Sync failed",error.message));
@@ -1441,7 +1380,6 @@ function openStatsDetail(type) {
 }
 function persistHubs(){
   const codes=[...state.hubs];
-  localStorage.setItem("flightArchiveHubs",JSON.stringify(codes));
   if(window.flightArchiveData?.enabled){
     window.flightArchiveData.replaceHubs(codes)
       .catch(error=>showToast(state.lang==="zh"?"同步失败":"Sync failed",error.message));

@@ -4,6 +4,5 @@
 window.FLIGHT_ARCHIVE_BACKEND = Object.freeze({
   enabled: true,
   supabaseUrl: "https://syoveioaykftjukhduwx.supabase.co",
-  publishableKey: "sb_publishable_GGcwKEhMMEc8_QdfVn4IqQ_f8W1lbxB",
-  legacyOwnerEmail: "lihaozhe041128@gmail.com"
+  publishableKey: "sb_publishable_GGcwKEhMMEc8_QdfVn4IqQ_f8W1lbxB"
 });

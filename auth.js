@@ -4,7 +4,6 @@
   const accountSettings=document.getElementById("accountSettings");
   const accountEmail=document.getElementById("accountEmail");
   const accountAvatar=document.getElementById("accountAvatar");
-  const importLegacyButton=document.getElementById("importLegacyButton");
   const form=document.getElementById("authForm");
   const emailField=document.getElementById("authEmailField");
   const emailInput=document.getElementById("authEmail");
@@ -91,7 +90,6 @@
     subtitle.textContent=text(mode==="signin"?"signInHelp":mode==="signup"?"createAccountHelp":"resetPasswordHelp");
     submitButton.textContent=text(mode==="signin"?"signIn":mode==="signup"?"createAccount":"resetPassword");
     forgotButton.textContent=text(mode==="signin"?"forgotPassword":"sendResetLink");
-    importLegacyButton.textContent=text("importExistingArchive");
   };
   const setMode=nextMode=>{
     mode=nextMode;
@@ -110,8 +108,6 @@
     document.body.classList.toggle("auth-required",!authenticated);
     gate.hidden=authenticated;
     accountSettings.hidden=!authenticated;
-    const ownerEmail=String(config.legacyOwnerEmail || "").trim().toLowerCase();
-    importLegacyButton.hidden=!authenticated || String(session?.user?.email || "").trim().toLowerCase()!==ownerEmail;
     if(authenticated){
       const email=session.user.email || "";
       accountEmail.textContent=email;
@@ -179,20 +175,6 @@
   document.getElementById("signOutButton").addEventListener("click",async()=>{
     if(client)await client.auth.signOut();
   });
-  importLegacyButton.addEventListener("click",async()=>{
-    if(!window.flightArchiveData || !window.confirm(text("importConfirm")))return;
-    importLegacyButton.disabled=true;
-    try{
-      const count=await window.flightArchiveData.importLegacyArchive();
-      window.alert(`${text("importComplete")} (${count})`);
-      importLegacyButton.hidden=true;
-    }catch(error){
-      window.alert(error?.message || String(error));
-    }finally{
-      importLegacyButton.disabled=false;
-    }
-  });
-
   window.flightArchiveBackend={
     get client(){return client;},
     get session(){return session;},

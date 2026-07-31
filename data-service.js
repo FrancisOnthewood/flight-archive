@@ -1,10 +1,4 @@
 (() => {
-  const legacyArchive=window.FLIGHT_ARCHIVE_DATA || {};
-  const clone=value=>JSON.parse(JSON.stringify(value));
-  const legacyArchiveSnapshot={
-    flights:clone(legacyArchive.flights || []),
-    incomingFlights:clone(legacyArchive.incomingFlights || [])
-  };
   let activeUserId=null;
   let loadingPromise=null;
 
@@ -77,31 +71,6 @@
     notes:flight.note || null,
     metadata:flight.metadata || {}
   });
-  const legacyRowKey=row=>[
-    row.record_status,
-    row.flight_date,
-    String(row.flight_number || "").toUpperCase(),
-    row.departure_airport,
-    row.arrival_airport
-  ].join("|");
-  const buildLegacyRows=()=>{
-    const completed=legacyArchiveSnapshot.flights.map(flight=>rowFromFlight(flight,"completed"));
-    const upcoming=legacyArchiveSnapshot.incomingFlights.map(flight=>rowFromFlight(flight,"upcoming"));
-    return [...completed,...upcoming].map((row,index)=>({
-      ...row,
-      metadata:{...(row.metadata || {}),legacy_import:true,legacy_index:index+1}
-    }));
-  };
-  const insertMissingLegacyRows=async(supabase,existingRows=[])=>{
-    const rows=buildLegacyRows();
-    const existingKeys=new Set(existingRows.map(legacyRowKey));
-    const missingRows=rows.filter(row=>!existingKeys.has(legacyRowKey(row)));
-    for(let index=0;index<missingRows.length;index+=100){
-      const {error}=await supabase.from("flights").insert(missingRows.slice(index,index+100));
-      if(error)throw error;
-    }
-    return rows.length;
-  };
   const requireClient=()=>{
     const value=client();
     if(!value || !activeUserId)throw new Error("No authenticated Flight Archive session.");
@@ -111,7 +80,7 @@
     window.dispatchEvent(new CustomEvent("flightarchive:data-error",{detail:{message:error?.message || String(error)}}));
   };
 
-  const loadUserData=async(userId,{autoRepair=true}={})=>{
+  const loadUserData=async userId=>{
     const supabase=client();
     if(!supabase || !userId)return;
     activeUserId=userId;
@@ -124,19 +93,6 @@
     const failure=requests.find(result=>result.error)?.error;
     if(failure)throw failure;
     const rows=requests[0].data || [];
-    const ownerEmail=String(window.FLIGHT_ARCHIVE_BACKEND?.legacyOwnerEmail || "").trim().toLowerCase();
-    const signedInEmail=String(backend()?.user?.email || "").trim().toLowerCase();
-    const isPartialOwnerImport=
-      autoRepair &&
-      ownerEmail &&
-      signedInEmail===ownerEmail &&
-      legacyArchiveSnapshot.flights.length>0 &&
-      !rows.some(row=>row.record_status==="completed") &&
-      rows.every(row=>row.metadata?.legacy_import===true);
-    if(isPartialOwnerImport){
-      await insertMissingLegacyRows(supabase,rows);
-      return loadUserData(userId,{autoRepair:false});
-    }
     const settings=requests[1].data || null;
     const hubs=(requests[2].data || []).map(row=>row.airport_code);
     const favourites=Object.fromEntries((requests[3].data || []).map(row=>[row.category,row.value]));
@@ -221,23 +177,6 @@
       const supabase=requireClient();
       const {error}=await supabase.from("flights").delete().eq("id",id);
       if(error)throw error;
-    },
-    async importLegacyArchive(){
-      const supabase=requireClient();
-      const ownerEmail=String(window.FLIGHT_ARCHIVE_BACKEND?.legacyOwnerEmail || "").trim().toLowerCase();
-      const signedInEmail=String(backend()?.user?.email || "").trim().toLowerCase();
-      if(!ownerEmail || signedInEmail!==ownerEmail)throw new Error("Legacy import is restricted to the archive owner.");
-      const {data:existingRows,error:existingError}=await supabase
-        .from("flights")
-        .select("id,record_status,flight_date,flight_number,departure_airport,arrival_airport,metadata");
-      if(existingError)throw existingError;
-      if((existingRows || []).some(row=>row.metadata?.legacy_import!==true)){
-        throw new Error("This account already contains flight records that were not created by the archive import.");
-      }
-      const total=await insertMissingLegacyRows(supabase,existingRows || []);
-      await this.replaceHubs(["CAN","HKG"]);
-      await this.reload();
-      return total;
     }
   };
 })();
