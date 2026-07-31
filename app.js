@@ -1362,7 +1362,8 @@ function renderHubSettings(){
 const canvas = document.getElementById("globeCanvas");
 const ctx = canvas.getContext("2d");
 let cw = 0, ch = 0, globeR = 200, centerX = 0, centerY = 0;
-let rotation = { lon: -112, lat: -18 };
+const firstHubAirport=airports[[...state.hubs][0]]||airports.CAN;
+let rotation = { lon: -firstHubAirport.lon, lat: firstHubAirport.lat };
 let dragging = false, moved = false, lastPointer = null, autoSpin = true;
 let routeHitAreas = [], airportHitAreas = [];
 let flatView = { zoom:1.08, panX:0, panY:0 };
