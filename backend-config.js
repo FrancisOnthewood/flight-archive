@@ -5,6 +5,5 @@ window.FLIGHT_ARCHIVE_BACKEND = Object.freeze({
   enabled: true,
   supabaseUrl: "https://syoveioaykftjukhduwx.supabase.co",
   publishableKey: "sb_publishable_GGcwKEhMMEc8_QdfVn4IqQ_f8W1lbxB",
-  // Paste the public Tally form URL here after completing the private owner setup.
-  feedbackUrl: ""
+  feedbackUrl: "https://tally.so/r/68GYoN"
 });

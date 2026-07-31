@@ -2553,7 +2553,14 @@ rebuildRoutes();applyLanguage("en");resizeGlobe();loadGeography();requestAnimati
 const feedbackUrl=window.FLIGHT_ARCHIVE_BACKEND?.feedbackUrl;
 if(feedbackUrl){
   const feedbackLink=document.getElementById("feedbackLink");
-  feedbackLink.href=feedbackUrl;
+  const updateFeedbackLink=()=>{
+    const url=new URL(feedbackUrl);
+    const username=currentProfile.username || "";
+    if(username)url.searchParams.set("username",username);
+    feedbackLink.href=url.toString();
+  };
+  updateFeedbackLink();
+  feedbackLink.addEventListener("click",updateFeedbackLink);
 }else{
   document.getElementById("feedbackLink").addEventListener("click",event=>{
     event.preventDefault();
