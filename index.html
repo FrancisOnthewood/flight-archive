@@ -6,9 +6,46 @@
     <meta name="theme-color" content="#f4f6f8" />
     <title>Flight Archive</title>
     <link rel="icon" href="./logo.svg?v=20260730-v3" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css?v=20260731-v33" />
+    <link rel="stylesheet" href="./styles.css?v=20260731-auth-v1" />
   </head>
   <body>
+    <section class="auth-gate" id="authGate" aria-live="polite" hidden>
+      <div class="auth-card">
+        <header class="auth-brand">
+          <img src="./logo.svg?v=20260730-v3" alt="" />
+          <div>
+            <strong>Flight Archive</strong>
+            <span data-auth-i18n="privateArchive">Your private flight archive</span>
+          </div>
+        </header>
+        <div class="auth-heading">
+          <h1 id="authTitle" data-auth-i18n="signIn">Sign in</h1>
+          <p id="authSubtitle" data-auth-i18n="signInHelp">Access your flights, statistics, and photos.</p>
+        </div>
+        <div class="auth-tabs" id="authTabs">
+          <button class="active" type="button" data-auth-mode="signin" data-auth-i18n="signIn">Sign in</button>
+          <button type="button" data-auth-mode="signup" data-auth-i18n="createAccount">Create account</button>
+        </div>
+        <form class="auth-form" id="authForm">
+          <label id="authNameField" hidden>
+            <span data-auth-i18n="displayName">Display name</span>
+            <input id="authDisplayName" type="text" autocomplete="name" maxlength="80" />
+          </label>
+          <label id="authEmailField">
+            <span data-auth-i18n="email">Email</span>
+            <input id="authEmail" type="email" autocomplete="email" required />
+          </label>
+          <label>
+            <span data-auth-i18n="password">Password</span>
+            <input id="authPassword" type="password" autocomplete="current-password" minlength="8" required />
+          </label>
+          <button class="auth-submit" id="authSubmit" type="submit" data-auth-i18n="signIn">Sign in</button>
+        </form>
+        <button class="auth-forgot" id="authForgot" type="button" data-auth-i18n="forgotPassword">Forgot password?</button>
+        <p class="auth-message" id="authMessage" role="status"></p>
+      </div>
+    </section>
+
     <div class="app-shell" id="appShell">
       <aside class="sidebar" id="sidebar">
         <div class="sidebar-head">
@@ -102,6 +139,15 @@
               <div class="hub-options" id="hubOptions" aria-label="Select hub airports"></div>
             </div>
             <div class="author-contact">
+              <div class="account-settings" id="accountSettings" hidden>
+                <span data-i18n="account">Account</span>
+                <div class="account-identity">
+                  <b id="accountAvatar" aria-hidden="true"></b>
+                  <strong id="accountEmail"></strong>
+                </div>
+                <button id="importLegacyButton" type="button" data-i18n="importExistingArchive" hidden>Import existing archive</button>
+                <button id="signOutButton" type="button" data-i18n="signOut">Sign out</button>
+              </div>
               <span data-i18n="authorGithub">Author GitHub</span>
               <a class="author-github" href="https://github.com/FrancisOnthewood/flight-archive" target="_blank" rel="noreferrer">
                 <img src="https://avatars.githubusercontent.com/u/272975747?v=4" alt="" loading="lazy" />
@@ -354,9 +400,12 @@
     </div>
 
     <div class="toast" id="toast"><span>✓</span><div><strong data-i18n="actionComplete">Completed</strong><small data-i18n="recordUpdated">Record updated</small></div></div>
+    <script src="./backend-config.js?v=20260731-auth-v1"></script>
+    <script src="./auth.js?v=20260731-auth-v1"></script>
     <script src="./flight-data.js?v=20260730-v2"></script>
     <script src="./incoming-data.js?v=20260730-v1"></script>
+    <script src="./data-service.js?v=20260731-auth-v1"></script>
     <script src="./global-airports.js?v=20260730-v1"></script>
-    <script src="./app.js?v=20260731-v31"></script>
+    <script src="./app.js?v=20260731-auth-v1"></script>
   </body>
 </html>

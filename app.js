@@ -121,7 +121,7 @@ const translations = {
     mapSelection:"Map content", routes:"Routes", airports:"Airports", mapHelp:"Drag to rotate, scroll to zoom, and select a route or airport for details.",
     flatMapHelp:"Drag to pan, scroll to zoom, and select a route or airport for details.",
     mapStyle:"Map style", lightGlobe:"Light globe", spaceGlobe:"Space globe", flatMap:"Flat map",
-    language:"Language", region:"Region", currency:"Currency", settings:"Settings", authorGithub:"Author GitHub", authorEmail:"Author email",
+    language:"Language", region:"Region", currency:"Currency", settings:"Settings", account:"Account", signOut:"Sign out", importExistingArchive:"Import existing archive", authorGithub:"Author GitHub", authorEmail:"Author email",
     hubs:"Hub airports", edit:"Edit", done:"Done", noHubs:"No hub selected", selectedAirports:"selected airports", loadingGeography:"Loading geographic data",
     searchAirports:"Search IATA, ICAO, airport, city, or country", airportSearchHint:"Search {count} locally stored airports. Enter at least two characters.", noAirportMatches:"No airports match this search.", selectedHubAirports:"Selected hub airports",
     backToMap:"Back to map", upcomingTravel:"Upcoming travel", noIncoming:"No upcoming flights", upcomingCount:"upcoming flights",
@@ -188,7 +188,7 @@ const translations = {
     mapSelection:"地图内容", routes:"航线", airports:"机场", mapHelp:"拖拽旋转，滚轮缩放；点击航线或机场查看详情。",
     flatMapHelp:"拖拽平移，滚轮缩放；点击航线或机场查看详情。",
     mapStyle:"地图样式", lightGlobe:"浅色地球", spaceGlobe:"星空地球", flatMap:"平面地图",
-    language:"语言", region:"地区", currency:"货币", settings:"设置", authorGithub:"作者 GitHub", authorEmail:"作者邮箱",
+    language:"语言", region:"地区", currency:"货币", settings:"设置", account:"账户", signOut:"退出登录", importExistingArchive:"导入现有档案", authorGithub:"作者 GitHub", authorEmail:"作者邮箱",
     hubs:"枢纽机场", edit:"编辑", done:"完成", noHubs:"未选择枢纽机场", selectedAirports:"个已选机场", loadingGeography:"正在载入地理数据",
     searchAirports:"搜索 IATA、ICAO、机场、城市或国家", airportSearchHint:"本地已存储 {count} 座机场，请输入至少两个字符。", noAirportMatches:"没有符合搜索条件的机场。", selectedHubAirports:"已选择的枢纽机场",
     backToMap:"返回首页", upcomingTravel:"未来行程", noIncoming:"暂无即将飞行的航班", upcomingCount:"个即将飞行",
@@ -337,6 +337,14 @@ function persistPreferences() {
   try {
     localStorage.setItem("flightArchivePreferences",JSON.stringify({region:state.region,currency:state.currency}));
   } catch {}
+  if(window.flightArchiveData?.enabled){
+    window.flightArchiveData.saveSettings({
+      language:state.lang,
+      region:state.region,
+      currency:state.currency,
+      mapStyle:state.globeStyle
+    }).catch(error=>showToast(state.lang==="zh"?"同步失败":"Sync failed",error.message));
+  }
 }
 function applyRegionalPreferences() {
   renderPreferenceSettings();
@@ -351,6 +359,7 @@ function applyRegionalPreferences() {
 function applyLanguage(lang) {
   state.lang = lang;
   document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
+  window.flightArchiveBackend?.setLanguage(lang);
   document.querySelectorAll("[data-i18n]").forEach(el => {
     const value = translations[lang][el.dataset.i18n];
     if (value) el.textContent = value;
@@ -499,7 +508,58 @@ function saveEditedFlight() {
   const edit=Object.fromEntries(editableKeys.map(key=>[key,f[key]]));
   savedFlightEdits[f.id]=edit;
   try{localStorage.setItem("flightArchiveEdits",JSON.stringify(savedFlightEdits));}catch{}
+  if(window.flightArchiveData?.enabled){
+    window.flightArchiveData.saveFlight(f,"completed")
+      .catch(error=>showToast(state.lang==="zh"?"同步失败":"Sync failed",error.message));
+  }
   state.editingFlightId=null;
+  return true;
+}
+function saveNewFlight() {
+  const from=airportCodeFromInput(document.getElementById("formFrom").value,"");
+  const to=airportCodeFromInput(document.getElementById("formTo").value,"");
+  if(!from || !to)return false;
+  const flightNo=document.getElementById("formFlightNo").value.trim().toUpperCase();
+  const duration=document.getElementById("formDuration").value.trim() || "0min";
+  const fareValue=document.getElementById("formFare").value;
+  const distanceValue=Number(document.getElementById("formDistance").value);
+  const flight={
+    id:crypto.randomUUID(),
+    from,
+    to,
+    date:document.getElementById("formDate").value,
+    airline:document.getElementById("formAirline").value.trim() || "Unknown airline",
+    airlineShort:(flightNo.match(/^([A-Z0-9]{2})/)||[])[1] || "",
+    flightNo,
+    aircraft:document.getElementById("formAircraft").value.trim() || "—",
+    registration:document.getElementById("formRegistration").value.trim() || "—",
+    depart:document.getElementById("formDepart").value || "—",
+    arrive:document.getElementById("formArrive").value || "—",
+    duration,
+    durationMinutes:parseDurationMinutes(duration),
+    distance:distanceValue>0?Math.round(distanceValue):estimateAirportDistance(from,to),
+    terminalFrom:document.getElementById("formTerminalFrom").value.trim() || "—",
+    terminalTo:document.getElementById("formTerminalTo").value.trim() || "—",
+    seat:document.getElementById("formSeat").value.trim() || "—",
+    cabin:document.getElementById("cabinSelect").value || t("economy"),
+    fare:fareValue===""?null:Math.max(0,Number(fareValue)),
+    fareCurrency:state.currency,
+    fareRaw:fareValue || null,
+    fareGroup:null,
+    booking:"",
+    gate:document.getElementById("formGate").value.trim() || "—",
+    status:"",
+    note:document.getElementById("formNote").value.trim(),
+    scope:airports[from].countryCode===airports[to].countryCode?"domestic":"international",
+    recordStatus:"completed"
+  };
+  flights.unshift(flight);
+  rebuildRoutes();
+  if(window.flightArchiveData?.enabled){
+    window.flightArchiveData.saveFlight(flight,"completed")
+      .then(savedFlight=>Object.assign(flight,savedFlight))
+      .catch(error=>showToast(state.lang==="zh"?"同步失败":"Sync failed",error.message));
+  }
   return true;
 }
 function iconMarkup(f, className = "airline-icon") {
@@ -582,7 +642,7 @@ function renderFlights() {
   });
   document.getElementById("recordTotal").textContent=list.length;
   document.getElementById("flightList").innerHTML = list.length ? list.map(flightRowMarkup).join("") : `<div class="empty-state">${t("noRecords")}</div>`;
-  document.querySelectorAll("[data-flight-id]").forEach(el => el.addEventListener("click", () => openFlight(Number(el.dataset.flightId))));
+  document.querySelectorAll("[data-flight-id]").forEach(el => el.addEventListener("click", () => openFlight(el.dataset.flightId)));
 }
 
 function openFlight(id,{returnStatsType=null}={}) {
@@ -755,6 +815,11 @@ function saveIncomingFlight() {
   plannedIncomingFlights.push(flight);
   savedIncomingFlights.push(flight);
   try{localStorage.setItem("flightArchiveIncomingFlights",JSON.stringify(savedIncomingFlights));}catch{}
+  if(window.flightArchiveData?.enabled){
+    window.flightArchiveData.saveFlight(flight,"upcoming")
+      .then(savedFlight=>Object.assign(flight,savedFlight))
+      .catch(error=>showToast(state.lang==="zh"?"同步失败":"Sync failed",error.message));
+  }
   renderIncomingFlights();drawGlobe();
   return true;
 }
@@ -1039,6 +1104,10 @@ function bindFavouriteEditor(type) {
     const value=card.querySelector("[data-favourite-select]").value;
     if(value)savedFavourites[type]=value;else delete savedFavourites[type];
     try{localStorage.setItem("flightArchiveFavourites",JSON.stringify(savedFavourites));}catch{}
+    if(window.flightArchiveData?.enabled){
+      window.flightArchiveData.saveFavourite(type,value)
+        .catch(error=>showToast(state.lang==="zh"?"同步失败":"Sync failed",error.message));
+    }
     renderStats();
     openStatsDetail(type);
     showToast(t("favouriteUpdated"),favouriteDisplay(type,value));
@@ -1362,7 +1431,7 @@ function openStatsDetail(type) {
   document.getElementById("statsDetailTitle").textContent=title;
   document.getElementById("statsDetailSummary").textContent=summary;
   document.getElementById("statsDetailContent").innerHTML=content;
-  document.querySelectorAll("#statsDetailContent [data-flight-id]").forEach(el=>el.addEventListener("click",()=>{closeModals();openFlight(Number(el.dataset.flightId),{returnStatsType:type});}));
+  document.querySelectorAll("#statsDetailContent [data-flight-id]").forEach(el=>el.addEventListener("click",()=>{closeModals();openFlight(el.dataset.flightId,{returnStatsType:type});}));
   bindFavouriteEditor(type);
   openModal("statsDetailModal");
   if(type==="countries"){
@@ -1370,7 +1439,14 @@ function openStatsDetail(type) {
     requestAnimationFrame(()=>drawCountryStatsMap(countryStatsMapFlights));
   }
 }
-function persistHubs(){localStorage.setItem("flightArchiveHubs",JSON.stringify([...state.hubs]));}
+function persistHubs(){
+  const codes=[...state.hubs];
+  localStorage.setItem("flightArchiveHubs",JSON.stringify(codes));
+  if(window.flightArchiveData?.enabled){
+    window.flightArchiveData.replaceHubs(codes)
+      .catch(error=>showToast(state.lang==="zh"?"同步失败":"Sync failed",error.message));
+  }
+}
 function renderHubSettings(){
   const available=Object.values(airports).sort((a,b)=>a.code.localeCompare(b.code));
   const selected=[...state.hubs].sort();
@@ -1885,10 +1961,10 @@ document.getElementById("airportMode").addEventListener("click",()=>{
 document.querySelectorAll("[data-map-style]").forEach(button=>button.addEventListener("click",()=>{
   state.globeStyle=button.dataset.mapStyle;
   document.querySelectorAll("[data-map-style]").forEach(item=>item.classList.toggle("active",item===button));
-  updateMapHelp();closeDrawer();drawGlobe();
+  persistPreferences();updateMapHelp();closeDrawer();drawGlobe();
 }));
-document.getElementById("langZh").addEventListener("click",()=>applyLanguage("zh"));
-document.getElementById("langEn").addEventListener("click",()=>applyLanguage("en"));
+document.getElementById("langZh").addEventListener("click",()=>{applyLanguage("zh");persistPreferences();});
+document.getElementById("langEn").addEventListener("click",()=>{applyLanguage("en");persistPreferences();});
 document.getElementById("regionSelect").addEventListener("change",event=>{
   if(regionOptions.some(option=>option.code===event.target.value)){
     state.region=event.target.value;
@@ -1932,10 +2008,15 @@ document.querySelectorAll(".modal-backdrop").forEach(el=>el.addEventListener("cl
 document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeModals();closeDrawer();setSettingsOpen(false);}});
 document.getElementById("flightForm").addEventListener("submit",e=>{
   e.preventDefault();
-  const edited=state.editingFlightId!==null&&saveEditedFlight();
+  const editing=state.editingFlightId!==null;
+  const saved=editing?saveEditedFlight():saveNewFlight();
+  if(!saved){
+    showToast(t("invalidAirportCode"),t("recordSaved"));
+    return;
+  }
   closeModals();
-  if(edited){renderFlights();renderStats();closeDrawer();drawGlobe();}
-  showToast(t("recordSaved"),t("recordUpdated"));
+  renderFlights();renderStats();closeDrawer();drawGlobe();
+  showToast(t("recordSaved"),editing?t("recordUpdated"):t("recordSaved"));
 });
 document.getElementById("incomingFlightForm").addEventListener("submit",e=>{
   e.preventDefault();
@@ -1949,4 +2030,35 @@ window.addEventListener("resize",()=>{
   if(document.getElementById("countryStatsMap"))drawCountryStatsMap(countryStatsMapFlights);
 });
 
+function hydrateUserData(payload) {
+  flights.splice(0,flights.length,...(payload.flights || []));
+  plannedIncomingFlights.splice(0,plannedIncomingFlights.length,...(payload.incomingFlights || []));
+  Object.keys(savedFavourites).forEach(key=>delete savedFavourites[key]);
+  Object.assign(savedFavourites,payload.favourites || {});
+  state.hubs=new Set((payload.hubs || []).filter(code=>airports[code]));
+  state.selectedRoute=null;
+  state.selectedAirport=null;
+  state.yearFilter="all";
+  state.scopeFilter="all";
+  const settings=payload.settings || {};
+  if(["en","zh"].includes(settings.language))state.lang=settings.language;
+  if(regionOptions.some(option=>option.code===settings.region))state.region=settings.region;
+  if(currencyOptions.some(option=>option.code===settings.currency))state.currency=settings.currency;
+  if(["light","orbit","flat"].includes(settings.map_style))state.globeStyle=settings.map_style;
+  document.querySelectorAll("[data-map-style]").forEach(button=>button.classList.toggle("active",button.dataset.mapStyle===state.globeStyle));
+  const firstHub=airports[[...state.hubs][0]];
+  if(firstHub)rotation={lon:-firstHub.lon,lat:firstHub.lat};
+  rebuildRoutes();
+  closeDrawer();
+  applyLanguage(state.lang);
+  renderIncomingFlights();
+  drawGlobe();
+}
+
+window.flightArchiveApp={hydrateUserData};
+window.addEventListener("flightarchive:data-error",event=>{
+  showToast(state.lang==="zh"?"数据同步失败":"Data sync failed",event.detail.message);
+});
+
 rebuildRoutes();applyLanguage("en");resizeGlobe();loadGeography();requestAnimationFrame(animate);
+window.dispatchEvent(new Event("flightarchive:app-ready"));
