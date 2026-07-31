@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#f4f6f8" />
     <title>Flight Archive</title>
     <link rel="icon" href="./logo.svg?v=20260730-v3" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css?v=20260731-auth-v1" />
+    <link rel="stylesheet" href="./styles.css?v=20260731-profile-v1" />
   </head>
   <body>
     <section class="auth-gate" id="authGate" aria-live="polite" hidden>
@@ -138,15 +138,35 @@
               </label>
               <div class="hub-options" id="hubOptions" aria-label="Select hub airports"></div>
             </div>
-            <div class="author-contact">
-              <div class="account-settings" id="accountSettings" hidden>
-                <span data-i18n="account">Account</span>
-                <div class="account-identity">
-                  <b id="accountAvatar" aria-hidden="true"></b>
-                  <strong id="accountEmail"></strong>
-                </div>
+            <div class="account-settings" id="accountSettings" hidden>
+              <span class="settings-label" data-i18n="account">Account</span>
+              <div class="account-identity">
+                <b id="accountAvatar" aria-hidden="true"></b>
+                <div><strong id="accountDisplayName"></strong><small id="accountEmail"></small></div>
+              </div>
+              <label class="settings-field">
+                <span class="settings-label" data-i18n="displayName">Display name</span>
+                <input id="profileDisplayName" type="text" maxlength="80" autocomplete="name" />
+              </label>
+              <label class="avatar-upload">
+                <span data-i18n="chooseAvatar">Choose avatar</span>
+                <input id="profileAvatarInput" type="file" accept="image/jpeg,image/png,image/webp" />
+              </label>
+              <div class="account-actions">
+                <button id="saveProfileButton" type="button" data-i18n="saveProfile">Save profile</button>
                 <button id="signOutButton" type="button" data-i18n="signOut">Sign out</button>
               </div>
+            </div>
+            <div class="favourite-settings" id="favouriteSettings">
+              <span class="settings-label" data-i18n="favourites">Favourites</span>
+              <label class="settings-field"><span data-i18n="airline">Airline</span><input id="favouriteAirlineInput" list="airlineCodeOptions" maxlength="3" placeholder="CX" /></label>
+              <label class="settings-field"><span data-i18n="aircraft">Aircraft</span><input id="favouriteAircraftInput" placeholder="A350-900" /></label>
+              <label class="settings-field"><span data-i18n="airport">Airport</span><input id="favouriteAirportInput" maxlength="3" placeholder="HKG" /></label>
+              <label class="settings-field"><span data-i18n="country">Country / region</span><select id="favouriteCountrySelect"></select></label>
+              <label class="settings-field"><span data-i18n="city">City</span><input id="favouriteCityInput" placeholder="Hong Kong" /></label>
+              <button class="settings-save-button" id="saveFavouritesButton" type="button" data-i18n="saveFavourites">Save favourites</button>
+            </div>
+            <div class="author-contact">
               <span data-i18n="authorGithub">Author GitHub</span>
               <a class="author-github" href="https://github.com/FrancisOnthewood/flight-archive" target="_blank" rel="noreferrer">
                 <img src="https://avatars.githubusercontent.com/u/272975747?v=4" alt="" loading="lazy" />
@@ -154,7 +174,15 @@
               </a>
               <span data-i18n="authorEmail">Author email</span>
               <a href="mailto:lihaozhe041128@gmail.com">lihaozhe041128@gmail.com</a>
+              <a class="feedback-link" href="https://github.com/FrancisOnthewood/flight-archive/issues/new?labels=feedback&amp;title=Flight%20Archive%20feedback" target="_blank" rel="noreferrer">
+                <span data-i18n="feedback">Feedback</span>
+                <svg viewBox="0 0 24 24"><path d="M8 16 16 8M10 8h6v6"/></svg>
+              </a>
             </div>
+          </div>
+          <div class="sidebar-account-summary" id="sidebarAccountSummary" hidden>
+            <b id="sidebarAccountAvatar" aria-hidden="true"></b>
+            <span><strong id="sidebarAccountName"></strong><small id="sidebarAccountEmail"></small></span>
           </div>
           <button class="settings-button" id="settingsButton" aria-expanded="false">
             <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.8 1.8 0 0 0 .36 1.98l.06.06-2.78 2.78-.06-.06A1.8 1.8 0 0 0 15 19.4a1.8 1.8 0 0 0-1.08 1.65V21H10v-.08A1.8 1.8 0 0 0 8.95 19.3a1.8 1.8 0 0 0-1.98.36l-.06.06-2.78-2.78.06-.06A1.8 1.8 0 0 0 4.6 15a1.8 1.8 0 0 0-1.65-1.08H3V10h.08A1.8 1.8 0 0 0 4.7 8.95a1.8 1.8 0 0 0-.36-1.98l-.06-.06 2.78-2.78.06.06A1.8 1.8 0 0 0 9 4.6a1.8 1.8 0 0 0 1.08-1.65V3H14v.08A1.8 1.8 0 0 0 15.05 4.7a1.8 1.8 0 0 0 1.98-.36l.06-.06 2.78 2.78-.06.06A1.8 1.8 0 0 0 19.4 9a1.8 1.8 0 0 0 1.65 1.08H21V14h-.08A1.8 1.8 0 0 0 19.4 15Z"/></svg>
@@ -163,6 +191,9 @@
         </div>
 
         <section class="incoming-sidebar" id="incomingSidebar" aria-hidden="true">
+          <button class="incoming-collapse-button" id="incomingCollapseButton" aria-label="Collapse incoming flights" title="Collapse incoming flights">
+            <svg viewBox="0 0 24 24"><path d="m14 7-5 5 5 5"/></svg>
+          </button>
           <button class="incoming-back" id="incomingBackButton">
             <svg viewBox="0 0 24 24"><path d="m14.5 6-6 6 6 6"/></svg>
             <span data-i18n="backToMap">Back to map</span>
@@ -292,7 +323,12 @@
         </figure>
         <div class="detail-info-grid" id="detailInfoGrid"></div>
         <div class="detail-note"><span data-i18n="notes">Notes</span><p id="detailNote"></p></div>
-        <div class="modal-actions"><button class="subtle-button" data-close-modal data-i18n="close">Close</button><button class="primary-button" id="editFlightButton" data-i18n="editRecord">Edit record</button></div>
+        <div class="modal-actions">
+          <button class="subtle-button danger-button" id="deleteFlightButton" data-i18n="deleteRecord">Delete record</button>
+          <span class="modal-action-spacer"></span>
+          <button class="subtle-button" data-close-modal data-i18n="close">Close</button>
+          <button class="primary-button" id="editFlightButton" data-i18n="editRecord">Edit record</button>
+        </div>
       </section>
     </div>
 
@@ -399,11 +435,56 @@
     </div>
 
     <div class="toast" id="toast"><span>✓</span><div><strong data-i18n="actionComplete">Completed</strong><small data-i18n="recordUpdated">Record updated</small></div></div>
-    <script src="./backend-config.js?v=20260731-auth-v1"></script>
-    <script src="./auth.js?v=20260731-auth-v1"></script>
+    <div class="modal-backdrop onboarding-backdrop" id="onboardingModal">
+      <section class="modal onboarding-modal" role="dialog" aria-modal="true" aria-labelledby="onboardingTitle">
+        <header class="onboarding-head">
+          <img src="./logo.svg?v=20260730-v3" alt="" />
+          <div><span data-i18n="welcomeToArchive">WELCOME TO FLIGHT ARCHIVE</span><h2 id="onboardingTitle" data-i18n="setUpArchive">Set up your archive</h2></div>
+        </header>
+        <div id="onboardingRequiredStep">
+          <p data-i18n="requiredPreferencesHelp">Choose your region and currency. You can change them later in Settings.</p>
+          <div class="onboarding-grid">
+            <label><span data-i18n="region">Region</span><select id="onboardingRegionSelect"></select></label>
+            <label><span data-i18n="currency">Currency</span><select id="onboardingCurrencySelect"></select></label>
+          </div>
+          <div class="modal-actions"><button class="primary-button" id="onboardingContinue" type="button" data-i18n="continue">Continue</button></div>
+        </div>
+        <div id="onboardingOptionalStep" hidden>
+          <p data-i18n="optionalSetupHelp">Avatar, hubs, and favourites are optional. Add them now or skip this step.</p>
+          <div class="onboarding-avatar-row">
+            <b id="onboardingAvatarPreview" aria-hidden="true">F</b>
+            <label class="avatar-upload"><span data-i18n="chooseAvatar">Choose avatar</span><input id="onboardingAvatarInput" type="file" accept="image/jpeg,image/png,image/webp" /></label>
+          </div>
+          <div class="onboarding-section">
+            <span class="settings-label" data-i18n="hubs">Hub airports</span>
+            <div class="hub-chips" id="onboardingHubChips"></div>
+            <label class="hub-search">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4 4"/></svg>
+              <input id="onboardingHubSearch" type="search" autocomplete="off" data-i18n-placeholder="searchAirports" placeholder="Search airports" />
+            </label>
+            <div class="hub-options" id="onboardingHubResults"></div>
+          </div>
+          <div class="onboarding-grid onboarding-favourites">
+            <label><span data-i18n="favouriteAirline">Favourite airline</span><input id="onboardingFavouriteAirline" list="airlineCodeOptions" maxlength="3" placeholder="CX" /></label>
+            <label><span data-i18n="favouriteAircraft">Favourite aircraft</span><input id="onboardingFavouriteAircraft" placeholder="A350-900" /></label>
+            <label><span data-i18n="favouriteAirport">Favourite airport</span><input id="onboardingFavouriteAirport" maxlength="3" placeholder="HKG" /></label>
+            <label><span data-i18n="favouriteCountry">Favourite country / region</span><select id="onboardingFavouriteCountry"></select></label>
+            <label><span data-i18n="favouriteCity">Favourite city</span><input id="onboardingFavouriteCity" placeholder="Hong Kong" /></label>
+          </div>
+          <div class="modal-actions">
+            <button class="subtle-button" id="onboardingSkip" type="button" data-i18n="skipForNow">Skip for now</button>
+            <button class="primary-button" id="onboardingFinish" type="button" data-i18n="finishSetup">Finish setup</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <datalist id="airlineCodeOptions"></datalist>
+    <script src="./backend-config.js?v=20260731-profile-v1"></script>
+    <script src="./auth.js?v=20260731-profile-v1"></script>
     <script src="./flight-data.js?v=20260731-private-v1"></script>
-    <script src="./data-service.js?v=20260731-auth-v4"></script>
+    <script src="./data-service.js?v=20260731-profile-v1"></script>
     <script src="./global-airports.js?v=20260730-v1"></script>
-    <script src="./app.js?v=20260731-auth-v1"></script>
+    <script src="./app.js?v=20260731-profile-v1"></script>
   </body>
 </html>

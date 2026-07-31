@@ -4,6 +4,14 @@
 
   const backend=()=>window.flightArchiveBackend;
   const client=()=>backend()?.client || null;
+  const favouriteToApp={
+    aircraft:"aircraft",
+    airline:"airlines",
+    airport:"airports",
+    country:"countries",
+    city:"cities"
+  };
+  const favouriteToDatabase=Object.fromEntries(Object.entries(favouriteToApp).map(([databaseKey,appKey])=>[appKey,databaseKey]));
   const timeText=value=>String(value || "").slice(0,5);
   const durationText=minutes=>{
     const value=Number(minutes) || 0;
@@ -88,17 +96,23 @@
       supabase.from("flights").select("*").order("flight_date",{ascending:false}),
       supabase.from("user_settings").select("*").maybeSingle(),
       supabase.from("user_hubs").select("*").order("sort_order",{ascending:true}),
-      supabase.from("user_favourites").select("*")
+      supabase.from("user_favourites").select("*"),
+      supabase.from("profiles").select("*").maybeSingle()
     ]);
     const failure=requests.find(result=>result.error)?.error;
     if(failure)throw failure;
     const rows=requests[0].data || [];
     const settings=requests[1].data || null;
     const hubs=(requests[2].data || []).map(row=>row.airport_code);
-    const favourites=Object.fromEntries((requests[3].data || []).map(row=>[row.category,row.value]));
+    const favourites=Object.fromEntries((requests[3].data || []).map(row=>[favouriteToApp[row.category]||row.category,row.value]));
+    const profile={...(requests[4].data || {})};
+    if(profile.avatar_path){
+      const {data:signedAvatar}=await supabase.storage.from("flight-photos").createSignedUrl(profile.avatar_path,3600);
+      profile.avatar_url=signedAvatar?.signedUrl || null;
+    }
     const completed=rows.filter(row=>row.record_status==="completed").map(flightFromRow);
     const upcoming=rows.filter(row=>row.record_status==="upcoming").map(flightFromRow);
-    const payload={flights:completed,incomingFlights:upcoming,settings,hubs,favourites};
+    const payload={flights:completed,incomingFlights:upcoming,settings,hubs,favourites,profile};
     if(window.flightArchiveApp?.hydrateUserData)window.flightArchiveApp.hydrateUserData(payload);
     else window.__FLIGHT_ARCHIVE_PENDING_USER_DATA__=payload;
   };
@@ -139,6 +153,39 @@
       });
       if(error)throw error;
     },
+    async saveProfile(profile){
+      const supabase=requireClient();
+      const values={user_id:activeUserId};
+      if(typeof profile.displayName==="string")values.display_name=profile.displayName.trim() || null;
+      if(typeof profile.onboardingCompleted==="boolean")values.onboarding_completed=profile.onboardingCompleted;
+      const {data,error}=await supabase.from("profiles").upsert(values).select().single();
+      if(error)throw error;
+      if(typeof profile.displayName==="string"){
+        const {error:authError}=await supabase.auth.updateUser({data:{display_name:values.display_name || ""}});
+        if(authError)throw authError;
+      }
+      return {...data,avatar_url:profile.avatarUrl || null};
+    },
+    async uploadAvatar(file){
+      const supabase=requireClient();
+      if(!file?.type?.startsWith("image/"))throw new Error("Choose an image file.");
+      if(file.size>5*1024*1024)throw new Error("Avatar images must be 5 MB or smaller.");
+      const storagePath=`${activeUserId}/profile/avatar`;
+      const {error:uploadError}=await supabase.storage.from("flight-photos").upload(storagePath,file,{
+        upsert:true,
+        contentType:file.type,
+        cacheControl:"3600"
+      });
+      if(uploadError)throw uploadError;
+      const {data:profile,error:profileError}=await supabase.from("profiles").upsert({
+        user_id:activeUserId,
+        avatar_path:storagePath
+      }).select().single();
+      if(profileError)throw profileError;
+      const {data:signedAvatar,error:signedError}=await supabase.storage.from("flight-photos").createSignedUrl(storagePath,3600);
+      if(signedError)throw signedError;
+      return {...profile,avatar_url:signedAvatar?.signedUrl || null};
+    },
     async replaceHubs(codes){
       const supabase=requireClient();
       const {error:deleteError}=await supabase.from("user_hubs").delete().eq("user_id",activeUserId);
@@ -153,14 +200,15 @@
     },
     async saveFavourite(category,value){
       const supabase=requireClient();
+      const databaseCategory=favouriteToDatabase[category] || category;
       if(!value){
-        const {error}=await supabase.from("user_favourites").delete().eq("user_id",activeUserId).eq("category",category);
+        const {error}=await supabase.from("user_favourites").delete().eq("user_id",activeUserId).eq("category",databaseCategory);
         if(error)throw error;
         return;
       }
       const {error}=await supabase.from("user_favourites").upsert({
         user_id:activeUserId,
-        category,
+        category:databaseCategory,
         value
       });
       if(error)throw error;

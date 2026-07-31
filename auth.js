@@ -4,6 +4,12 @@
   const accountSettings=document.getElementById("accountSettings");
   const accountEmail=document.getElementById("accountEmail");
   const accountAvatar=document.getElementById("accountAvatar");
+  const accountDisplayName=document.getElementById("accountDisplayName");
+  const profileDisplayName=document.getElementById("profileDisplayName");
+  const sidebarAccountSummary=document.getElementById("sidebarAccountSummary");
+  const sidebarAccountAvatar=document.getElementById("sidebarAccountAvatar");
+  const sidebarAccountName=document.getElementById("sidebarAccountName");
+  const sidebarAccountEmail=document.getElementById("sidebarAccountEmail");
   const form=document.getElementById("authForm");
   const emailField=document.getElementById("authEmailField");
   const emailInput=document.getElementById("authEmail");
@@ -102,16 +108,33 @@
     setMessage("");
     applyCopy();
   };
+  const avatarMarkup=(element,avatarUrl,fallback)=>{
+    if(!element)return;
+    element.innerHTML=avatarUrl?`<img src="${avatarUrl}" alt="" />`:"";
+    if(!avatarUrl)element.textContent=fallback;
+  };
+  const renderAccount=(profile={})=>{
+    if(!session?.user)return;
+    const email=session.user.email || "";
+    const displayName=(profile.display_name || session.user.user_metadata?.display_name || email.split("@")[0] || "Flight Archive").trim();
+    const initial=displayName.charAt(0).toUpperCase() || "?";
+    accountEmail.textContent=email;
+    accountDisplayName.textContent=displayName;
+    profileDisplayName.value=displayName;
+    sidebarAccountName.textContent=displayName;
+    sidebarAccountEmail.textContent=email;
+    avatarMarkup(accountAvatar,profile.avatar_url,initial);
+    avatarMarkup(sidebarAccountAvatar,profile.avatar_url,initial);
+  };
   const syncSession=nextSession=>{
     session=nextSession;
     const authenticated=Boolean(session?.user);
     document.body.classList.toggle("auth-required",!authenticated);
     gate.hidden=authenticated;
     accountSettings.hidden=!authenticated;
+    sidebarAccountSummary.hidden=!authenticated;
     if(authenticated){
-      const email=session.user.email || "";
-      accountEmail.textContent=email;
-      accountAvatar.textContent=(session.user.user_metadata?.display_name || email || "?").trim().charAt(0).toUpperCase();
+      renderAccount();
     }
     window.dispatchEvent(new CustomEvent("flightarchive:session-changed",{detail:{session}}));
   };
@@ -180,6 +203,7 @@
     get session(){return session;},
     get user(){return session?.user || null;},
     get enabled(){return Boolean(client);},
+    setProfile(profile){renderAccount(profile || {});},
     setLanguage(nextLanguage){
       language=nextLanguage==="zh"?"zh":"en";
       applyCopy();
