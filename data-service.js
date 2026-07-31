@@ -1,5 +1,9 @@
 (() => {
   const legacyArchive=window.FLIGHT_ARCHIVE_DATA || {};
+  const legacyArchiveSnapshot={
+    flights:structuredClone(legacyArchive.flights || []),
+    incomingFlights:structuredClone(legacyArchive.incomingFlights || [])
+  };
   let activeUserId=null;
   let loadingPromise=null;
 
@@ -184,17 +188,30 @@
       const ownerEmail=String(window.FLIGHT_ARCHIVE_BACKEND?.legacyOwnerEmail || "").trim().toLowerCase();
       const signedInEmail=String(backend()?.user?.email || "").trim().toLowerCase();
       if(!ownerEmail || signedInEmail!==ownerEmail)throw new Error("Legacy import is restricted to the archive owner.");
-      const {count,error:countError}=await supabase.from("flights").select("id",{count:"exact",head:true});
-      if(countError)throw countError;
-      if(count)throw new Error("This account already contains flight records.");
-      const completed=(legacyArchive.flights || []).map(flight=>rowFromFlight(flight,"completed"));
-      const upcoming=(legacyArchive.incomingFlights || []).map(flight=>rowFromFlight(flight,"upcoming"));
+      const {data:existingRows,error:existingError}=await supabase
+        .from("flights")
+        .select("id,record_status,flight_date,flight_number,departure_airport,arrival_airport,metadata");
+      if(existingError)throw existingError;
+      if((existingRows || []).some(row=>row.metadata?.legacy_import!==true)){
+        throw new Error("This account already contains flight records that were not created by the archive import.");
+      }
+      const completed=legacyArchiveSnapshot.flights.map(flight=>rowFromFlight(flight,"completed"));
+      const upcoming=legacyArchiveSnapshot.incomingFlights.map(flight=>rowFromFlight(flight,"upcoming"));
       const rows=[...completed,...upcoming].map((row,index)=>({
         ...row,
         metadata:{...(row.metadata || {}),legacy_import:true,legacy_index:index+1}
       }));
-      for(let index=0;index<rows.length;index+=100){
-        const {error}=await supabase.from("flights").insert(rows.slice(index,index+100));
+      const rowKey=row=>[
+        row.record_status,
+        row.flight_date,
+        String(row.flight_number || "").toUpperCase(),
+        row.departure_airport,
+        row.arrival_airport
+      ].join("|");
+      const existingKeys=new Set((existingRows || []).map(rowKey));
+      const missingRows=rows.filter(row=>!existingKeys.has(rowKey(row)));
+      for(let index=0;index<missingRows.length;index+=100){
+        const {error}=await supabase.from("flights").insert(missingRows.slice(index,index+100));
         if(error)throw error;
       }
       await this.replaceHubs(["CAN","HKG"]);
