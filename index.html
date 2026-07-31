@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#f4f6f8" />
     <title>Flight Archive</title>
     <link rel="icon" href="./logo.svg?v=20260730-v3" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css?v=20260731-friends-v1" />
+    <link rel="stylesheet" href="./styles.css?v=20260731-remember-v1" />
   </head>
   <body>
     <section class="auth-gate" id="authGate" aria-live="polite" hidden>
@@ -38,6 +38,10 @@
           <label>
             <span data-auth-i18n="password">Password</span>
             <input id="authPassword" type="password" autocomplete="current-password" minlength="8" required />
+          </label>
+          <label class="auth-remember" id="authRememberField">
+            <input id="authRemember" type="checkbox" checked />
+            <span data-auth-i18n="rememberMe">Remember me</span>
           </label>
           <button class="auth-submit" id="authSubmit" type="submit" data-auth-i18n="signIn">Sign in</button>
         </form>
@@ -552,7 +556,7 @@
     <datalist id="favouriteCityOptions"></datalist>
     <datalist id="onboardingCityOptions"></datalist>
     <script src="./backend-config.js?v=20260731-feedback-v1"></script>
-    <script src="./auth.js?v=20260731-boarding-v1"></script>
+    <script src="./auth.js?v=20260731-remember-v1"></script>
     <script src="./flight-data.js?v=20260731-private-v1"></script>
     <script src="./data-service.js?v=20260731-friends-v1"></script>
     <script src="./global-airports.js?v=20260730-v1"></script>

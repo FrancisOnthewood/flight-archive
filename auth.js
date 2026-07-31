@@ -18,6 +18,8 @@
   const emailField=document.getElementById("authEmailField");
   const emailInput=document.getElementById("authEmail");
   const passwordInput=document.getElementById("authPassword");
+  const rememberField=document.getElementById("authRememberField");
+  const rememberInput=document.getElementById("authRemember");
   const nameField=document.getElementById("authNameField");
   const nameInput=document.getElementById("authDisplayName");
   const submitButton=document.getElementById("authSubmit");
@@ -37,6 +39,7 @@
       displayName:"Display name",
       email:"Email",
       password:"Password",
+      rememberMe:"Remember me",
       forgotPassword:"Forgot password?",
       sendResetLink:"Send reset link",
       resetPassword:"Set new password",
@@ -60,6 +63,7 @@
       displayName:"显示名称",
       email:"邮箱",
       password:"密码",
+      rememberMe:"保持登录",
       forgotPassword:"忘记密码？",
       sendResetLink:"发送重置链接",
       resetPassword:"设置新密码",
@@ -102,6 +106,29 @@
   let session=null;
   let boardingSlowTimer=null;
   let boardingTimeoutTimer=null;
+  const rememberPreferenceKey="flightarchive:remember-session";
+  const rememberEnabled=()=>localStorage.getItem(rememberPreferenceKey)!=="false";
+  const setRememberEnabled=enabled=>{
+    localStorage.setItem(rememberPreferenceKey,enabled?"true":"false");
+    rememberInput.checked=enabled;
+  };
+  const authStorage={
+    getItem(key){
+      return (rememberEnabled()?localStorage:sessionStorage).getItem(key);
+    },
+    setItem(key,value){
+      const persistent=rememberEnabled();
+      const target=persistent?localStorage:sessionStorage;
+      const alternate=persistent?sessionStorage:localStorage;
+      alternate.removeItem(key);
+      target.setItem(key,value);
+    },
+    removeItem(key){
+      localStorage.removeItem(key);
+      sessionStorage.removeItem(key);
+    }
+  };
+  rememberInput.checked=rememberEnabled();
 
   const text=key=>copy[language][key] || key;
   const redirectUrl=()=>`${window.location.origin}${window.location.pathname}`;
@@ -166,6 +193,7 @@
     emailField.hidden=mode==="recovery";
     tabs.hidden=mode==="recovery";
     forgotButton.hidden=mode==="recovery";
+    rememberField.hidden=mode!=="signin";
     passwordInput.autocomplete=mode==="signin"?"current-password":"new-password";
     document.querySelectorAll("[data-auth-mode]").forEach(button=>button.classList.toggle("active",button.dataset.authMode===mode));
     setMessage("");
@@ -258,6 +286,7 @@
         setMode("signin");
         syncSession(session);
       }else{
+        setRememberEnabled(rememberInput.checked);
         const {error}=await client.auth.signInWithPassword({
           email:emailInput.value.trim(),
           password:passwordInput.value
@@ -325,7 +354,7 @@
     try{
       const library=await loadSupabaseLibrary();
       client=library.createClient(config.supabaseUrl,config.publishableKey,{
-        auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}
+        auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true,storage:authStorage}
       });
       const {data,error}=await client.auth.getSession();
       if(error)throw error;
