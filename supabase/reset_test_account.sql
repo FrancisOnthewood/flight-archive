@@ -24,6 +24,16 @@ begin
   -- Clearing profiles.avatar_path below detaches the previous avatar. If the
   -- physical object ever needs removal, delete it through the Storage UI/API.
 
+  -- Remove the profile labels cached in Auth metadata as well. The login,
+  -- password, and email stay unchanged, but onboarding starts without a
+  -- previously selected username.
+  update auth.users
+  set raw_user_meta_data = coalesce(raw_user_meta_data, '{}'::jsonb)
+      - 'username'
+      - 'display_name',
+      updated_at = timezone('utc', now())
+  where id = test_user_id;
+
   insert into public.user_settings (user_id, language, region, currency, map_style)
   values (test_user_id, 'en', 'CN', 'CNY', 'orbit')
   on conflict (user_id) do update
