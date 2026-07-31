@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#f4f6f8" />
     <title>Flight Archive</title>
     <link rel="icon" href="./logo.svg?v=20260730-v3" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css?v=20260731-boarding-v1" />
+    <link rel="stylesheet" href="./styles.css?v=20260731-friends-v1" />
   </head>
   <body>
     <section class="auth-gate" id="authGate" aria-live="polite" hidden>
@@ -80,6 +80,12 @@
             </span>
             <span class="nav-label" data-i18n="navMap">Flight Map</span>
           </button>
+          <button class="nav-item" id="incomingNavButton">
+            <span class="nav-icon">
+              <svg viewBox="0 0 24 24"><path d="M3.5 18.5h17"/><path d="m5 14.5 4.2-1.2 3-7.1 1.8.5-1 5.1 4.9-1.4c1.2-.3 2.2.2 2.6 1.2l.2.5-7.7 3.2-5.7.8L5 14.5Z"/></svg>
+            </span>
+            <span class="nav-label" data-i18n="navIncoming">Incoming Flights</span>
+          </button>
           <button class="nav-item" data-view="records">
             <span class="nav-icon">
               <svg viewBox="0 0 24 24"><path d="M7 3.5h10l2 2v15H5v-15l2-2Z"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
@@ -92,11 +98,11 @@
             </span>
             <span class="nav-label" data-i18n="navStats">Statistics</span>
           </button>
-          <button class="nav-item" id="incomingNavButton">
+          <button class="nav-item" data-view="friends">
             <span class="nav-icon">
-              <svg viewBox="0 0 24 24"><path d="M3.5 18.5h17"/><path d="m5 14.5 4.2-1.2 3-7.1 1.8.5-1 5.1 4.9-1.4c1.2-.3 2.2.2 2.6 1.2l.2.5-7.7 3.2-5.7.8L5 14.5Z"/></svg>
+              <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><circle cx="17" cy="10" r="2.5"/><path d="M3.5 19c.5-4 2.3-6 5.5-6s5 2 5.5 6M14 14.5c3.4-.7 5.5.8 6.2 4.5"/></svg>
             </span>
-            <span class="nav-label" data-i18n="navIncoming">Incoming Flights</span>
+            <span class="nav-label" data-i18n="navFriends">Friends</span>
           </button>
         </nav>
 
@@ -150,32 +156,55 @@
               <div class="hub-options" id="hubOptions" aria-label="Select hub airports"></div>
             </div>
             <div class="account-settings" id="accountSettings" hidden>
-              <span class="settings-label" data-i18n="account">Account</span>
+              <div class="settings-section-head">
+                <span class="settings-label" data-i18n="account">Account</span>
+                <button class="settings-edit-button" id="editAccountButton" type="button" data-i18n="edit">Edit</button>
+              </div>
               <div class="account-identity">
                 <b id="accountAvatar" aria-hidden="true"></b>
                 <div><strong id="accountDisplayName"></strong><small id="accountEmail"></small></div>
               </div>
-              <label class="settings-field">
-                <span class="settings-label" data-i18n="displayName">Display name</span>
-                <input id="profileDisplayName" type="text" maxlength="80" autocomplete="name" />
-              </label>
-              <label class="avatar-upload">
-                <span data-i18n="chooseAvatar">Choose avatar</span>
-                <input id="profileAvatarInput" type="file" accept="image/jpeg,image/png,image/webp" />
-              </label>
-              <div class="account-actions">
-                <button id="saveProfileButton" type="button" data-i18n="saveProfile">Save profile</button>
-                <button id="signOutButton" type="button" data-i18n="signOut">Sign out</button>
+              <div class="settings-editor" id="accountEditor" hidden>
+                <label class="settings-field">
+                  <span class="settings-label" data-i18n="displayName">Display name</span>
+                  <input id="profileDisplayName" type="text" maxlength="80" autocomplete="name" />
+                </label>
+                <label class="settings-field">
+                  <span class="settings-label" data-i18n="username">Username</span>
+                  <input id="profileUsername" type="text" maxlength="30" autocomplete="username" pattern="[A-Za-z0-9_.-]{3,30}" />
+                </label>
+                <label class="avatar-upload">
+                  <span data-i18n="chooseAvatar">Choose avatar</span>
+                  <input id="profileAvatarInput" type="file" accept="image/jpeg,image/png,image/webp" />
+                </label>
+                <div class="password-editor">
+                  <span class="settings-label" data-i18n="changePassword">Change password</span>
+                  <input id="newPasswordInput" type="password" minlength="8" autocomplete="new-password" data-i18n-placeholder="newPasswordPlaceholder" placeholder="At least 8 characters" />
+                  <input id="confirmPasswordInput" type="password" minlength="8" autocomplete="new-password" data-i18n-placeholder="confirmPasswordPlaceholder" placeholder="Confirm new password" />
+                  <button id="changePasswordButton" type="button" data-i18n="updatePassword">Update password</button>
+                </div>
+                <div class="account-actions">
+                  <button id="saveProfileButton" type="button" data-i18n="saveProfile">Save profile</button>
+                  <button id="cancelAccountEditButton" type="button" data-i18n="cancel">Cancel</button>
+                </div>
               </div>
+              <button class="settings-signout-button" id="signOutButton" type="button" data-i18n="signOut">Sign out</button>
             </div>
             <div class="favourite-settings" id="favouriteSettings">
-              <span class="settings-label" data-i18n="favourites">Favourites</span>
-              <label class="settings-field"><span data-i18n="airline">Airline</span><input id="favouriteAirlineInput" list="airlineCodeOptions" maxlength="3" placeholder="CX" /></label>
-              <label class="settings-field"><span data-i18n="aircraft">Aircraft</span><input id="favouriteAircraftInput" placeholder="A350-900" /></label>
-              <label class="settings-field"><span data-i18n="airport">Airport</span><input id="favouriteAirportInput" maxlength="3" placeholder="HKG" /></label>
-              <label class="settings-field"><span data-i18n="country">Country / region</span><select id="favouriteCountrySelect"></select></label>
-              <label class="settings-field"><span data-i18n="city">City</span><input id="favouriteCityInput" placeholder="Hong Kong" /></label>
-              <button class="settings-save-button" id="saveFavouritesButton" type="button" data-i18n="saveFavourites">Save favourites</button>
+              <div class="settings-section-head">
+                <span class="settings-label" data-i18n="favourites">Favourites</span>
+                <button class="settings-edit-button" id="editFavouritesButton" type="button" data-i18n="edit">Edit</button>
+              </div>
+              <div class="favourite-summary" id="favouriteSummary"></div>
+              <div class="settings-editor favourite-editor" id="favouriteEditor" hidden>
+                <label class="settings-field"><span data-i18n="airline">Airline</span><select id="favouriteAirlineInput"></select></label>
+                <label class="settings-field"><span data-i18n="aircraft">Aircraft</span><select id="favouriteAircraftInput"></select></label>
+                <label class="settings-field"><span data-i18n="airport">Airport</span><input id="favouriteAirportInput" list="airportCodeOptions" maxlength="3" placeholder="HKG" /></label>
+                <label class="settings-field"><span data-i18n="country">Country / region</span><select id="favouriteCountrySelect"></select></label>
+                <label class="settings-field"><span data-i18n="cityCountry">City country / region</span><select id="favouriteCityCountrySelect"></select></label>
+                <label class="settings-field"><span data-i18n="city">City</span><input id="favouriteCityInput" list="favouriteCityOptions" placeholder="Hong Kong" /></label>
+                <button class="settings-save-button" id="saveFavouritesButton" type="button" data-i18n="saveFavourites">Save favourites</button>
+              </div>
             </div>
             <div class="author-contact">
               <span data-i18n="authorGithub">Author GitHub</span>
@@ -185,7 +214,7 @@
               </a>
               <span data-i18n="authorEmail">Author email</span>
               <a href="mailto:lihaozhe041128@gmail.com">lihaozhe041128@gmail.com</a>
-              <a class="feedback-link" href="https://github.com/FrancisOnthewood/flight-archive/issues/new?labels=feedback&amp;title=Flight%20Archive%20feedback" target="_blank" rel="noreferrer">
+              <a class="feedback-link" id="feedbackLink" href="#" target="_blank" rel="noreferrer">
                 <span data-i18n="feedback">Feedback</span>
                 <svg viewBox="0 0 24 24"><path d="M8 16 16 8M10 8h6v6"/></svg>
               </a>
@@ -306,6 +335,33 @@
             </div>
           </div>
           <div class="stats-list" id="statsList"></div>
+        </section>
+
+        <section class="view page-view friends-view" id="friendsView">
+          <header class="page-header">
+            <div><h1 data-i18n="friendsTitle">Friends</h1><p data-i18n="friendsHelp">Connect by username and share flight records with accepted friends.</p></div>
+          </header>
+          <div class="friend-search-panel">
+            <label class="search-field">
+              <svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4 4"/></svg>
+              <input id="friendSearchInput" type="search" autocomplete="off" data-i18n-placeholder="searchUsername" placeholder="Search username" />
+            </label>
+            <button class="primary-button" id="friendSearchButton" type="button" data-i18n="search">Search</button>
+          </div>
+          <div class="friends-results" id="friendSearchResults"></div>
+          <section class="friends-section">
+            <h2 data-i18n="friendRequests">Friend requests</h2>
+            <div id="friendRequestsList"></div>
+          </section>
+          <section class="friends-section">
+            <h2 data-i18n="yourFriends">Your friends</h2>
+            <div id="friendsList"></div>
+          </section>
+          <section class="friend-records-panel" id="friendRecordsPanel" hidden>
+            <button class="subtle-button" id="closeFriendRecordsButton" type="button" data-i18n="backToFriends">Back to friends</button>
+            <header><b id="friendRecordsAvatar"></b><div><h2 id="friendRecordsName"></h2><p id="friendRecordsUsername"></p></div></header>
+            <div class="friend-flight-list" id="friendFlightList"></div>
+          </section>
         </section>
 
       </main>
@@ -466,6 +522,7 @@
             <b id="onboardingAvatarPreview" aria-hidden="true">F</b>
             <label class="avatar-upload"><span data-i18n="chooseAvatar">Choose avatar</span><input id="onboardingAvatarInput" type="file" accept="image/jpeg,image/png,image/webp" /></label>
           </div>
+          <label class="onboarding-username"><span data-i18n="username">Username</span><input id="onboardingUsername" type="text" maxlength="30" pattern="[A-Za-z0-9_.-]{3,30}" data-i18n-placeholder="usernamePlaceholder" placeholder="Used for friend search" /></label>
           <div class="onboarding-section">
             <span class="settings-label" data-i18n="hubs">Hub airports</span>
             <div class="hub-chips" id="onboardingHubChips"></div>
@@ -476,11 +533,12 @@
             <div class="hub-options" id="onboardingHubResults"></div>
           </div>
           <div class="onboarding-grid onboarding-favourites">
-            <label><span data-i18n="favouriteAirline">Favourite airline</span><input id="onboardingFavouriteAirline" list="airlineCodeOptions" maxlength="3" placeholder="CX" /></label>
-            <label><span data-i18n="favouriteAircraft">Favourite aircraft</span><input id="onboardingFavouriteAircraft" placeholder="A350-900" /></label>
+            <label><span data-i18n="favouriteAirline">Favourite airline</span><select id="onboardingFavouriteAirline"></select></label>
+            <label><span data-i18n="favouriteAircraft">Favourite aircraft</span><select id="onboardingFavouriteAircraft"></select></label>
             <label><span data-i18n="favouriteAirport">Favourite airport</span><input id="onboardingFavouriteAirport" maxlength="3" placeholder="HKG" /></label>
             <label><span data-i18n="favouriteCountry">Favourite country / region</span><select id="onboardingFavouriteCountry"></select></label>
-            <label><span data-i18n="favouriteCity">Favourite city</span><input id="onboardingFavouriteCity" placeholder="Hong Kong" /></label>
+            <label><span data-i18n="cityCountry">City country / region</span><select id="onboardingFavouriteCityCountry"></select></label>
+            <label><span data-i18n="favouriteCity">Favourite city</span><input id="onboardingFavouriteCity" list="onboardingCityOptions" placeholder="Hong Kong" /></label>
           </div>
           <div class="modal-actions">
             <button class="subtle-button" id="onboardingSkip" type="button" data-i18n="skipForNow">Skip for now</button>
@@ -490,12 +548,15 @@
       </section>
     </div>
 
-    <datalist id="airlineCodeOptions"></datalist>
-    <script src="./backend-config.js?v=20260731-profile-v1"></script>
+    <datalist id="airportCodeOptions"></datalist>
+    <datalist id="favouriteCityOptions"></datalist>
+    <datalist id="onboardingCityOptions"></datalist>
+    <script src="./backend-config.js?v=20260731-friends-v1"></script>
     <script src="./auth.js?v=20260731-boarding-v1"></script>
     <script src="./flight-data.js?v=20260731-private-v1"></script>
-    <script src="./data-service.js?v=20260731-boarding-v1"></script>
+    <script src="./data-service.js?v=20260731-friends-v1"></script>
     <script src="./global-airports.js?v=20260730-v1"></script>
-    <script src="./app.js?v=20260731-profile-v1"></script>
+    <script src="./reference-data.js?v=20260731-v1"></script>
+    <script src="./app.js?v=20260731-friends-v1"></script>
   </body>
 </html>

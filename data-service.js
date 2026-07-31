@@ -164,6 +164,11 @@
       const supabase=requireClient();
       const values={user_id:activeUserId};
       if(typeof profile.displayName==="string")values.display_name=profile.displayName.trim() || null;
+      if(typeof profile.username==="string"){
+        const username=profile.username.trim();
+        if(username && !/^[A-Za-z0-9_.-]{3,30}$/.test(username))throw new Error("Username must be 3–30 letters, numbers, dots, hyphens, or underscores.");
+        values.username=username || null;
+      }
       if(typeof profile.onboardingCompleted==="boolean")values.onboarding_completed=profile.onboardingCompleted;
       const {data,error}=await supabase.from("profiles").upsert(values).select().single();
       if(error)throw error;
@@ -172,6 +177,11 @@
         if(authError)throw authError;
       }
       return {...data,avatar_url:profile.avatarUrl || null};
+    },
+    async updatePassword(password){
+      const supabase=requireClient();
+      const {error}=await supabase.auth.updateUser({password});
+      if(error)throw error;
     },
     async uploadAvatar(file){
       const supabase=requireClient();
@@ -219,6 +229,39 @@
         value
       });
       if(error)throw error;
+    },
+    async searchUsers(query){
+      const supabase=requireClient();
+      const {data,error}=await supabase.rpc("search_flight_archive_users",{search_text:query});
+      if(error)throw error;
+      return data || [];
+    },
+    async listFriends(){
+      const supabase=requireClient();
+      const {data,error}=await supabase.rpc("list_flight_archive_friends");
+      if(error)throw error;
+      return data || [];
+    },
+    async sendFriendRequest(targetUserId){
+      const supabase=requireClient();
+      const {error}=await supabase.rpc("send_flight_archive_friend_request",{target_user_id:targetUserId});
+      if(error)throw error;
+    },
+    async respondFriendRequest(friendshipId,accept){
+      const supabase=requireClient();
+      const {error}=await supabase.rpc("respond_flight_archive_friend_request",{friendship_id:friendshipId,accept_request:Boolean(accept)});
+      if(error)throw error;
+    },
+    async removeFriend(friendshipId){
+      const supabase=requireClient();
+      const {error}=await supabase.rpc("remove_flight_archive_friend",{friendship_id:friendshipId});
+      if(error)throw error;
+    },
+    async getFriendFlights(friendUserId){
+      const supabase=requireClient();
+      const {data,error}=await supabase.rpc("get_flight_archive_friend_flights",{friend_user_id:friendUserId});
+      if(error)throw error;
+      return (data || []).map(flightFromRow);
     },
     async saveFlight(flight,recordStatus=flight.recordStatus || "completed"){
       const supabase=requireClient();
