@@ -1716,7 +1716,13 @@ function activeMapRoutes() {
 function activeVisitedCountries() {
   if(!state.friendRecords?.mapVisible)return visitedCountries;
   const result=new Set();
-  activeMapFlights().forEach(f=>[airports[f.from],airports[f.to]].forEach(airport=>{
+  // Incoming flights may point to future destinations. Keep a friend's country
+  // shading tied to completed records so places they have not visited stay neutral.
+  // Do not derive the shading from records that the friend marked as private.
+  const countryFlights=state.friendRecords.privacy?.records===false
+    ? []
+    : (state.friendRecords.records||[]);
+  countryFlights.forEach(f=>[airports[f.from],airports[f.to]].forEach(airport=>{
     const country=geoCountryName(airport);
     if(country)result.add(country);
   }));
