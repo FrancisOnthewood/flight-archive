@@ -282,6 +282,7 @@ translations.en.majorAirportResults="Major airports";
 translations.zh.majorAirportResults="主要枢纽机场";
 Object.assign(translations.en,{
   listView:"List view",mapView:"Map view",friendMapFlights:"flights on this map",moreActions:"More actions",
+  searchAndFilters:"Search and filters",editTrip:"Edit trip",updateTrip:"Update trip",
   fullCitySearch:"Search all cities",majorCityResults:"Major cities",citySearchHint:"Search city or country / region",
   showTripLabels:"Show trip labels",hideTripLabels:"Hide trip labels",organizeFlights:"Organize",selectedFlights:"selected flights",
   createBundle:"Create ticket bundle",addToTrip:"Add to trip",bundleHelp:"These flights share one purchase record.",bundleTotal:"Bundle total",
@@ -292,6 +293,7 @@ Object.assign(translations.en,{
 });
 Object.assign(translations.zh,{
   listView:"列表视图",mapView:"地图视图",friendMapFlights:"条好友飞行记录",moreActions:"更多操作",
+  searchAndFilters:"搜索与筛选",editTrip:"修改 Trip",updateTrip:"更新 Trip",
   fullCitySearch:"进入完整搜索",majorCityResults:"主要城市",citySearchHint:"搜索城市或国家 / 地区",
   showTripLabels:"显示 Trip Label",hideTripLabels:"隐藏 Trip Label",organizeFlights:"批量整理",selectedFlights:"条已选航班",
   createBundle:"创建套票",addToTrip:"加入 Trip",bundleHelp:"这些航班共享同一笔购买记录。",bundleTotal:"套票总价",
@@ -351,7 +353,8 @@ const state = {
   selectedRoute:null, selectedAirport:null, activeFlightId:null, editingFlightId:null, editingIncomingId:null,
   hubs:new Set(savedHubs.filter(code => airports[code])), hubEditorOpen:false, hubSearch:"", hubFullSearch:false, incomingMode:false, statsReturnType:null,
   region:savedRegion, currency:savedCurrency, friends:[],friendSearchResults:[],friendRecords:null,
-  recordSelectionMode:false,selectedFlightIds:new Set(),showTripLabels:false,bundleSession:null
+  recordSelectionMode:false,selectedFlightIds:new Set(),showTripLabels:false,bundleSession:null,
+  incomingSelectionMode:false,selectedIncomingIds:new Set(),recordBatchScope:"completed",editingTripId:null,editingTripFlightIds:new Set()
 };
 const flightLookupState={
   completed:{candidates:[],addedId:null},
@@ -1223,10 +1226,11 @@ function genericAircraftMarkup(label) {
   </svg>`;
 }
 
-function bundleMembers(f,sourceFlights=flights) {
-  return f?.fareGroup?sourceFlights.filter(item=>item.fareGroup===f.fareGroup):[f];
+function bundleMembers(f,sourceFlights=null) {
+  const source=sourceFlights||(plannedIncomingFlights.includes(f)?plannedIncomingFlights:flights);
+  return f?.fareGroup?source.filter(item=>item.fareGroup===f.fareGroup):[f];
 }
-function bundleTotalForFlight(f,sourceFlights=flights) {
+function bundleTotalForFlight(f,sourceFlights=null) {
   return bundleMembers(f,sourceFlights).reduce((sum,item)=>sum+(Number.isFinite(item?.fare)?Number(item.fare):0),0);
 }
 function flightFareMarkup(f) {
@@ -1304,15 +1308,22 @@ function renderFlights() {
       if(!groups.has(key))groups.set(key,{trip,items:[]});
       groups.get(key).items.push(f);
     });
-    content=[...groups.values()].sort((a,b)=>String(b.trip?.start||b.items[0]?.date||"").localeCompare(String(a.trip?.start||a.items[0]?.date||""))).map(group=>{
+    content=[...groups.values()].sort((a,b)=>{
+      if(!a.trip&&b.trip)return 1;
+      if(a.trip&&!b.trip)return -1;
+      return String(b.trip?.start||b.items[0]?.date||"").localeCompare(String(a.trip?.start||a.items[0]?.date||""));
+    }).map(group=>{
       const label=group.trip?.label||t("otherFlights");
       const period=group.trip?`${formatDate(group.trip.start)} — ${formatDate(group.trip.end)}`:"";
-      return `<section class="trip-flight-group"><header><strong>${escapeHtml(label)}</strong><small>${escapeHtml(period)}</small></header>${group.items.map(flightRowMarkup).join("")}</section>`;
+      return `<section class="trip-flight-group"><header><strong>${escapeHtml(label)}</strong><small>${escapeHtml(period)}</small>${group.trip?`<button type="button" data-edit-trip="${escapeHtml(group.trip.id||group.trip.label)}">${t("editTrip")}</button>`:""}</header>${group.items.map(flightRowMarkup).join("")}</section>`;
     }).join("");
   }else content=list.map(flightRowMarkup).join("");
   document.getElementById("flightList").innerHTML = list.length ? content : `<div class="empty-state">${t("noRecords")}</div>`;
   document.getElementById("flightList").classList.toggle("selection-mode",state.recordSelectionMode);
-  document.querySelectorAll("[data-flight-id]").forEach(el => el.addEventListener("click", () => openFlight(el.dataset.flightId)));
+  document.querySelectorAll("[data-flight-id]").forEach(el => el.addEventListener("click", () => {
+    if(state.recordSelectionMode)return;
+    openFlight(el.dataset.flightId);
+  }));
   document.querySelectorAll("[data-row-edit]").forEach(button=>button.addEventListener("click",event=>{
     event.stopPropagation();
     prepareEditForm(button.dataset.rowEdit);
@@ -1321,12 +1332,13 @@ function renderFlights() {
     event.stopPropagation();
     deleteFlightRecord(button.dataset.rowDelete);
   }));
-  document.querySelectorAll("[data-select-flight]").forEach(input=>input.addEventListener("click",event=>event.stopPropagation()));
+  document.querySelectorAll(".flight-select").forEach(label=>label.addEventListener("click",event=>event.stopPropagation()));
   document.querySelectorAll("[data-select-flight]").forEach(input=>input.addEventListener("change",()=>{
     const id=String(input.dataset.selectFlight);
     if(input.checked)state.selectedFlightIds.add(id);else state.selectedFlightIds.delete(id);
     updateRecordBulkToolbar();
   }));
+  document.querySelectorAll("[data-edit-trip]").forEach(button=>button.addEventListener("click",()=>openTripEditor(button.dataset.editTrip)));
 }
 
 function updateRecordBulkToolbar() {
@@ -1337,34 +1349,90 @@ function updateRecordBulkToolbar() {
 }
 function setRecordSelectionMode(active) {
   state.recordSelectionMode=Boolean(active);
+  if(active){
+    state.recordBatchScope="completed";
+    state.editingTripId=null;
+    state.editingTripFlightIds.clear();
+  }
   if(!active)state.selectedFlightIds.clear();
   updateRecordBulkToolbar();renderFlights();
 }
 function selectedFlights() {
   return flights.filter(f=>state.selectedFlightIds.has(String(f.id)));
 }
-async function saveFlightBatch(items) {
+function openTripEditor(tripId) {
+  const items=flights.filter(f=>{
+    const trip=flightTrip(f);
+    return trip&&String(trip.id||trip.label)===String(tripId);
+  });
+  const trip=flightTrip(items[0]);
+  if(!trip||!items.length)return;
+  state.recordBatchScope="completed";
+  state.editingTripId=trip.id||tripId;
+  state.editingTripFlightIds=new Set(items.map(f=>String(f.id)));
+  document.getElementById("tripModalTitle").textContent=t("editTrip");
+  document.getElementById("saveTripButton").textContent=t("updateTrip");
+  document.getElementById("tripLabelInput").value=trip.label||"";
+  document.getElementById("tripStartInput").value=trip.start||items.map(f=>f.date).sort()[0]||"";
+  document.getElementById("tripEndInput").value=trip.end||items.map(f=>f.date).sort().at(-1)||"";
+  openModal("tripModal");
+}
+function batchSelectedFlights() {
+  if(state.editingTripId)return flights.filter(f=>state.editingTripFlightIds.has(String(f.id)));
+  return state.recordBatchScope==="incoming"
+    ? incomingFlights().filter(f=>state.selectedIncomingIds.has(String(f.id)))
+    : selectedFlights();
+}
+async function saveFlightBatch(items,recordStatus=state.recordBatchScope==="incoming"?"upcoming":"completed") {
   if(!window.flightArchiveData?.enabled)return;
-  const saved=await Promise.all(items.map(f=>window.flightArchiveData.saveFlight(f,"completed")));
+  const saved=await Promise.all(items.map(f=>window.flightArchiveData.saveFlight(f,recordStatus)));
   saved.forEach((row,index)=>Object.assign(items[index],row));
 }
 async function saveSelectedBundle() {
-  const items=selectedFlights(),totalRaw=document.getElementById("bundleTotalInput").value,total=Number(totalRaw);
+  const items=batchSelectedFlights(),totalRaw=document.getElementById("bundleTotalInput").value,total=Number(totalRaw);
   if(items.length<2||totalRaw===""||!Number.isFinite(total)||total<0){showToast(t("saveFailed"),t("bundleRequired"));return;}
   const groupId=crypto.randomUUID();
   items.sort((a,b)=>String(a.date).localeCompare(String(b.date))).forEach((f,index)=>{
     f.fareGroup=groupId;f.fare=index===0?total:null;f.fareRaw=index===0?String(total):null;
   });
-  try{await saveFlightBatch(items);closeModals();setRecordSelectionMode(false);renderStats();showToast(t("bundle"),t("recordUpdated"));}
+  try{await saveFlightBatch(items);closeModals();finishBatchEditing();renderStats();renderIncomingFlights();showToast(t("bundle"),t("recordUpdated"));}
   catch(error){showToast(t("saveFailed"),error?.message||String(error));}
 }
 async function saveSelectedTrip() {
-  const items=selectedFlights(),label=document.getElementById("tripLabelInput").value.trim(),start=document.getElementById("tripStartInput").value,end=document.getElementById("tripEndInput").value;
+  const items=batchSelectedFlights(),label=document.getElementById("tripLabelInput").value.trim(),start=document.getElementById("tripStartInput").value,end=document.getElementById("tripEndInput").value;
   if(!items.length||!label||!start||!end||start>end){showToast(t("saveFailed"),t("tripRequired"));return;}
-  const trip={id:crypto.randomUUID(),label,start,end};
+  const trip={id:state.editingTripId||crypto.randomUUID(),label,start,end};
   items.forEach(f=>{f.metadata={...(f.metadata||{}),trip};});
-  try{await saveFlightBatch(items);closeModals();setRecordSelectionMode(false);renderStats();showToast(t("tripLabel"),t("recordUpdated"));}
+  try{await saveFlightBatch(items);closeModals();finishBatchEditing();renderFlights();renderStats();renderIncomingFlights();showToast(t("tripLabel"),t("recordUpdated"));}
   catch(error){showToast(t("saveFailed"),error?.message||String(error));}
+}
+function finishBatchEditing() {
+  const scope=state.recordBatchScope;
+  state.editingTripId=null;
+  state.editingTripFlightIds.clear();
+  if(scope==="incoming")setIncomingSelectionMode(false);else setRecordSelectionMode(false);
+}
+function openBundleForScope(scope) {
+  state.recordBatchScope=scope;
+  state.editingTripId=null;
+  state.editingTripFlightIds.clear();
+  if(batchSelectedFlights().length<2)return;
+  document.getElementById("bundleTotalInput").value="";
+  openModal("bundleModal");
+}
+function openTripForScope(scope) {
+  state.recordBatchScope=scope;
+  state.editingTripId=null;
+  state.editingTripFlightIds.clear();
+  const items=batchSelectedFlights();
+  if(!items.length)return;
+  const dates=items.map(f=>f.date).sort();
+  document.getElementById("tripModalTitle").textContent=t("addToTrip");
+  document.getElementById("saveTripButton").textContent=t("saveTrip");
+  document.getElementById("tripLabelInput").value="";
+  document.getElementById("tripStartInput").value=dates[0]||"";
+  document.getElementById("tripEndInput").value=dates.at(-1)||"";
+  openModal("tripModal");
 }
 
 function openFlight(id,{returnStatsType=null}={}) {
@@ -1473,11 +1541,14 @@ function incomingRemainingLabel(f) {
   return `${days} ${t("days")}`;
 }
 function incomingFlightMarkup(f,index) {
-  return `<button class="incoming-flight" data-incoming-index="${index}">
+  const trip=flightTrip(f);
+  return `<article class="incoming-flight" data-incoming-index="${index}" role="button" tabindex="0">
+    ${state.incomingSelectionMode?`<label class="incoming-flight-select"><input type="checkbox" data-select-incoming="${f.id}" ${state.selectedIncomingIds.has(String(f.id))?"checked":""} /><span></span></label>`:""}
     <div class="incoming-flight-top">${iconMarkup(f,"incoming-airline-icon")}<span><strong>${f.flightNo}</strong><small>${f.airline}</small></span></div>
     <div class="incoming-flight-route"><strong>${f.from}</strong><i></i><strong>${f.to}</strong><b>${incomingRemainingLabel(f)}</b></div>
     <p>${formatDate(f.date)} · ${f.depart || "—"}</p>
-  </button>`;
+    ${(f.fareGroup||trip)?`<div class="incoming-flight-tags">${f.fareGroup?`<span>${escapeHtml(formatFare(bundleTotalForFlight(f)))} · ${t("bundle")}</span>`:""}${trip?`<span>${escapeHtml(trip.label)}</span>`:""}</div>`:""}
+  </article>`;
 }
 function renderIncomingFlights() {
   const list=incomingFlights();
@@ -1485,10 +1556,30 @@ function renderIncomingFlights() {
   if(!summary||!container)return;
   summary.textContent=`${list.length} ${t("upcomingCount")}`;
   container.innerHTML=list.length?list.map(incomingFlightMarkup).join(""):`<div class="incoming-empty"><span>✈</span><p>${t("noIncoming")}</p></div>`;
-  container.querySelectorAll("[data-incoming-index]").forEach(button=>button.addEventListener("click",()=>{
-    const flight=list[Number(button.dataset.incomingIndex)];
+  container.classList.toggle("selection-mode",state.incomingSelectionMode);
+  container.querySelectorAll("[data-incoming-index]").forEach(card=>card.addEventListener("click",()=>{
+    if(state.incomingSelectionMode)return;
+    const flight=list[Number(card.dataset.incomingIndex)];
     if(flight)openFlight(flight.id);
   }));
+  container.querySelectorAll(".incoming-flight-select").forEach(label=>label.addEventListener("click",event=>event.stopPropagation()));
+  container.querySelectorAll("[data-select-incoming]").forEach(input=>input.addEventListener("change",()=>{
+    const id=String(input.dataset.selectIncoming);
+    if(input.checked)state.selectedIncomingIds.add(id);else state.selectedIncomingIds.delete(id);
+    updateIncomingBulkToolbar();
+  }));
+}
+function updateIncomingBulkToolbar() {
+  document.getElementById("incomingBulkToolbar").hidden=!state.incomingSelectionMode;
+  document.getElementById("selectedIncomingCount").textContent=state.selectedIncomingIds.size;
+  document.getElementById("incomingOrganizeButton").classList.toggle("active",state.incomingSelectionMode);
+}
+function setIncomingSelectionMode(active) {
+  state.incomingSelectionMode=Boolean(active);
+  state.recordBatchScope="incoming";
+  if(!active)state.selectedIncomingIds.clear();
+  updateIncomingBulkToolbar();
+  renderIncomingFlights();
 }
 function estimateAirportDistance(from,to) {
   const a=airports[from],b=airports[to];
@@ -1611,7 +1702,12 @@ function setIncomingMode(active) {
   }
   const shell=document.getElementById("appShell");
   shell.classList.toggle("incoming-mode",active);
-  if(!active)shell.classList.remove("incoming-collapsed");
+  if(!active){
+    shell.classList.remove("incoming-collapsed");
+    state.incomingSelectionMode=false;
+    state.selectedIncomingIds.clear();
+    updateIncomingBulkToolbar();
+  }
   document.getElementById("incomingSidebar").setAttribute("aria-hidden",String(!active));
   setSettingsOpen(false);closeDrawer();renderIncomingFlights();drawGlobe();
 }
@@ -1849,6 +1945,10 @@ function updateMapHelp() {
 
 function setView(view) {
   state.activeView = view;
+  if(view!=="records"){
+    setRecordActionsOpen(false);
+    setRecordFiltersOpen(false);
+  }
   setSettingsOpen(false);
   document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
   document.querySelectorAll(".nav-item").forEach(n => n.classList.toggle("active", n.dataset.view === view));
@@ -1858,6 +1958,18 @@ function setView(view) {
   if (view === "atlas") setTimeout(resizeGlobe, 30);
   if (view === "friends") loadFriends();
   window.scrollTo({ top: 0, behavior: "smooth" });
+}
+function setRecordActionsOpen(open) {
+  const menu=document.getElementById("recordActionsMenu"),button=document.getElementById("recordMoreButton");
+  menu.hidden=!open;
+  button.setAttribute("aria-expanded",String(open));
+}
+function setRecordFiltersOpen(open) {
+  const panel=document.getElementById("recordFilterPanel"),button=document.getElementById("recordFilterMenuButton");
+  panel.hidden=!open;
+  button.classList.toggle("active",open);
+  button.setAttribute("aria-expanded",String(open));
+  if(open)setTimeout(()=>document.getElementById("recordSearch").focus(),0);
 }
 
 function openModal(id) {
@@ -3273,26 +3385,33 @@ document.getElementById("hubSearch").addEventListener("input",event=>{
 });
 document.getElementById("drawerClose").addEventListener("click",closeDrawer);
 document.getElementById("recordSearch").addEventListener("input",renderFlights);
-document.getElementById("organizeFlightsButton").addEventListener("click",()=>setRecordSelectionMode(!state.recordSelectionMode));
+document.getElementById("recordMoreButton").addEventListener("click",event=>{
+  event.stopPropagation();setRecordActionsOpen(document.getElementById("recordActionsMenu").hidden);
+});
+document.getElementById("recordFilterMenuButton").addEventListener("click",event=>{
+  event.stopPropagation();setRecordFiltersOpen(document.getElementById("recordFilterPanel").hidden);
+});
+document.getElementById("recordActionsMenu").addEventListener("click",event=>event.stopPropagation());
+document.addEventListener("click",event=>{
+  if(!event.target.closest(".record-menu-wrap"))setRecordActionsOpen(false);
+});
+document.getElementById("organizeFlightsButton").addEventListener("click",()=>{
+  setRecordActionsOpen(false);setRecordSelectionMode(!state.recordSelectionMode);
+});
 document.getElementById("cancelOrganizeButton").addEventListener("click",()=>setRecordSelectionMode(false));
 document.getElementById("toggleTripLabelsButton").addEventListener("click",()=>{
   state.showTripLabels=!state.showTripLabels;
   document.querySelector("#toggleTripLabelsButton span").dataset.i18n=state.showTripLabels?"hideTripLabels":"showTripLabels";
   document.querySelector("#toggleTripLabelsButton span").textContent=t(state.showTripLabels?"hideTripLabels":"showTripLabels");
+  setRecordActionsOpen(false);
   renderFlights();
 });
-document.getElementById("createBundleButton").addEventListener("click",()=>{
-  if(selectedFlights().length<2)return;
-  document.getElementById("bundleTotalInput").value="";openModal("bundleModal");
-});
-document.getElementById("addToTripButton").addEventListener("click",()=>{
-  const items=selectedFlights();if(!items.length)return;
-  const dates=items.map(f=>f.date).sort();
-  document.getElementById("tripLabelInput").value="";
-  document.getElementById("tripStartInput").value=dates[0]||"";
-  document.getElementById("tripEndInput").value=dates.at(-1)||"";
-  openModal("tripModal");
-});
+document.getElementById("createBundleButton").addEventListener("click",()=>openBundleForScope("completed"));
+document.getElementById("addToTripButton").addEventListener("click",()=>openTripForScope("completed"));
+document.getElementById("incomingOrganizeButton").addEventListener("click",()=>setIncomingSelectionMode(!state.incomingSelectionMode));
+document.getElementById("cancelIncomingOrganizeButton").addEventListener("click",()=>setIncomingSelectionMode(false));
+document.getElementById("incomingCreateBundleButton").addEventListener("click",()=>openBundleForScope("incoming"));
+document.getElementById("incomingAddToTripButton").addEventListener("click",()=>openTripForScope("incoming"));
 document.getElementById("saveBundleButton").addEventListener("click",saveSelectedBundle);
 document.getElementById("saveTripButton").addEventListener("click",saveSelectedTrip);
 document.getElementById("yearFilter").addEventListener("change",e=>applyFlightFilters(e.target.value));
@@ -3303,8 +3422,8 @@ document.querySelectorAll("[data-scope]").forEach(el=>el.addEventListener("click
 document.querySelectorAll("[data-stats-scope]").forEach(el=>el.addEventListener("click",()=>{
   applyFlightFilters(state.yearFilter,el.dataset.statsScope);
 }));
-document.querySelectorAll("[data-open-add]").forEach(el=>el.addEventListener("click",()=>prepareAddForm()));
-document.getElementById("importButton").addEventListener("click",()=>openModal("importModal"));
+document.querySelectorAll("[data-open-add]").forEach(el=>el.addEventListener("click",()=>{setRecordActionsOpen(false);prepareAddForm();}));
+document.getElementById("importButton").addEventListener("click",()=>{setRecordActionsOpen(false);openModal("importModal");});
 document.getElementById("detailBackToStats").addEventListener("click",()=>{
   const returnType=state.statsReturnType;
   if(!returnType)return;

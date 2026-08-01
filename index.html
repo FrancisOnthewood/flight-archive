@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#f4f6f8" />
     <title>Flight Archive</title>
     <link rel="icon" href="./logo.svg?v=20260730-v3" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css?v=20260801-bundles-trips-v1" />
+    <link rel="stylesheet" href="./styles.css?v=20260801-record-organizer-v1" />
   </head>
   <body>
     <section class="auth-gate" id="authGate" aria-live="polite" hidden>
@@ -244,12 +244,21 @@
             <span data-i18n="upcomingTravel">Upcoming travel</span>
             <div class="incoming-title-row">
               <h2 data-i18n="navIncoming">Incoming Flights</h2>
+              <button class="incoming-organize-button" id="incomingOrganizeButton" data-i18n-title="organizeFlights" aria-label="Organize incoming flights">
+                <svg viewBox="0 0 24 24"><path d="M5 7h14M5 12h14M5 17h14"/><path d="m7 7 1.5 1.5L11 5.5"/></svg>
+              </button>
               <button class="incoming-add-button" id="addIncomingButton" data-i18n-title="addIncomingFlight" aria-label="Add incoming flight">
                 <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
               </button>
             </div>
             <p id="incomingSummary"></p>
           </header>
+          <div class="incoming-bulk-toolbar" id="incomingBulkToolbar" hidden>
+            <strong><span id="selectedIncomingCount">0</span> <span data-i18n="selectedFlights">selected flights</span></strong>
+            <button type="button" id="incomingCreateBundleButton" data-i18n="createBundle">Create ticket bundle</button>
+            <button type="button" id="incomingAddToTripButton" data-i18n="addToTrip">Add to trip</button>
+            <button type="button" id="cancelIncomingOrganizeButton" data-i18n="cancel">Cancel</button>
+          </div>
           <div class="incoming-list" id="incomingList"></div>
         </section>
       </aside>
@@ -290,21 +299,25 @@
               <h1 data-i18n="recordsTitle">Flight Records</h1>
               <div class="flight-total"><strong id="recordTotal">50</strong><span data-i18n="totalFlights">total flights</span></div>
             </div>
-            <div class="record-actions">
-              <button class="subtle-button" id="toggleTripLabelsButton" type="button"><span data-i18n="showTripLabels">Show trip labels</span></button>
-              <button class="subtle-button" id="organizeFlightsButton" type="button"><span data-i18n="organizeFlights">Organize</span></button>
-              <button class="subtle-button" id="importButton">
-                <svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M5 19h14"/></svg>
-                <span data-i18n="import">Import</span>
+            <div class="record-header-tools">
+              <button class="record-header-icon" id="recordFilterMenuButton" type="button" aria-expanded="false" data-i18n-title="searchAndFilters">
+                <svg viewBox="0 0 24 24"><circle cx="9.5" cy="9.5" r="5.5"/><path d="m13.5 13.5 4 4M16 6h4M18 4v4"/></svg>
               </button>
-              <button class="primary-button page-add" data-open-add>
-                <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-                <span data-i18n="addFlight">Add Flight</span>
-              </button>
+              <div class="record-menu-wrap">
+                <button class="record-header-icon" id="recordMoreButton" type="button" aria-expanded="false" data-i18n-title="moreActions">
+                  <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="12" cy="19" r="1.2"/></svg>
+                </button>
+                <div class="record-actions-menu" id="recordActionsMenu" hidden>
+                  <button id="toggleTripLabelsButton" type="button"><span data-i18n="showTripLabels">Show trip labels</span></button>
+                  <button id="organizeFlightsButton" type="button"><span data-i18n="organizeFlights">Organize</span></button>
+                  <button id="importButton" type="button"><span data-i18n="import">Import</span></button>
+                  <button class="primary" type="button" data-open-add><span data-i18n="addFlight">Add Flight</span></button>
+                </div>
+              </div>
             </div>
           </header>
 
-          <div class="filter-bar">
+          <div class="filter-bar record-filter-panel" id="recordFilterPanel" hidden>
             <label class="search-field">
               <svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4 4"/></svg>
               <input id="recordSearch" placeholder="Search flight, airline, or airport" data-i18n-placeholder="searchPlaceholder" />
@@ -640,7 +653,7 @@
     <div class="modal-backdrop" id="tripModal">
       <section class="modal compact-action-modal" role="dialog" aria-modal="true">
         <button class="modal-close" data-close-modal aria-label="Close"><svg viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
-        <header class="modal-header"><span data-i18n="tripLabel">TRIP LABEL</span><h2 data-i18n="addToTrip">Add to trip</h2></header>
+        <header class="modal-header"><span data-i18n="tripLabel">TRIP LABEL</span><h2 id="tripModalTitle" data-i18n="addToTrip">Add to trip</h2></header>
         <label class="action-modal-field"><span data-i18n="tripLabel">Trip label</span><input id="tripLabelInput" data-i18n-placeholder="tripNamePlaceholder" placeholder="e.g. 2026 Australia" /></label>
         <div class="action-modal-row"><label class="action-modal-field"><span data-i18n="tripPeriod">Trip period</span><input id="tripStartInput" type="date" /></label><label class="action-modal-field"><span data-i18n="tripPeriod">Trip period</span><input id="tripEndInput" type="date" /></label></div>
         <div class="modal-actions"><button class="subtle-button" data-close-modal data-i18n="cancel">Cancel</button><button class="primary-button" id="saveTripButton" type="button" data-i18n="saveTrip">Save trip</button></div>
@@ -660,6 +673,6 @@
     <script src="./global-airports.js?v=20260730-v1"></script>
     <script src="./search-data.js?v=20260801-v1"></script>
     <script src="./reference-data.js?v=20260731-v1"></script>
-    <script src="./app.js?v=20260801-settings-cleanup-v1"></script>
+    <script src="./app.js?v=20260801-record-organizer-v1"></script>
   </body>
 </html>
