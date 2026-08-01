@@ -174,7 +174,10 @@
         region:settings.region,
         currency:settings.currency,
         map_style:settings.mapStyle,
-        day_night:settings.dayNight!==false
+        day_night:settings.dayNight!==false,
+        friends_can_view_records:settings.privacyRecords!==false,
+        friends_can_view_incoming:settings.privacyIncoming!==false,
+        friends_can_view_statistics:settings.privacyStatistics!==false
       });
       if(error)throw error;
     },
@@ -283,6 +286,22 @@
       const {data,error}=await supabase.rpc("get_flight_archive_friend_flights",{friend_user_id:friendUserId});
       if(error)throw error;
       return (data || []).map(flightFromRow);
+    },
+    async getFriendArchive(friendUserId){
+      const supabase=requireClient();
+      const {data,error}=await supabase.rpc("get_flight_archive_friend_archive",{friend_user_id:friendUserId});
+      if(error)throw error;
+      const payload=data || {};
+      return {
+        privacy:{
+          records:payload.privacy?.records!==false,
+          incoming:payload.privacy?.incoming!==false,
+          statistics:payload.privacy?.statistics!==false
+        },
+        completedFlights:(payload.completed_flights || []).map(flightFromRow),
+        incomingFlights:(payload.incoming_flights || []).map(flightFromRow),
+        statisticsSummary:payload.statistics_summary || {}
+      };
     },
     async searchFlights(query){
       const supabase=requireClient();

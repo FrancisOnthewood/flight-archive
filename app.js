@@ -282,6 +282,8 @@ translations.en.majorAirportResults="Major airports";
 translations.zh.majorAirportResults="主要枢纽机场";
 Object.assign(translations.en,{
   listView:"List view",mapView:"Map view",friendMapFlights:"flights on this map",moreActions:"More actions",
+  friendArchiveMenu:"Friend archive views",friendViewPrivate:"Your friend has set this view to private",
+  privacy:"Privacy",privacyHelp:"Choose what accepted friends can view.",
   searchAndFilters:"Search and filters",editTrip:"Edit trip",updateTrip:"Update trip",
   fullCitySearch:"Search all cities",majorCityResults:"Major cities",citySearchHint:"Search city or country / region",
   showTripLabels:"Show trip labels",hideTripLabels:"Hide trip labels",organizeFlights:"Organize",selectedFlights:"selected flights",
@@ -293,6 +295,8 @@ Object.assign(translations.en,{
 });
 Object.assign(translations.zh,{
   listView:"列表视图",mapView:"地图视图",friendMapFlights:"条好友飞行记录",moreActions:"更多操作",
+  friendArchiveMenu:"好友档案页面",friendViewPrivate:"你的朋友设置此界面不可查看",
+  privacy:"隐私",privacyHelp:"选择好友可以查看的档案页面。",
   searchAndFilters:"搜索与筛选",editTrip:"修改 Trip",updateTrip:"更新 Trip",
   fullCitySearch:"进入完整搜索",majorCityResults:"主要城市",citySearchHint:"搜索城市或国家 / 地区",
   showTripLabels:"显示 Trip Label",hideTripLabels:"隐藏 Trip Label",organizeFlights:"批量整理",selectedFlights:"条已选航班",
@@ -353,6 +357,7 @@ const state = {
   selectedRoute:null, selectedAirport:null, activeFlightId:null, editingFlightId:null, editingIncomingId:null,
   hubs:new Set(savedHubs.filter(code => airports[code])), hubEditorOpen:false, hubSearch:"", hubFullSearch:false, incomingMode:false, statsReturnType:null,
   region:savedRegion, currency:savedCurrency, friends:[],friendSearchResults:[],friendRecords:null,
+  privacy:{records:true,incoming:true,statistics:true},
   recordSelectionMode:false,selectedFlightIds:new Set(),showTripLabels:false,bundleSession:null,
   incomingSelectionMode:false,selectedIncomingIds:new Set(),recordBatchScope:"completed",editingTripId:null,editingTripFlightIds:new Set()
 };
@@ -376,7 +381,8 @@ const activeLocale = () => {
   try{new Intl.NumberFormat(candidate);return candidate;}catch{return state.lang==="zh"?"zh-CN":"en-CA";}
 };
 const airportName = airport => state.lang === "zh" ? (airport.nameZh || airport.name || airport.globalName) : (airport.nameEn || airport.globalName || airport.name);
-const airportCity = airport => state.lang === "zh" ? (airport.cityZh || airport.city || airport.globalCity) : (airport.cityEn || airport.globalCity || airport.city);
+const cleanCityName = value => String(value||"").replace(/\s*\([^)]*\)\s*$/," ").replace(/\s+/g," ").trim();
+const airportCity = airport => cleanCityName(state.lang === "zh" ? (airport.cityZh || airport.city || airport.globalCity) : (airport.cityEn || airport.globalCity || airport.city));
 const airportCountry = airport => airport?.countryCode ? displayName("region",airport.countryCode) : (state.lang === "zh" ? (airport.countryZh || airport.country) : (airport.countryEn || airport.country));
 const compactAirportName = airport => {
   const name=airportName(airport);
@@ -401,6 +407,9 @@ function renderPreferenceSettings() {
   currencySelect.value=state.currency;
   regionSelect.setAttribute("aria-label",t("region"));
   currencySelect.setAttribute("aria-label",t("currency"));
+  document.getElementById("privacyRecords").checked=state.privacy.records;
+  document.getElementById("privacyIncoming").checked=state.privacy.incoming;
+  document.getElementById("privacyStatistics").checked=state.privacy.statistics;
   document.getElementById("formFare").placeholder=state.currency;
   document.getElementById("incomingFare").placeholder=state.currency;
   renderFavouriteSettings();
@@ -413,7 +422,10 @@ function persistPreferences() {
       region:state.region,
       currency:state.currency,
       mapStyle:state.globeStyle,
-      dayNight:state.dayNight
+      dayNight:state.dayNight,
+      privacyRecords:state.privacy.records,
+      privacyIncoming:state.privacy.incoming,
+      privacyStatistics:state.privacy.statistics
     }).catch(error=>showToast(state.lang==="zh"?"同步失败":"Sync failed",error.message));
   }
 }
@@ -433,7 +445,8 @@ function countryOptionMarkup(selectedValue="") {
   return `<option value="">${t("notSet")}</option>${sorted.map(option=>`<option value="${option.code}" ${option.code===selectedValue?"selected":""}>${escapeHtml(displayName("region",option.code))}</option>`).join("")}`;
 }
 function airlineByValue(value) {
-  return referenceData.airlines.find(airline=>airline.iata===value || airline.icao===value);
+  const normalized=String(value||"").trim().toLocaleLowerCase();
+  return referenceData.airlines.find(airline=>[airline.iata,airline.icao,airline.en,airline.zh].some(item=>String(item||"").toLocaleLowerCase()===normalized));
 }
 function airlineIconSource(value) {
   const airline=airlineByValue(value);
@@ -511,6 +524,16 @@ function airlineInputDisplay(value) {
   if(!airline)return value.startsWith("OTHER|")?value.slice(6):value;
   const name=state.lang==="zh"?(airline.zh||airline.en):airline.en;
   return `${name} (${airline.iata})`;
+}
+function localizedAirlineName(flightOrValue) {
+  const flight=typeof flightOrValue==="object"?flightOrValue:null;
+  const value=flight?.airlineShort||flight?.airlineCode||flight?.airline||flightOrValue;
+  const airline=airlineByValue(value) || airlineByValue(flight?.flightNo?.match(/^[A-Z0-9]{2}/)?.[0]);
+  if(!airline)return flight?.airline||String(value||"");
+  return state.lang==="zh"?(airline.zh||airline.en):airline.en;
+}
+function effectiveFlightScope(flight) {
+  return airports[flight?.from]?.countryCode==="CN" && airports[flight?.to]?.countryCode==="CN" ? "domestic" : "international";
 }
 function normalizeAircraftFavourite(value) {
   const text=String(value||"").trim();
@@ -778,7 +801,7 @@ function applyLanguage(lang) {
   if(flightLookupState.completed.candidates.length)renderFlightLookupCandidates("completed");
   if(flightLookupState.incoming.candidates.length)renderFlightLookupCandidates("incoming");
   if(state.activeView==="friends")loadFriends();
-  if(state.friendRecords)setFriendMapIdentity();
+  if(state.friendRecords){setFriendMapIdentity();renderFriendFlightList();renderFriendIncoming();renderFriendStatistics();}
   updateMapHelp();
   if (state.selectedRoute) openRouteDrawer(state.selectedRoute);
   if (state.selectedAirport) openAirportDrawer(state.selectedAirport);
@@ -908,7 +931,7 @@ function renderFlightLookupCandidates(kind) {
       ${lookupCandidateLogo(candidate)}
       <span class="flight-candidate-main">
         <span><strong>${escapeHtml(candidate.flightNumber||"—")}</strong><b>${escapeHtml(candidate.from||"—")}</b><i></i><b>${escapeHtml(candidate.to||"—")}</b></span>
-        <small>${escapeHtml(candidate.departTime||"—")} → ${escapeHtml(candidate.arriveTime||"—")} · ${escapeHtml(candidate.airline||candidate.airlineCode||"—")}${candidate.aircraft?` · ${escapeHtml(candidate.aircraft)}`:""}</small>
+        <small>${escapeHtml(candidate.departTime||"—")} → ${escapeHtml(candidate.arriveTime||"—")} · ${escapeHtml(localizedAirlineName(candidate)||"—")}${candidate.aircraft?` · ${escapeHtml(candidate.aircraft)}`:""}</small>
       </span>
       <span class="flight-candidate-action">${t("addThisFlight")}</span>
     </button>`).join("");
@@ -935,7 +958,7 @@ function flightFromLookupCandidate(candidate,recordStatus) {
     terminalFrom:candidate.departureTerminal||"—",terminalTo:candidate.arrivalTerminal||"—",
     seat:"—",cabin:t("economy"),fare:null,fareCurrency:state.currency,fareRaw:null,fareGroup:null,booking:"",
     gate:candidate.departureGate||"—",status:candidate.status||"",note:"",
-    scope:airports[from]?.countryCode===airports[to]?.countryCode?"domestic":"international",
+    scope:effectiveFlightScope({from,to}),
     recordStatus,metadata:{source:"aerodatabox",provider_id:candidate.id||null}
   };
 }
@@ -1120,7 +1143,7 @@ function saveEditedFlight() {
   f.fare=fareValue===""?null:Math.max(0,Number(fareValue));
   if(f.fare!==previousFare){f.fareRaw=fareValue||null;f.fareGroup=null;}
   f.note=document.getElementById("formNote").value.trim();
-  f.scope=airports[f.from].countryCode===airports[f.to].countryCode?"domestic":"international";
+  f.scope=effectiveFlightScope(f);
   rebuildRoutes();
   if(window.flightArchiveData?.enabled){
     window.flightArchiveData.saveFlight(f,"completed")
@@ -1164,7 +1187,7 @@ function saveNewFlight() {
     gate:document.getElementById("formGate").value.trim() || "—",
     status:"",
     note:document.getElementById("formNote").value.trim(),
-    scope:airports[from].countryCode===airports[to].countryCode?"domestic":"international",
+    scope:effectiveFlightScope({from,to}),
     recordStatus:"completed"
   };
   if(state.bundleSession){
@@ -1248,7 +1271,7 @@ function flightRowMarkup(f) {
       ${state.recordSelectionMode?`<label class="flight-select"><input type="checkbox" data-select-flight="${f.id}" ${state.selectedFlightIds.has(String(f.id))?"checked":""} /><span></span></label>`:""}
       <div class="airline-cell">
         ${iconMarkup(f)}
-        <div><strong class="flight-number">${f.flightNo}</strong><small>${f.airline}</small></div>
+        <div><strong class="flight-number">${f.flightNo}</strong><small>${escapeHtml(localizedAirlineName(f))}</small></div>
       </div>
       <div class="date-cell"><strong>${formatDate(f.date)}</strong></div>
       <div class="route-cell">
@@ -1271,7 +1294,7 @@ function flightRowMarkup(f) {
 function filteredFlights() {
   return flights.filter(f=>{
     const yearOk=state.yearFilter==="all"||f.date.startsWith(state.yearFilter);
-    const scopeOk=state.scopeFilter==="all"||f.scope===state.scopeFilter;
+    const scopeOk=state.scopeFilter==="all"||effectiveFlightScope(f)===state.scopeFilter;
     return yearOk&&scopeOk;
   });
 }
@@ -1407,10 +1430,17 @@ async function saveSelectedTrip() {
   catch(error){showToast(t("saveFailed"),error?.message||String(error));}
 }
 function finishBatchEditing() {
-  const scope=state.recordBatchScope;
   state.editingTripId=null;
   state.editingTripFlightIds.clear();
-  if(scope==="incoming")setIncomingSelectionMode(false);else setRecordSelectionMode(false);
+  if(state.recordBatchScope==="incoming"){
+    state.selectedIncomingIds.clear();
+    updateIncomingBulkToolbar();
+    renderIncomingFlights();
+  }else{
+    state.selectedFlightIds.clear();
+    updateRecordBulkToolbar();
+    renderFlights();
+  }
 }
 function openBundleForScope(scope) {
   state.recordBatchScope=scope;
@@ -1455,7 +1485,7 @@ function openFlight(id,{returnStatsType=null}={}) {
   const set = (id, value) => document.getElementById(id).textContent = value;
   const detailAirlineIcon=airlineIconSource(f.airlineShort);
   document.getElementById("detailLogo").innerHTML = detailAirlineIcon ? `<img src="${detailAirlineIcon}" alt="${f.airline} logo" />` : f.airlineShort;
-  set("detailAirline", f.airline); set("detailTitle", f.flightNo); set("detailDate", formatDate(f.date));
+  set("detailAirline", localizedAirlineName(f)); set("detailTitle", f.flightNo); set("detailDate", formatDate(f.date));
   set("detailFromCode", f.from); set("detailFromCity", `${compactAirportName(from)} · ${f.terminalFrom}`); set("detailDeparture", f.depart);
   set("detailToCode", f.to); set("detailToCity", `${compactAirportName(to)} · ${f.terminalTo}`); set("detailArrival", f.arrive);
   set("detailDuration", f.duration); set("detailDistance", `${formatNumber(f.distance)} km`); set("detailNote", f.note || t("noNotes"));
@@ -1483,7 +1513,7 @@ function openFlight(id,{returnStatsType=null}={}) {
 function drawerFlightMarkup(f,highlighted=false) {
   return `<article class="drawer-flight${highlighted?" highlighted":""}" data-drawer-flight="${f.id}">
     <div class="drawer-flight-top">
-      <div class="drawer-flight-identity">${iconMarkup(f,"drawer-airline-icon")}<strong>${f.flightNo} · ${f.airline}</strong></div>
+      <div class="drawer-flight-identity">${iconMarkup(f,"drawer-airline-icon")}<strong>${f.flightNo} · ${escapeHtml(localizedAirlineName(f))}</strong></div>
       <span>${formatDate(f.date)}</span>
     </div>
     <div class="drawer-flight-route">
@@ -1544,7 +1574,7 @@ function incomingFlightMarkup(f,index) {
   const trip=flightTrip(f);
   return `<article class="incoming-flight" data-incoming-index="${index}" role="button" tabindex="0">
     ${state.incomingSelectionMode?`<label class="incoming-flight-select"><input type="checkbox" data-select-incoming="${f.id}" ${state.selectedIncomingIds.has(String(f.id))?"checked":""} /><span></span></label>`:""}
-    <div class="incoming-flight-top">${iconMarkup(f,"incoming-airline-icon")}<span><strong>${f.flightNo}</strong><small>${f.airline}</small></span></div>
+    <div class="incoming-flight-top">${iconMarkup(f,"incoming-airline-icon")}<span><strong>${f.flightNo}</strong><small>${escapeHtml(localizedAirlineName(f))}</small></span></div>
     <div class="incoming-flight-route"><strong>${f.from}</strong><i></i><strong>${f.to}</strong><b>${incomingRemainingLabel(f)}</b></div>
     <p>${formatDate(f.date)} · ${f.depart || "—"}</p>
     ${(f.fareGroup||trip)?`<div class="incoming-flight-tags">${f.fareGroup?`<span>${escapeHtml(formatFare(bundleTotalForFlight(f)))} · ${t("bundle")}</span>`:""}${trip?`<span>${escapeHtml(trip.label)}</span>`:""}</div>`:""}
@@ -1679,7 +1709,7 @@ function saveIncomingFlight() {
     fare:fareValue===""?null:Math.max(0,Number(fareValue)),fareCurrency:state.currency,fareRaw:fareValue||null,fareGroup:null,
     gate:document.getElementById("incomingGate").value.trim()||"—",
     note:document.getElementById("incomingNote").value.trim(),
-    scope:airports[from].countryCode===airports[to].countryCode?"domestic":"international",
+    scope:effectiveFlightScope({from,to}),
     custom:true,recordStatus:"upcoming",metadata:existing?.metadata||{}
   };
   if(existing)Object.assign(existing,flight);else plannedIncomingFlights.push(flight);
@@ -1865,22 +1895,72 @@ async function loadFriends() {
 }
 function friendFlightMarkup(f) {
   return `<article class="friend-flight-row">
-    <div class="airline-cell">${iconMarkup(f)}<div><strong>${escapeHtml(f.flightNo)}</strong><small>${escapeHtml(f.airline)}</small></div></div>
+    <div class="airline-cell">${iconMarkup(f)}<div><strong>${escapeHtml(f.flightNo)}</strong><small>${escapeHtml(localizedAirlineName(f))}</small></div></div>
     <b>${escapeHtml(formatDate(f.date))}</b>
     <div class="friend-flight-route"><strong>${f.from}</strong><i></i><strong>${f.to}</strong></div>
     <small>${escapeHtml(f.aircraft)} · ${escapeHtml(durationText(f.durationMinutes))}</small>
   </article>`;
 }
+function renderFriendFlightList() {
+  const records=state.friendRecords?.records||[],container=document.getElementById("friendFlightList");
+  if(!container)return;
+  if(!records.length){container.innerHTML=`<div class="friends-empty">${t("noRecords")}</div>`;return;}
+  if(!state.friendRecords.listTripLabels){container.innerHTML=records.map(friendFlightMarkup).join("");return;}
+  const grouped=new Map(),unlabelled=[];
+  records.forEach(f=>{
+    const trip=flightTrip(f);
+    if(!trip){unlabelled.push(f);return;}
+    const key=String(trip.id||trip.label);
+    if(!grouped.has(key))grouped.set(key,{trip,items:[]});
+    grouped.get(key).items.push(f);
+  });
+  const groups=[...grouped.values()].sort((a,b)=>String(b.trip.start||"").localeCompare(String(a.trip.start||"")));
+  if(unlabelled.length)groups.push({trip:{label:t("otherFlights")},items:unlabelled,other:true});
+  container.innerHTML=groups.map(group=>`<section class="trip-flight-group"><header><strong>${escapeHtml(group.trip.label)}</strong>${group.other?"":`<small>${escapeHtml(group.trip.start||"")} — ${escapeHtml(group.trip.end||"")}</small>`}</header>${group.items.map(friendFlightMarkup).join("")}</section>`).join("");
+}
+function renderFriendIncoming() {
+  const items=state.friendRecords?.incomingFlights||[],container=document.getElementById("friendIncomingList");
+  container.innerHTML=items.length?items.map(friendFlightMarkup).join(""):`<div class="friends-empty">${t("noIncoming")}</div>`;
+}
+function renderFriendStatistics() {
+  const s=state.friendRecords?.statisticsSummary||{},container=document.getElementById("friendStatsList");
+  const airportCodes=Array.isArray(s.airport_codes)?s.airport_codes:[];
+  const countryCount=new Set(airportCodes.map(code=>airports[code]?.countryCode).filter(Boolean)).size;
+  const cityCount=new Set(airportCodes.map(code=>airportCity(airports[code])).filter(Boolean)).size;
+  const cards=[
+    [t("totalTime"),durationText(Number(s.total_minutes)||0),`${Number(s.flight_count)||0} ${t("flightUnit")}`],
+    [t("totalDistance"),`${formatNumber(Number(s.total_distance)||0)} km`,`${Number(s.route_count)||0} ${t("routeUnit")}`],
+    [t("airlinesFlown"),String(Number(s.airline_count)||0),t("airlineUnit")],
+    [t("aircraftTypes"),String(Number(s.aircraft_count)||0),t("typeUnit")],
+    [t("airportsVisited"),String(airportCodes.length),t("airportUnit")],
+    [t("countriesRegions"),String(countryCount),t("countryUnit")],
+    [t("citiesVisited"),String(cityCount),t("cityUnit")],
+    [t("directedRoutes"),String(Number(s.route_count)||0),t("routeUnit")]
+  ];
+  container.innerHTML=cards.map(([label,value,unit])=>`<article class="stat-block simple friend-stat-card"><span class="stat-label">${escapeHtml(label)}</span><strong class="stat-value">${escapeHtml(value)}</strong><span class="stat-unit">${escapeHtml(unit)}</span></article>`).join("");
+}
+function friendViewAllowed(mode) {
+  if(mode==="incoming")return state.friendRecords?.privacy.incoming!==false;
+  if(mode==="statistics")return state.friendRecords?.privacy.statistics!==false;
+  return state.friendRecords?.privacy.records!==false;
+}
+function applyFriendPrivacy(mode,viewId) {
+  const allowed=friendViewAllowed(mode),overlay=document.getElementById("friendPrivacyOverlay");
+  document.querySelectorAll(".view.friend-view-locked").forEach(view=>view.classList.remove("friend-view-locked"));
+  document.getElementById(viewId)?.classList.toggle("friend-view-locked",!allowed);
+  overlay.hidden=allowed;
+}
+function setFriendViewMenuOpen(open) {
+  document.getElementById("friendViewMenu").hidden=!open;
+  document.getElementById("friendViewMenuButton").setAttribute("aria-expanded",String(open));
+}
 async function openFriendRecords(userId) {
   const profile=state.friends.find(item=>item.user_id===userId);
   if(!profile)return;
   try{
-    const records=await window.flightArchiveData.getFriendFlights(userId);
-    state.friendRecords={profile,records,mapVisible:true};
-    document.getElementById("friendRecordsAvatar").innerHTML=profile.avatar_url?`<img src="${escapeHtml(profile.avatar_url)}" alt="" />`:escapeHtml(friendInitial(profile));
-    document.getElementById("friendRecordsName").textContent=profile.username||profile.display_name||"Flight Archive user";
-    document.getElementById("friendRecordsUsername").textContent=`@${profile.username||""} · ${records.length} ${t("friendFlights")}`;
-    document.getElementById("friendFlightList").innerHTML=records.length?records.map(friendFlightMarkup).join(""):`<div class="friends-empty">${t("noRecords")}</div>`;
+    const archive=await window.flightArchiveData.getFriendArchive(userId);
+    state.friendRecords={profile,records:archive.completedFlights,incomingFlights:archive.incomingFlights,statisticsSummary:archive.statisticsSummary,privacy:archive.privacy,mapVisible:true,listTripLabels:false};
+    renderFriendFlightList();renderFriendIncoming();renderFriendStatistics();
     showFriendMap();
   }catch(error){showToast(t("saveFailed"),error?.message||String(error));}
 }
@@ -1891,19 +1971,15 @@ function setFriendMapIdentity() {
   avatar.innerHTML=profile.avatar_url?`<img src="${escapeHtml(profile.avatar_url)}" alt="" />`:escapeHtml(friendInitial(profile));
   document.getElementById("friendMapName").textContent=profile.username||profile.display_name||"Flight Archive user";
   document.getElementById("friendMapCount").textContent=`${records.length} ${t("friendMapFlights")}`;
-  document.getElementById("friendRecordsAvatar").innerHTML=profile.avatar_url?`<img src="${escapeHtml(profile.avatar_url)}" alt="" />`:escapeHtml(friendInitial(profile));
-  document.getElementById("friendRecordsName").textContent=profile.username||profile.display_name||"Flight Archive user";
-  document.getElementById("friendRecordsUsername").textContent=`@${profile.username||""} · ${records.length} ${t("friendFlights")}`;
 }
 function showFriendMap() {
   if(!state.friendRecords)return;
   state.friendRecords.mapVisible=true;
-  document.getElementById("friendRecordsPanel").hidden=true;
-  document.getElementById("appShell").classList.remove("friend-list-mode");
   document.getElementById("appShell").classList.add("friend-map-mode");
-  document.getElementById("friendMapToolbar").hidden=false;
+  document.getElementById("friendViewerControls").hidden=false;
   setFriendMapIdentity();
   setView("atlas");
+  applyFriendPrivacy("map","atlasView");
   const first=state.friendRecords.records.find(f=>airports[f.from]);
   if(first){const airport=airports[first.from];rotation={lon:-airport.lon,lat:airport.lat};}
   setTimeout(resizeGlobe,20);
@@ -1911,17 +1987,28 @@ function showFriendMap() {
 function showFriendList() {
   if(!state.friendRecords)return;
   state.friendRecords.mapVisible=false;
-  document.getElementById("appShell").classList.remove("friend-map-mode");
-  document.getElementById("appShell").classList.add("friend-list-mode");
-  document.getElementById("friendMapToolbar").hidden=true;
+  document.getElementById("appShell").classList.add("friend-map-mode");
   setFriendMapIdentity();
   setView("friendList");
   document.getElementById("friendRecordsPanel").hidden=false;
+  renderFriendFlightList();applyFriendPrivacy("list","friendListView");
+}
+function showFriendIncoming() {
+  if(!state.friendRecords)return;
+  state.friendRecords.mapVisible=false;
+  setView("friendIncoming");renderFriendIncoming();applyFriendPrivacy("incoming","friendIncomingView");
+}
+function showFriendStatistics() {
+  if(!state.friendRecords)return;
+  state.friendRecords.mapVisible=false;
+  setView("friendStatistics");renderFriendStatistics();applyFriendPrivacy("statistics","friendStatisticsView");
 }
 function closeFriendRecords() {
   state.friendRecords=null;
   document.getElementById("appShell").classList.remove("friend-map-mode","friend-list-mode");
-  document.getElementById("friendMapToolbar").hidden=true;
+  document.getElementById("friendViewerControls").hidden=true;
+  document.getElementById("friendPrivacyOverlay").hidden=true;
+  document.querySelectorAll(".view.friend-view-locked").forEach(view=>view.classList.remove("friend-view-locked"));
   document.getElementById("friendRecordsPanel").hidden=true;
   setView("friends");
 }
@@ -1947,8 +2034,10 @@ function setView(view) {
   state.activeView = view;
   if(view!=="records"){
     setRecordActionsOpen(false);
+    setRecordAddOpen(false);
     setRecordFiltersOpen(false);
   }
+  if(view!=="stats")setStatsFiltersOpen(false);
   setSettingsOpen(false);
   document.querySelectorAll(".view").forEach(v => v.classList.remove("active"));
   document.querySelectorAll(".nav-item").forEach(n => n.classList.toggle("active", n.dataset.view === view));
@@ -1962,6 +2051,17 @@ function setView(view) {
 function setRecordActionsOpen(open) {
   const menu=document.getElementById("recordActionsMenu"),button=document.getElementById("recordMoreButton");
   menu.hidden=!open;
+  button.setAttribute("aria-expanded",String(open));
+}
+function setRecordAddOpen(open) {
+  const menu=document.getElementById("recordAddMenu"),button=document.getElementById("recordAddButton");
+  menu.hidden=!open;
+  button.setAttribute("aria-expanded",String(open));
+}
+function setStatsFiltersOpen(open) {
+  const menu=document.getElementById("statsFilterMenu"),button=document.getElementById("statsMoreButton");
+  menu.hidden=!open;
+  button.classList.toggle("active",open);
   button.setAttribute("aria-expanded",String(open));
 }
 function setRecordFiltersOpen(open) {
@@ -2055,7 +2155,7 @@ function preferenceOptions(type,sourceFlights=flights) {
   const snapshot=statsSnapshot(sourceFlights);
   let options=[];
   if(type==="aircraft")options=[...snapshot.aircraft.entries()].map(([value,items])=>({value,label:aircraftPreferenceLabel(value),count:items.length}));
-  else if(type==="airlines")options=[...snapshot.airlines.entries()].map(([value,items])=>({value,label:items[0]?.airline||value,count:items.length}));
+  else if(type==="airlines")options=[...snapshot.airlines.entries()].map(([value,items])=>({value,label:localizedAirlineName(items[0])||value,count:items.length}));
   else if(type==="airports")options=[...snapshot.airportVisits.entries()].map(([value,count])=>({value,label:`${value} · ${airportCity(airports[value])}`,count}));
   else if(type==="countries"){
     const counts=new Map(),labels=new Map();
@@ -2077,7 +2177,7 @@ function preferenceOptions(type,sourceFlights=flights) {
 function favouriteOptions(type) {
   if(type==="airlines")return referenceData.airlines.map(airline=>({
     value:airline.iata,
-    label:state.lang==="zh"?`${airline.zh} · ${airline.en}`:airline.en,
+    label:state.lang==="zh"?(airline.zh||airline.en):airline.en,
     count:0
   }));
   if(type==="aircraft")return Object.entries(referenceData.aircraft).flatMap(([maker,models])=>models.map(model=>({
@@ -2086,7 +2186,7 @@ function favouriteOptions(type) {
   if(type==="countries")return [...regionOptions].map(option=>({value:option.code,label:displayName("region",option.code),count:0}))
     .sort((a,b)=>a.label.localeCompare(b.label,activeLocale()));
   if(type==="airports")return Object.values(airports).map(airport=>({
-    value:airport.code,label:`${airport.code} · ${airportCity(airport)} · ${airportName(airport)}`,count:0
+    value:airport.code,label:`${airport.code} · ${airportName(airport)}`,count:0
   })).sort((a,b)=>a.value.localeCompare(b.value));
   if(type==="cities"){
     return cityIndex.map(city=>({value:city.value,label:cityDisplay(city),count:0}))
@@ -2107,7 +2207,7 @@ function favouriteDisplay(type,value) {
   if(type==="airlines"){
     if(value.startsWith("OTHER|"))return value.slice(6);
     const airline=airlineByValue(value);
-    if(airline)return state.lang==="zh"?`${airline.zh} · ${airline.en}`:airline.en;
+    if(airline)return state.lang==="zh"?(airline.zh||airline.en):airline.en;
   }
   if(type==="aircraft" && value.startsWith("OTHER|"))return value.slice(6);
   return favouriteOptions(type).find(option=>option.value===value)?.label||aircraftPreferenceLabel(value);
@@ -2303,7 +2403,7 @@ function featuredFlightMarkup(f,value,kicker=t("longestFlight")) {
   return `<button class="featured-flight" data-flight-id="${f.id}">
     <div class="featured-flight-copy">
       <span>${kicker}</span>
-      <div class="featured-flight-title">${iconMarkup(f,"featured-airline-icon")}<div><strong>${f.flightNo}</strong><small>${f.airline}</small></div></div>
+      <div class="featured-flight-title">${iconMarkup(f,"featured-airline-icon")}<div><strong>${f.flightNo}</strong><small>${escapeHtml(localizedAirlineName(f))}</small></div></div>
       <div class="featured-flight-route"><b>${f.from}</b><i></i><b>${f.to}</b></div>
       <p>${formatDate(f.date)} · ${f.aircraft} · ${f.registration || "—"}</p>
       <em>${value}</em>
@@ -2507,7 +2607,7 @@ function openStatsDetail(type) {
   }else if(type==="airlines"){
     summary=`${s.airlines.size} ${t("airlineUnit")}`;
     content=statsBarMarkup([...s.airlines.entries()].map(([code,items])=>({
-      label:items[0].airline,count:items.length,icon:iconMarkup(items[0],"stats-bar-logo")
+      label:localizedAirlineName(items[0]),count:items.length,icon:iconMarkup(items[0],"stats-bar-logo")
     })));
   }else if(type==="airports"){
     summary=`${s.airportVisits.size} ${t("airportUnit")}`;
@@ -3377,6 +3477,12 @@ document.getElementById("currencySelect").addEventListener("change",event=>{
     applyRegionalPreferences();
   }
 });
+["Records","Incoming","Statistics"].forEach(key=>{
+  document.getElementById(`privacy${key}`).addEventListener("change",event=>{
+    state.privacy[key.toLocaleLowerCase()]=event.target.checked;
+    persistPreferences();
+  });
+});
 document.getElementById("editHubsButton").addEventListener("click",()=>{
   state.hubEditorOpen=!state.hubEditorOpen;renderHubSettings();
 });
@@ -3386,15 +3492,23 @@ document.getElementById("hubSearch").addEventListener("input",event=>{
 document.getElementById("drawerClose").addEventListener("click",closeDrawer);
 document.getElementById("recordSearch").addEventListener("input",renderFlights);
 document.getElementById("recordMoreButton").addEventListener("click",event=>{
-  event.stopPropagation();setRecordActionsOpen(document.getElementById("recordActionsMenu").hidden);
+  event.stopPropagation();setRecordAddOpen(false);setRecordActionsOpen(document.getElementById("recordActionsMenu").hidden);
+});
+document.getElementById("recordAddButton").addEventListener("click",event=>{
+  event.stopPropagation();setRecordActionsOpen(false);setRecordAddOpen(document.getElementById("recordAddMenu").hidden);
 });
 document.getElementById("recordFilterMenuButton").addEventListener("click",event=>{
   event.stopPropagation();setRecordFiltersOpen(document.getElementById("recordFilterPanel").hidden);
 });
 document.getElementById("recordActionsMenu").addEventListener("click",event=>event.stopPropagation());
+document.getElementById("recordAddMenu").addEventListener("click",event=>event.stopPropagation());
 document.addEventListener("click",event=>{
-  if(!event.target.closest(".record-menu-wrap"))setRecordActionsOpen(false);
+  if(!event.target.closest(".record-menu-wrap")){setRecordActionsOpen(false);setRecordAddOpen(false);setStatsFiltersOpen(false);}
 });
+document.getElementById("statsMoreButton").addEventListener("click",event=>{
+  event.stopPropagation();setStatsFiltersOpen(document.getElementById("statsFilterMenu").hidden);
+});
+document.getElementById("statsFilterMenu").addEventListener("click",event=>event.stopPropagation());
 document.getElementById("organizeFlightsButton").addEventListener("click",()=>{
   setRecordActionsOpen(false);setRecordSelectionMode(!state.recordSelectionMode);
 });
@@ -3422,8 +3536,8 @@ document.querySelectorAll("[data-scope]").forEach(el=>el.addEventListener("click
 document.querySelectorAll("[data-stats-scope]").forEach(el=>el.addEventListener("click",()=>{
   applyFlightFilters(state.yearFilter,el.dataset.statsScope);
 }));
-document.querySelectorAll("[data-open-add]").forEach(el=>el.addEventListener("click",()=>{setRecordActionsOpen(false);prepareAddForm();}));
-document.getElementById("importButton").addEventListener("click",()=>{setRecordActionsOpen(false);openModal("importModal");});
+document.querySelectorAll("[data-open-add]").forEach(el=>el.addEventListener("click",()=>{setRecordActionsOpen(false);setRecordAddOpen(false);prepareAddForm();}));
+document.getElementById("importButton").addEventListener("click",()=>{setRecordActionsOpen(false);setRecordAddOpen(false);openModal("importModal");});
 document.getElementById("detailBackToStats").addEventListener("click",()=>{
   const returnType=state.statsReturnType;
   if(!returnType)return;
@@ -3445,10 +3559,22 @@ document.getElementById("friendSearchInput").addEventListener("input",()=>{
   clearTimeout(friendSearchTimer);
   friendSearchTimer=setTimeout(searchFriends,220);
 });
-document.getElementById("closeFriendRecordsButton").addEventListener("click",closeFriendRecords);
 document.getElementById("friendMapBack").addEventListener("click",closeFriendRecords);
-document.getElementById("friendMapList").addEventListener("click",showFriendList);
-document.getElementById("friendListMap").addEventListener("click",showFriendMap);
+document.getElementById("friendViewMenuButton").addEventListener("click",event=>{
+  event.stopPropagation();setFriendViewMenuOpen(document.getElementById("friendViewMenu").hidden);
+});
+document.getElementById("friendViewMenu").addEventListener("click",event=>event.stopPropagation());
+document.querySelectorAll("[data-friend-view]").forEach(button=>button.addEventListener("click",()=>{
+  setFriendViewMenuOpen(false);
+  ({map:showFriendMap,list:showFriendList,incoming:showFriendIncoming,statistics:showFriendStatistics}[button.dataset.friendView])();
+}));
+document.getElementById("friendListTripToggle").addEventListener("click",event=>{
+  state.friendRecords.listTripLabels=!state.friendRecords.listTripLabels;
+  event.currentTarget.dataset.i18n=state.friendRecords.listTripLabels?"hideTripLabels":"showTripLabels";
+  event.currentTarget.textContent=t(state.friendRecords.listTripLabels?"hideTripLabels":"showTripLabels");
+  renderFriendFlightList();
+});
+document.addEventListener("click",event=>{if(!event.target.closest(".friend-view-menu-wrap"))setFriendViewMenuOpen(false);});
 document.querySelectorAll("[data-close-modal]").forEach(el=>el.addEventListener("click",closeModals));
 document.querySelectorAll(".modal-backdrop:not(#onboardingModal)").forEach(el=>el.addEventListener("click",e=>{if(e.target===el)closeModals();}));
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!document.getElementById("onboardingModal").classList.contains("open")){closeModals();closeDrawer();setSettingsOpen(false);}});
@@ -3503,6 +3629,11 @@ function hydrateUserData(payload) {
   if(currencyOptions.some(option=>option.code===settings.currency))state.currency=settings.currency;
   if(["light","orbit","flat"].includes(settings.map_style))state.globeStyle=settings.map_style;
   state.dayNight=settings.day_night!==false;
+  state.privacy={
+    records:settings.friends_can_view_records!==false,
+    incoming:settings.friends_can_view_incoming!==false,
+    statistics:settings.friends_can_view_statistics!==false
+  };
   document.getElementById("dayNightToggle").checked=state.dayNight;
   document.querySelectorAll("[data-map-style]").forEach(button=>button.classList.toggle("active",button.dataset.mapStyle===state.globeStyle));
   const firstHub=airports[[...state.hubs][0]];
