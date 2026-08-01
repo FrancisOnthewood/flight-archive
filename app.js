@@ -309,11 +309,17 @@ Object.assign(translations.zh,{
 
 Object.assign(translations.en,{
   deleteSelected:"Delete selected",confirmBulkDelete:"Delete {count} selected flights? This cannot be undone.",
-  editBundle:"Edit ticket bundle",updateBundle:"Update bundle",selectOneTrip:"Select flights belonging to one trip to edit it."
+  editBundle:"Edit ticket bundle",updateBundle:"Update bundle",selectOneTrip:"Select flights belonging to one trip to edit it.",
+  manualRequiredFields:"Flight number, departure and arrival airports, and both local times are required.",
+  airportTimezoneUnavailable:"The timezone for one of these airports is unavailable.",
+  invalidCalculatedDuration:"These local times do not produce a plausible flight duration. Check the airports and times."
 });
 Object.assign(translations.zh,{
   deleteSelected:"批量删除",confirmBulkDelete:"确定删除选中的 {count} 趟航班吗？此操作无法撤销。",
-  editBundle:"修改套票",updateBundle:"更新套票",selectOneTrip:"请选择属于同一个 Trip 的航班后再修改。"
+  editBundle:"修改套票",updateBundle:"更新套票",selectOneTrip:"请选择属于同一个 Trip 的航班后再修改。",
+  manualRequiredFields:"必须填写航班号、起降机场，以及起飞和到达的当地时间。",
+  airportTimezoneUnavailable:"暂时无法识别其中一个机场的时区。",
+  invalidCalculatedDuration:"根据这些机场和当地时间无法得到合理的飞行时长，请检查输入。"
 });
 
 const savedHubs = [];
@@ -354,6 +360,7 @@ const regionOptions=regionCodes.map(code=>({code}));
 const currencyOptions=currencyCodes.map(code=>({code}));
 const referenceData=window.FLIGHT_ARCHIVE_REFERENCE || {airlines:[],aircraft:{}};
 const airportSearchData=window.FLIGHT_ARCHIVE_SEARCH_DATA || {majorAirports:new Set(),airportZh:{}};
+const airportTimeZones=window.FLIGHT_ARCHIVE_TIMEZONES || {};
 Object.entries(airportSearchData.airportZh||{}).forEach(([code,[name,city]])=>{
   if(!airports[code])return;
   airports[code].nameZh=name;
@@ -837,6 +844,56 @@ function parseDurationMinutes(value) {
   if(minutes)return Number(minutes[1]);
   return 0;
 }
+function airlineFromFlightNumber(value,currentAirline="") {
+  const flightNo=String(value||"").trim().toUpperCase().replace(/\s+/g,"");
+  const airlineShort=(flightNo.match(/^([A-Z0-9]{2})/)||[])[1]||"";
+  const airline=airlineByValue(airlineShort);
+  return {
+    flightNo,airlineShort,
+    airlineName:airline?.en||currentAirline||"Unknown airline",
+    airlineIcao:airline?.icao||""
+  };
+}
+function addCalendarDays(dateString,days) {
+  const [year,month,day]=String(dateString).split("-").map(Number);
+  const date=new Date(Date.UTC(year,month-1,day+days));
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth()+1).padStart(2,"0")}-${String(date.getUTCDate()).padStart(2,"0")}`;
+}
+function zonedLocalTimeToUtc(dateString,timeString,timeZone) {
+  const [year,month,day]=String(dateString).split("-").map(Number);
+  const [hour,minute]=String(timeString).split(":").map(Number);
+  if(!year||!month||!day||!Number.isFinite(hour)||!Number.isFinite(minute)||!timeZone)return null;
+  const target=Date.UTC(year,month-1,day,hour,minute,0);
+  let guess=target;
+  const formatter=new Intl.DateTimeFormat("en-CA",{
+    timeZone,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"
+  });
+  for(let pass=0;pass<3;pass+=1){
+    const parts=Object.fromEntries(formatter.formatToParts(new Date(guess)).filter(part=>part.type!=="literal").map(part=>[part.type,Number(part.value)]));
+    const rendered=Date.UTC(parts.year,parts.month-1,parts.day,parts.hour,parts.minute,parts.second||0);
+    guess=target-(rendered-guess);
+  }
+  return new Date(guess);
+}
+function calculateFlightDuration(date,depart,from,arrive,to) {
+  if(!date||!depart||!arrive||!from||!to)return {error:"manualRequiredFields"};
+  const fromTimeZone=airportTimeZones[from],toTimeZone=airportTimeZones[to];
+  if(!fromTimeZone||!toTimeZone)return {error:"airportTimezoneUnavailable"};
+  const departureUtc=zonedLocalTimeToUtc(date,depart,fromTimeZone);
+  if(!departureUtc)return {error:"invalidCalculatedDuration"};
+  const candidates=[];
+  for(let dayOffset=-1;dayOffset<=2;dayOffset+=1){
+    const arrivalDate=addCalendarDays(date,dayOffset);
+    const arrivalUtc=zonedLocalTimeToUtc(arrivalDate,arrive,toTimeZone);
+    const minutes=Math.round((arrivalUtc-departureUtc)/60000);
+    if(minutes>=20&&minutes<=2160)candidates.push({minutes,arrivalDate,dayOffset});
+  }
+  if(!candidates.length)return {error:"invalidCalculatedDuration"};
+  const distance=estimateAirportDistance(from,to);
+  const expected=Math.max(35,(distance/820)*60+25);
+  const result=candidates.sort((a,b)=>Math.abs(a.minutes-expected)-Math.abs(b.minutes-expected))[0];
+  return {...result,text:flightDurationLabel(result.minutes),fromTimeZone,toTimeZone};
+}
 function airportCodeFromInput(value,currentCode) {
   const text=String(value||"").trim();
   if(!text)return currentCode;
@@ -1114,10 +1171,8 @@ function prepareEditForm(id) {
   setFormValue("formTo",`${f.to} / ${airportName(airports[f.to])}`);
   setFormValue("formTerminalFrom",f.terminalFrom==="—"?"":f.terminalFrom);
   setFormValue("formTerminalTo",f.terminalTo==="—"?"":f.terminalTo);
-  setFormValue("formAirline",f.airline);
   setFormValue("formAircraft",f.aircraft);
   setFormValue("formRegistration",f.registration==="—"?"":f.registration);
-  setFormValue("formDuration",f.duration);
   setFormValue("formDepart",timeInputValue(f.depart));
   setFormValue("formArrive",timeInputValue(f.arrive));
   setFormValue("formDistance",f.distance);
@@ -1133,20 +1188,29 @@ function saveEditedFlight() {
   const f=flights.find(item=>item.id===state.editingFlightId);
   if(!f)return false;
   const previousFare=f.fare;
-  f.date=document.getElementById("formDate").value||f.date;
-  f.flightNo=document.getElementById("formFlightNo").value.trim().toUpperCase()||f.flightNo;
-  f.from=airportCodeFromInput(document.getElementById("formFrom").value,f.from);
-  f.to=airportCodeFromInput(document.getElementById("formTo").value,f.to);
+  const date=document.getElementById("formDate").value;
+  const flightIdentity=airlineFromFlightNumber(document.getElementById("formFlightNo").value,f.airline);
+  const from=airportCodeFromInput(document.getElementById("formFrom").value,"");
+  const to=airportCodeFromInput(document.getElementById("formTo").value,"");
+  const depart=document.getElementById("formDepart").value;
+  const arrive=document.getElementById("formArrive").value;
+  if(!date||!flightIdentity.flightNo||!from||!to||!depart||!arrive){showToast(t("editFlightRecord"),t("manualRequiredFields"));return false;}
+  const calculated=calculateFlightDuration(date,depart,from,arrive,to);
+  if(calculated.error){showToast(t("editFlightRecord"),t(calculated.error));return false;}
+  f.date=date;
+  f.flightNo=flightIdentity.flightNo;
+  f.from=from;
+  f.to=to;
   f.terminalFrom=document.getElementById("formTerminalFrom").value.trim()||"—";
   f.terminalTo=document.getElementById("formTerminalTo").value.trim()||"—";
-  f.airline=document.getElementById("formAirline").value.trim()||f.airline;
-  f.airlineShort=(f.flightNo.match(/^([A-Z0-9]{2})/)||[])[1]||f.airlineShort;
+  f.airline=flightIdentity.airlineName;
+  f.airlineShort=flightIdentity.airlineShort;
   f.aircraft=document.getElementById("formAircraft").value.trim()||f.aircraft;
   f.registration=document.getElementById("formRegistration").value.trim()||"—";
-  f.duration=document.getElementById("formDuration").value.trim()||f.duration;
-  f.durationMinutes=parseDurationMinutes(f.duration);
-  f.depart=document.getElementById("formDepart").value||f.depart;
-  f.arrive=document.getElementById("formArrive").value||f.arrive;
+  f.duration=calculated.text;
+  f.durationMinutes=calculated.minutes;
+  f.depart=depart;
+  f.arrive=arrive;
   f.distance=Math.max(0,Number(document.getElementById("formDistance").value)||0);
   f.gate=document.getElementById("formGate").value.trim()||"—";
   f.seat=document.getElementById("formSeat").value.trim()||"—";
@@ -1155,6 +1219,7 @@ function saveEditedFlight() {
   f.fare=fareValue===""?null:Math.max(0,Number(fareValue));
   if(f.fare!==previousFare){f.fareRaw=fareValue||null;f.fareGroup=null;}
   f.note=document.getElementById("formNote").value.trim();
+  f.metadata={...(f.metadata||{}),airline_icao:flightIdentity.airlineIcao||f.metadata?.airline_icao||null,arrival_date:calculated.arrivalDate,duration_calculated:true};
   f.scope=effectiveFlightScope(f);
   rebuildRoutes();
   if(window.flightArchiveData?.enabled){
@@ -1167,25 +1232,29 @@ function saveEditedFlight() {
 function saveNewFlight() {
   const from=airportCodeFromInput(document.getElementById("formFrom").value,"");
   const to=airportCodeFromInput(document.getElementById("formTo").value,"");
-  if(!from || !to)return false;
-  const flightNo=document.getElementById("formFlightNo").value.trim().toUpperCase();
-  const duration=document.getElementById("formDuration").value.trim() || "0min";
+  const date=document.getElementById("formDate").value;
+  const depart=document.getElementById("formDepart").value;
+  const arrive=document.getElementById("formArrive").value;
+  const flightIdentity=airlineFromFlightNumber(document.getElementById("formFlightNo").value);
+  if(!date||!flightIdentity.flightNo||!from||!to||!depart||!arrive){showToast(t("addFlightRecord"),t("manualRequiredFields"));return false;}
+  const calculated=calculateFlightDuration(date,depart,from,arrive,to);
+  if(calculated.error){showToast(t("addFlightRecord"),t(calculated.error));return false;}
   const fareValue=document.getElementById("formFare").value;
   const distanceValue=Number(document.getElementById("formDistance").value);
   const flight={
     id:crypto.randomUUID(),
     from,
     to,
-    date:document.getElementById("formDate").value,
-    airline:document.getElementById("formAirline").value.trim() || "Unknown airline",
-    airlineShort:(flightNo.match(/^([A-Z0-9]{2})/)||[])[1] || "",
-    flightNo,
+    date,
+    airline:flightIdentity.airlineName,
+    airlineShort:flightIdentity.airlineShort,
+    flightNo:flightIdentity.flightNo,
     aircraft:document.getElementById("formAircraft").value.trim() || "—",
     registration:document.getElementById("formRegistration").value.trim() || "—",
-    depart:document.getElementById("formDepart").value || "—",
-    arrive:document.getElementById("formArrive").value || "—",
-    duration,
-    durationMinutes:parseDurationMinutes(duration),
+    depart,
+    arrive,
+    duration:calculated.text,
+    durationMinutes:calculated.minutes,
     distance:distanceValue>0?Math.round(distanceValue):estimateAirportDistance(from,to),
     terminalFrom:document.getElementById("formTerminalFrom").value.trim() || "—",
     terminalTo:document.getElementById("formTerminalTo").value.trim() || "—",
@@ -1200,7 +1269,8 @@ function saveNewFlight() {
     status:"",
     note:document.getElementById("formNote").value.trim(),
     scope:effectiveFlightScope({from,to}),
-    recordStatus:"completed"
+    recordStatus:"completed",
+    metadata:{airline_icao:flightIdentity.airlineIcao||null,arrival_date:calculated.arrivalDate,duration_calculated:true}
   };
   if(state.bundleSession){
     flight.fare=state.bundleSession.count===0?state.bundleSession.total:null;
@@ -1716,13 +1786,6 @@ function estimateAirportDistance(from,to) {
   const hav=Math.sin(deltaLat/2)**2+Math.cos(lat1)*Math.cos(lat2)*Math.sin(deltaLon/2)**2;
   return Math.round(6371*2*Math.atan2(Math.sqrt(hav),Math.sqrt(1-hav)));
 }
-function inferDuration(depart,arrive) {
-  if(!depart||!arrive)return {text:"—",minutes:0};
-  const [dh,dm]=depart.split(":").map(Number),[ah,am]=arrive.split(":").map(Number);
-  let minutes=ah*60+am-(dh*60+dm);
-  if(minutes<=0)minutes+=1440;
-  return {text:`${Math.floor(minutes/60)}h ${minutes%60}m`,minutes};
-}
 function prepareIncomingForm() {
   state.editingIncomingId=null;
   const form=document.getElementById("incomingFlightForm");
@@ -1749,10 +1812,8 @@ function prepareIncomingEditForm(id) {
   setFormValue("incomingTo",flight.to);
   setFormValue("incomingDepart",timeInputValue(flight.depart));
   setFormValue("incomingArrive",timeInputValue(flight.arrive));
-  setFormValue("incomingAirline",flight.airline);
   setFormValue("incomingAircraft",flight.aircraft==="—"?"":flight.aircraft);
   setFormValue("incomingRegistration",flight.registration==="—"?"":flight.registration);
-  setFormValue("incomingDuration",flight.duration);
   setFormValue("incomingDistance",flight.distance);
   setFormValue("incomingTerminalFrom",flight.terminalFrom==="—"?"":flight.terminalFrom);
   setFormValue("incomingTerminalTo",flight.terminalTo==="—"?"":flight.terminalTo);
@@ -1765,40 +1826,41 @@ function prepareIncomingEditForm(id) {
   openModal("incomingAddModal");
 }
 function saveIncomingFlight() {
+  const date=document.getElementById("incomingDate").value;
+  const flightNo=document.getElementById("incomingFlightNo").value.trim().toUpperCase();
+  const depart=document.getElementById("incomingDepart").value;
+  const arrive=document.getElementById("incomingArrive").value;
   const from=airportCodeFromInput(document.getElementById("incomingFrom").value,"");
   const to=airportCodeFromInput(document.getElementById("incomingTo").value,"");
+  if(!date||!flightNo||!from||!to||!depart||!arrive){
+    showToast(t("addIncomingFlight"),t("manualRequiredFields"));
+    return false;
+  }
   if(!airports[from]||!airports[to]){
     showToast(t("addIncomingFlight"),t("invalidAirportCode"));
     return false;
   }
   document.getElementById("incomingFrom").value=from;
   document.getElementById("incomingTo").value=to;
-  const date=document.getElementById("incomingDate").value;
-  const depart=document.getElementById("incomingDepart").value;
   const candidate={date,depart};
   if(!date||!depart||departureDateTime(candidate)<=new Date()){
     showToast(t("addIncomingFlight"),t("futureFlightRequired"));
     return false;
   }
-  const flightNo=document.getElementById("incomingFlightNo").value.trim().toUpperCase();
-  const airlineShort=(flightNo.match(/^([A-Z0-9]{2})/)||[])[1]||"—";
-  const knownAirline=[...flights,...plannedIncomingFlights].find(f=>f.airlineShort===airlineShort)?.airline;
-  const arrive=document.getElementById("incomingArrive").value;
-  const durationInput=document.getElementById("incomingDuration").value.trim();
-  const inferred=inferDuration(depart,arrive);
-  const duration=durationInput||inferred.text;
-  const durationMinutes=durationInput?parseDurationMinutes(durationInput):inferred.minutes;
+  const existing=plannedIncomingFlights.find(item=>String(item.id)===String(state.editingIncomingId));
+  const flightIdentity=airlineFromFlightNumber(flightNo,existing?.airline||"");
+  const calculated=calculateFlightDuration(date,depart,from,arrive,to);
+  if(calculated.error){showToast(t("addIncomingFlight"),t(calculated.error));return false;}
   const distanceInput=Number(document.getElementById("incomingDistance").value);
   const fareValue=document.getElementById("incomingFare").value;
-  const existing=plannedIncomingFlights.find(item=>String(item.id)===String(state.editingIncomingId));
   const flight={
     id:existing?.id||crypto.randomUUID(),
-    from,to,date,depart,arrive:arrive||"—",
-    airline:document.getElementById("incomingAirline").value.trim()||knownAirline||airlineShort,
-    airlineShort,flightNo,
+    from,to,date,depart,arrive,
+    airline:flightIdentity.airlineName,
+    airlineShort:flightIdentity.airlineShort,flightNo:flightIdentity.flightNo,
     aircraft:document.getElementById("incomingAircraft").value.trim()||"—",
     registration:document.getElementById("incomingRegistration").value.trim()||"—",
-    duration,durationMinutes,
+    duration:calculated.text,durationMinutes:calculated.minutes,
     distance:distanceInput>0?Math.round(distanceInput):estimateAirportDistance(from,to),
     terminalFrom:document.getElementById("incomingTerminalFrom").value.trim()||"—",
     terminalTo:document.getElementById("incomingTerminalTo").value.trim()||"—",
@@ -1809,7 +1871,7 @@ function saveIncomingFlight() {
     gate:document.getElementById("incomingGate").value.trim()||"—",
     note:document.getElementById("incomingNote").value.trim(),
     scope:effectiveFlightScope({from,to}),
-    custom:true,recordStatus:"upcoming",metadata:existing?.metadata||{}
+    custom:true,recordStatus:"upcoming",metadata:{...(existing?.metadata||{}),airline_icao:flightIdentity.airlineIcao||existing?.metadata?.airline_icao||null,arrival_date:calculated.arrivalDate,duration_calculated:true}
   };
   if(existing)Object.assign(existing,flight);else plannedIncomingFlights.push(flight);
   if(window.flightArchiveData?.enabled){
@@ -3797,10 +3859,7 @@ document.getElementById("flightForm").addEventListener("submit",e=>{
   e.preventDefault();
   const editing=state.editingFlightId!==null;
   const saved=editing?saveEditedFlight():saveNewFlight();
-  if(!saved){
-    showToast(t("invalidAirportCode"),t("recordSaved"));
-    return;
-  }
+  if(!saved)return;
   if(!editing&&state.bundleSession){
     const flight=flights[0];
     flightLookupState.completed.addedId=flight.id;
