@@ -39,19 +39,18 @@ Before deploying the function, apply
 `migrations/202607310005_flight_search_quota_cache.sql`. It adds:
 
 - a shared cache keyed by the canonical search query;
-- a limit of 20 external (cache-miss) searches per user per UTC day;
+- per-user query counts for monitoring, without a daily user limit;
 - a global stop at 480 AeroDataBox API Units per UTC calendar month;
 - atomic quota reservations, so simultaneous requests cannot exceed either
   limit.
 
 Flight-number searches reserve 2 Units and route searches reserve 4 Units.
-Cache hits consume neither a daily user request nor API Units. Past-flight
+Cache hits consume no API Units. Past-flight
 cache entries remain valid for one year; current and future schedules are
 refreshed after 12 hours. When a limit is reached, the frontend opens the
 manual-entry form and keeps the user's date, flight number, and airport codes.
-Empty provider results are not cached. The internal
-`flightarchive.test@example.com` account bypasses only the per-user daily
-limit; its searches still consume and respect the shared 480-Unit ceiling.
+Empty provider results are not cached. All accounts remain subject to the
+shared 480-Unit ceiling even though the per-user daily limit is disabled.
 
 1. Subscribe to an AeroDataBox plan on RapidAPI and copy the RapidAPI key.
 2. In Supabase, add the Edge Function secret `AERODATABOX_API_KEY`.

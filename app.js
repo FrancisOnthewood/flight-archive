@@ -458,9 +458,11 @@ function airlineByValue(value) {
   const normalized=String(value||"").trim().toLocaleLowerCase();
   return referenceData.airlines.find(airline=>[airline.iata,airline.icao,airline.en,airline.zh].some(item=>String(item||"").toLocaleLowerCase()===normalized));
 }
-function airlineIconSource(value) {
-  const airline=airlineByValue(value);
-  return airlineIcons[value] || (airline?.icao?`./airline-logos/flightaware_logos/${airline.icao}.png`:null);
+function airlineIconSource(value,icao="",name="") {
+  const normalizedValue=String(value||"").trim().toUpperCase();
+  const airline=airlineByValue(value)||airlineByValue(name);
+  const resolvedIcao=String(icao||airline?.icao||(normalizedValue.length===3?normalizedValue:"")).trim().toUpperCase();
+  return airlineIcons[normalizedValue] || (resolvedIcao?`./airline-logos/flightaware_logos/${resolvedIcao}.png`:null);
 }
 function airlineSearchMarkup() {
   return referenceData.airlines.map(airline=>{
@@ -927,7 +929,7 @@ function activateBundleSessionFromForm() {
   return state.bundleSession;
 }
 function lookupCandidateLogo(candidate) {
-  const source=airlineIconSource(candidate.airlineCode||"");
+  const source=airlineIconSource(candidate.airlineCode||"",candidate.airlineIcao||"",candidate.airline||"");
   return source
     ? `<span class="flight-candidate-logo"><img src="${source}" alt="" /></span>`
     : `<span class="flight-candidate-logo">${escapeHtml(candidate.airlineCode||"—")}</span>`;
@@ -969,7 +971,7 @@ function flightFromLookupCandidate(candidate,recordStatus) {
     seat:"—",cabin:t("economy"),fare:null,fareCurrency:state.currency,fareRaw:null,fareGroup:null,booking:"",
     gate:candidate.departureGate||"—",status:candidate.status||"",note:"",
     scope:effectiveFlightScope({from,to}),
-    recordStatus,metadata:{source:"aerodatabox",provider_id:candidate.id||null}
+    recordStatus,metadata:{source:"aerodatabox",provider_id:candidate.id||null,airline_icao:candidate.airlineIcao||null}
   };
 }
 async function addFlightLookupCandidate(kind,index) {
@@ -1236,7 +1238,7 @@ async function deleteFlightRecord(id) {
   }
 }
 function iconMarkup(f, className = "airline-icon") {
-  const icon = airlineIconSource(f.airlineShort);
+  const icon = airlineIconSource(f.airlineShort,f?.metadata?.airline_icao||f?.airlineIcao||"",f.airline);
   return icon
     ? `<span class="${className}"><img src="${icon}" alt="${f.airline} logo" loading="lazy" /></span>`
     : `<span class="${className} airline-fallback">${f.airlineShort}</span>`;
@@ -1559,7 +1561,7 @@ function openFlight(id,{returnStatsType=null,returnStatsFriend=false}={}) {
   }
   const from = airports[f.from], to = airports[f.to];
   const set = (id, value) => document.getElementById(id).textContent = value;
-  const detailAirlineIcon=airlineIconSource(f.airlineShort);
+  const detailAirlineIcon=airlineIconSource(f.airlineShort,f?.metadata?.airline_icao||f?.airlineIcao||"",f.airline);
   document.getElementById("detailLogo").innerHTML = detailAirlineIcon ? `<img src="${detailAirlineIcon}" alt="${f.airline} logo" />` : f.airlineShort;
   set("detailAirline", localizedAirlineName(f)); set("detailTitle", f.flightNo); set("detailDate", formatDate(f.date));
   set("detailFromCode", f.from); set("detailFromCity", `${compactAirportName(from)} · ${f.terminalFrom}`); set("detailDeparture", f.depart);

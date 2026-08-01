@@ -1,10 +1,8 @@
 import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 
-const DAILY_EXTERNAL_REQUEST_LIMIT = 20;
 const MONTHLY_API_UNIT_LIMIT = 480;
 const FLIGHT_NUMBER_API_UNITS = 2;
 const ROUTE_API_UNITS = 4;
-const TEST_ACCOUNT_EMAIL = "flightarchive.test@example.com";
 const EFFECTIVELY_UNLIMITED_DAILY_REQUESTS = 2147483647;
 
 const corsHeaders = {
@@ -60,6 +58,7 @@ const normalizeFlight = (flight: Record<string, any>) => {
     scheduledDepartTime: scheduledDeparture.time,
     airline: flight.airline?.name || "",
     airlineCode: String(flight.airline?.iata || "").toUpperCase(),
+    airlineIcao: String(flight.airline?.icao || "").toUpperCase(),
     aircraft: flight.aircraft?.model || "",
     registration: flight.aircraft?.reg || "",
     departureTerminal: departure.terminal || "",
@@ -175,11 +174,10 @@ Deno.serve(async request => {
     }
 
     const requestedUnits = queryKind === "number" ? FLIGHT_NUMBER_API_UNITS : ROUTE_API_UNITS;
-    const isTestAccount = String(authData.user.email || "").toLowerCase() === TEST_ACCOUNT_EMAIL;
     const { data: capacityRows, error: capacityError } = await admin.rpc("reserve_flight_search_capacity", {
       target_user_id: authData.user.id,
       requested_units: requestedUnits,
-      daily_limit: isTestAccount ? EFFECTIVELY_UNLIMITED_DAILY_REQUESTS : DAILY_EXTERNAL_REQUEST_LIMIT,
+      daily_limit: EFFECTIVELY_UNLIMITED_DAILY_REQUESTS,
       monthly_limit: MONTHLY_API_UNIT_LIMIT
     });
     if (capacityError) throw capacityError;

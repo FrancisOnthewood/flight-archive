@@ -21,7 +21,7 @@
     ["JX","SJX","STARLUX Airlines","星宇航空"],["IT","TTW","Tigerair Taiwan","台湾虎航"],
     ["AE","MDA","Mandarin Airlines","华信航空"],
     ["SQ","SIA","Singapore Airlines","新加坡航空"],["TR","TGW","Scoot","酷航"],
-    ["MH","MAS","Malaysia Airlines","马来西亚航空"],["OM","MGL","MIAT Mongolian Airlines","蒙古民用航空"],["AK","AXM","AirAsia","亚洲航空"],
+    ["MH","MAS","Malaysia Airlines","马来西亚航空"],["OM","MGL","MIAT Mongolian Airlines","蒙古民用航空"],["KT","HOG","Mahogany Air","Mahogany Air"],["AK","AXM","AirAsia","亚洲航空"],
     ["D7","XAX","AirAsia X","亚洲航空长途"],["OD","MXD","Batik Air Malaysia","马印航空"],
     ["GA","GIA","Garuda Indonesia","印度尼西亚鹰航"],["QZ","AWQ","Indonesia AirAsia","印尼亚洲航空"],
     ["JT","LNI","Lion Air","狮子航空"],["BI","RBA","Royal Brunei Airlines","文莱皇家航空"],
