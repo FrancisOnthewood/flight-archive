@@ -42,7 +42,7 @@
     ["EY","ETD","Etihad Airways","阿提哈德航空"],["QR","QTR","Qatar Airways","卡塔尔航空"],
     ["SV","SVA","Saudia","沙特阿拉伯航空"],["WY","OMA","Oman Air","阿曼航空"],
     ["GF","GFA","Gulf Air","海湾航空"],["FZ","FDB","flydubai","迪拜航空"],
-    ["TK","THY","Turkish Airlines","土耳其航空"],["LY","ELY","EL AL Israel Airlines","以色列航空"],
+    ["TK","THY","Turkish Airlines","土耳其航空"],["VF","TKJ","AJet","AJet航空"],["LY","ELY","EL AL Israel Airlines","以色列航空"],
     ["ET","ETH","Ethiopian Airlines","埃塞俄比亚航空"],["KQ","KQA","Kenya Airways","肯尼亚航空"],
     ["MS","MSR","EgyptAir","埃及航空"],["AT","RAM","Royal Air Maroc","摩洛哥皇家航空"],
     ["SA","SAA","South African Airways","南非航空"],["BA","BAW","British Airways","英国航空"],
