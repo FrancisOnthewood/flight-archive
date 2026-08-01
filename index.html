@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#f4f6f8" />
     <title>Flight Archive</title>
     <link rel="icon" href="./logo.svg?v=20260730-v3" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css?v=20260802-organize-stats-v1" />
+    <link rel="stylesheet" href="./styles.css?v=20260802-friend-browser-v1" />
   </head>
   <body>
     <section class="auth-gate" id="authGate" aria-live="polite" hidden>
@@ -278,15 +278,14 @@
             <button type="button" id="friendMapBack"><svg viewBox="0 0 24 24"><path d="m14.5 6-6 6 6 6"/></svg><span data-i18n="backToFriends">Back to friends</span></button>
             <div class="friend-map-identity"><b id="friendMapAvatar"></b><span><strong id="friendMapName"></strong><small id="friendMapCount"></small></span></div>
           </div>
-          <div class="friend-view-menu-wrap">
-            <button class="friend-view-menu-button" id="friendViewMenuButton" type="button" aria-expanded="false" data-i18n-title="friendArchiveMenu"><svg viewBox="0 0 24 24"><path d="M5 6h14M5 12h14M5 18h14"/></svg></button>
-            <div class="friend-view-menu" id="friendViewMenu" hidden>
-              <span data-i18n="recordsTitle">Flight Records</span>
-              <button type="button" data-friend-view="map" data-i18n="mapView">Map view</button>
-              <button type="button" data-friend-view="list" data-i18n="listView">List view</button>
-              <button type="button" data-friend-view="incoming" data-i18n="navIncoming">Incoming Flights</button>
-              <button type="button" data-friend-view="statistics" data-i18n="navStats">Statistics</button>
-            </div>
+          <div class="friend-view-tabs" role="tablist" aria-label="Friend archive views">
+            <button class="active" type="button" data-friend-view="map" data-i18n="mapView">Map view</button>
+            <button type="button" data-friend-view="list" data-i18n="listView">List view</button>
+            <button type="button" data-friend-view="statistics" data-i18n="navStats">Statistics</button>
+          </div>
+          <div class="friend-content-tabs" id="friendContentTabs" role="tablist" aria-label="Flight record type">
+            <button class="active" type="button" data-friend-content="records" data-i18n="recordsTitle">Flight Records</button>
+            <button type="button" data-friend-content="incoming" data-i18n="navIncoming">Incoming Flights</button>
           </div>
         </div>
         <div class="friend-privacy-overlay" id="friendPrivacyOverlay" hidden><strong data-i18n="friendViewPrivate">Your friend has set this view to private</strong></div>
@@ -426,18 +425,54 @@
 
         <section class="view page-view friend-list-view" id="friendListView">
           <section class="friend-records-panel" id="friendRecordsPanel" hidden>
-            <div class="friend-list-options"><button type="button" id="friendListTripToggle" data-i18n="showTripLabels">Show trip labels</button></div>
-            <div class="friend-flight-list" id="friendFlightList"></div>
+            <header class="page-header friend-archive-heading friend-list-heading">
+              <div class="records-heading">
+                <h1 id="friendListTitle" data-i18n="recordsTitle">Flight Records</h1>
+                <div class="flight-total"><strong id="friendListTotal">0</strong><span data-i18n="totalFlights">total flights</span></div>
+              </div>
+              <button class="record-header-icon" id="friendListFilterButton" type="button" aria-expanded="false" data-i18n-title="searchAndFilters">
+                <svg viewBox="0 0 24 24"><circle cx="9.5" cy="9.5" r="5.5"/><path d="m13.5 13.5 4 4M16 6h4M18 4v4"/></svg>
+              </button>
+            </header>
+            <div class="filter-bar record-filter-panel friend-filter-panel" id="friendListFilterPanel" hidden>
+              <label class="search-field">
+                <svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4 4"/></svg>
+                <input id="friendListSearch" data-i18n-placeholder="searchPlaceholder" placeholder="Search flight, airline, or airport" />
+              </label>
+              <label class="year-filter"><span data-i18n="year">Year</span><select id="friendListYearFilter"></select></label>
+              <div class="scope-filters">
+                <button class="filter-chip active" type="button" data-friend-list-scope="all" data-i18n="all">All</button>
+                <button class="filter-chip" type="button" data-friend-list-scope="international" data-i18n="international">International / HK, MO &amp; TW</button>
+                <button class="filter-chip" type="button" data-friend-list-scope="domestic" data-i18n="domestic">Domestic</button>
+              </div>
+              <button class="friend-trip-toggle" type="button" id="friendListTripToggle" data-i18n="showTripLabels">Show trip labels</button>
+            </div>
+            <div class="record-table-head friend-record-table-head" aria-hidden="true">
+              <span data-i18n="flight">Flight</span><span data-i18n="date">Date</span><span data-i18n="airportTime">Airports &amp; time</span><span data-i18n="flightInfo">Flight information</span><span data-i18n="fare">Fare</span><span></span>
+            </div>
+            <div class="flight-list friend-flight-list" id="friendFlightList"></div>
           </section>
         </section>
 
-        <section class="view page-view friend-list-view" id="friendIncomingView">
-          <div class="friend-archive-heading"><h1 data-i18n="navIncoming">Incoming Flights</h1></div>
-          <div class="friend-flight-list" id="friendIncomingList"></div>
-        </section>
-
         <section class="view page-view friend-list-view" id="friendStatisticsView">
-          <header class="page-header friend-archive-heading"><div><h1 data-i18n="statsTitle">Flight Statistics</h1></div></header>
+          <header class="page-header friend-archive-heading">
+            <div><h1 data-i18n="statsTitle">Flight Statistics</h1></div>
+            <button class="record-header-icon" id="friendStatsFilterButton" type="button" aria-expanded="false" data-i18n-title="searchAndFilters">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="12" cy="19" r="1.2"/></svg>
+            </button>
+          </header>
+          <div class="filter-bar record-filter-panel friend-filter-panel" id="friendStatsFilterPanel" hidden>
+            <label class="search-field">
+              <svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4 4"/></svg>
+              <input id="friendStatsSearch" data-i18n-placeholder="searchPlaceholder" placeholder="Search flight, airline, or airport" />
+            </label>
+            <label class="year-filter"><span data-i18n="year">Year</span><select id="friendStatsYearFilter"></select></label>
+            <div class="scope-filters">
+              <button class="filter-chip active" type="button" data-friend-stats-scope="all" data-i18n="all">All</button>
+              <button class="filter-chip" type="button" data-friend-stats-scope="international" data-i18n="international">International / HK, MO &amp; TW</button>
+              <button class="filter-chip" type="button" data-friend-stats-scope="domestic" data-i18n="domestic">Domestic</button>
+            </div>
+          </div>
           <div class="stats-list friend-stats-list" id="friendStatsList"></div>
         </section>
 
@@ -717,6 +752,6 @@
     <script src="./global-airports.js?v=20260730-v1"></script>
     <script src="./search-data.js?v=20260801-v1"></script>
     <script src="./reference-data.js?v=20260802-ajet-v1"></script>
-    <script src="./app.js?v=20260802-ajet-v1"></script>
+    <script src="./app.js?v=20260802-friend-browser-v1"></script>
   </body>
 </html>

@@ -813,7 +813,7 @@ function applyLanguage(lang) {
   if(flightLookupState.completed.candidates.length)renderFlightLookupCandidates("completed");
   if(flightLookupState.incoming.candidates.length)renderFlightLookupCandidates("incoming");
   if(state.activeView==="friends")loadFriends();
-  if(state.friendRecords){setFriendMapIdentity();renderFriendFlightList();renderFriendIncoming();renderFriendStatistics();}
+  if(state.friendRecords){populateFriendFilterYears();syncFriendViewerControls();setFriendMapIdentity();renderFriendFlightList();renderFriendIncoming();renderFriendStatistics();}
   updateMapHelp();
   if (state.selectedRoute) openRouteDrawer(state.selectedRoute);
   if (state.selectedAirport) openAirportDrawer(state.selectedAirport);
@@ -1623,7 +1623,11 @@ function routeIdForFlight(f) {
   return [f.from,f.to].sort().join("-").toLowerCase();
 }
 function activeMapFlights() {
-  if(state.friendRecords?.mapVisible)return state.friendRecords.records;
+  if(state.friendRecords?.mapVisible){
+    return state.friendRecords.contentMode==="incoming"
+      ? state.friendRecords.incomingFlights
+      : state.friendRecords.records;
+  }
   return state.incomingMode?incomingFlights():flights;
 }
 function activeMapRoutes() {
@@ -1988,38 +1992,85 @@ async function loadFriends() {
     document.getElementById("friendsList").innerHTML=`<div class="friends-empty">${escapeHtml(error?.message||String(error))}</div>`;
   }
 }
+function friendArchiveFlights(content=state.friendRecords?.contentMode||"records") {
+  if(!state.friendRecords)return [];
+  return content==="incoming"?state.friendRecords.incomingFlights:state.friendRecords.records;
+}
+function friendFlightSearchText(f) {
+  const from=airports[f.from],to=airports[f.to];
+  return normalizedSearchText([
+    f.flightNo,f.airline,localizedAirlineName(f),f.aircraft,f.registration,
+    f.from,f.to,from&&airportName(from),to&&airportName(to),
+    from&&airportCity(from),to&&airportCity(to)
+  ].filter(Boolean).join(" "));
+}
+function filteredFriendFlights(mode="list") {
+  if(!state.friendRecords)return [];
+  const filters=state.friendRecords.filters?.[mode]||{year:"all",scope:"all",search:""};
+  const source=mode==="stats"?state.friendRecords.statisticsFlights:friendArchiveFlights();
+  const query=normalizedSearchText(filters.search||"");
+  return source.filter(f=>{
+    const yearOk=filters.year==="all"||String(f.date||"").startsWith(filters.year);
+    const scopeOk=filters.scope==="all"||effectiveFlightScope(f)===filters.scope;
+    return yearOk&&scopeOk&&(!query||friendFlightSearchText(f).includes(query));
+  });
+}
+function friendFareMarkup(f) {
+  if(!f.fareGroup)return `<strong>${formatFare(f.fare)}</strong>`;
+  const source=[...(state.friendRecords?.records||[]),...(state.friendRecords?.incomingFlights||[])];
+  return `<strong>${formatFare(bundleTotalForFlight(f,source))}</strong><small>${t("bundle")}</small>`;
+}
 function friendFlightMarkup(f) {
-  return `<article class="friend-flight-row">
-    <div class="airline-cell">${iconMarkup(f)}<div><strong>${escapeHtml(f.flightNo)}</strong><small>${escapeHtml(localizedAirlineName(f))}</small></div></div>
-    <b>${escapeHtml(formatDate(f.date))}</b>
-    <div class="friend-flight-route"><strong>${f.from}</strong><i></i><strong>${f.to}</strong></div>
-    <small>${escapeHtml(f.aircraft)} · ${escapeHtml(durationText(f.durationMinutes))}</small>
+  const from=airports[f.from],to=airports[f.to];
+  const duration=f.duration&&f.duration!=="—"?f.duration:durationText(f.durationMinutes);
+  return `<article class="flight-row friend-readonly-flight" data-friend-flight-id="${escapeHtml(f.id)}">
+    <div class="airline-cell">${iconMarkup(f)}<div><strong class="flight-number">${escapeHtml(f.flightNo)}</strong><small>${escapeHtml(localizedAirlineName(f))}</small></div></div>
+    <div class="date-cell"><strong>${escapeHtml(formatDate(f.date))}</strong></div>
+    <div class="route-cell">
+      <div class="route-point"><strong>${escapeHtml(f.from)}</strong><span>${escapeHtml(from?airportCity(from):f.from)}</span><small>${escapeHtml(f.depart||"—")}</small></div>
+      <div class="route-line"><span>${escapeHtml(duration||"—")}</span><i></i><small>${formatNumber(Number(f.distance)||0)} km</small></div>
+      <div class="route-point"><strong>${escapeHtml(f.to)}</strong><span>${escapeHtml(to?airportCity(to):f.to)}</span><small>${escapeHtml(f.arrive||"—")}</small></div>
+    </div>
+    <div class="flight-meta">
+      <span>${t("aircraft")}<b>${escapeHtml(f.aircraft||"—")}</b></span><span>${t("cabin")}<b>${escapeHtml(displayCabin(f.cabin))}</b></span>
+      <span>${t("registration")}<b>${escapeHtml(f.registration||"—")}</b></span><span>${t("seat")}<b>${escapeHtml(f.seat||"—")}</b></span>
+    </div>
+    <div class="fare-cell">${friendFareMarkup(f)}</div><span class="flight-row-actions" aria-hidden="true"></span>
   </article>`;
 }
+function bindFriendFlightRows(container) {
+  container.querySelectorAll("[data-friend-flight-id]").forEach(row=>row.addEventListener("click",()=>openFlight(row.dataset.friendFlightId)));
+}
 function renderFriendFlightList() {
-  const records=state.friendRecords?.records||[],container=document.getElementById("friendFlightList");
-  if(!container)return;
-  if(!records.length){container.innerHTML=`<div class="friends-empty">${t("noRecords")}</div>`;return;}
-  if(!state.friendRecords.listTripLabels){container.innerHTML=records.map(friendFlightMarkup).join("");return;}
-  const grouped=new Map(),unlabelled=[];
-  records.forEach(f=>{
-    const trip=flightTrip(f);
-    if(!trip){unlabelled.push(f);return;}
-    const key=String(trip.id||trip.label);
-    if(!grouped.has(key))grouped.set(key,{trip,items:[]});
-    grouped.get(key).items.push(f);
-  });
-  const groups=[...grouped.values()].sort((a,b)=>String(b.trip.start||"").localeCompare(String(a.trip.start||"")));
-  if(unlabelled.length)groups.push({trip:{label:t("otherFlights")},items:unlabelled,other:true});
-  container.innerHTML=groups.map(group=>`<section class="trip-flight-group"><header><strong>${escapeHtml(group.trip.label)}</strong>${group.other?"":`<small>${escapeHtml(group.trip.start||"")} — ${escapeHtml(group.trip.end||"")}</small>`}</header>${group.items.map(friendFlightMarkup).join("")}</section>`).join("");
+  const records=filteredFriendFlights("list"),container=document.getElementById("friendFlightList");
+  if(!container||!state.friendRecords)return;
+  const incoming=state.friendRecords.contentMode==="incoming";
+  document.getElementById("friendListTitle").textContent=t(incoming?"navIncoming":"recordsTitle");
+  document.getElementById("friendListTotal").textContent=records.length;
+  if(!records.length){container.innerHTML=`<div class="friends-empty">${t(incoming?"noIncoming":"noRecords")}</div>`;return;}
+  let markup="";
+  if(!state.friendRecords.listTripLabels){
+    markup=records.map(friendFlightMarkup).join("");
+  }else{
+    const grouped=new Map(),unlabelled=[];
+    records.forEach(f=>{
+      const trip=flightTrip(f);
+      if(!trip){unlabelled.push(f);return;}
+      const key=String(trip.id||trip.label);
+      if(!grouped.has(key))grouped.set(key,{trip,items:[]});
+      grouped.get(key).items.push(f);
+    });
+    const groups=[...grouped.values()].sort((a,b)=>String(b.trip.start||"").localeCompare(String(a.trip.start||"")));
+    if(unlabelled.length)groups.push({trip:{label:t("otherFlights")},items:unlabelled,other:true});
+    markup=groups.map(group=>`<section class="trip-flight-group"><header><strong>${escapeHtml(group.trip.label)}</strong>${group.other?"":`<small>${escapeHtml(group.trip.start||"")} — ${escapeHtml(group.trip.end||"")}</small>`}</header>${group.items.map(friendFlightMarkup).join("")}</section>`).join("");
+  }
+  container.innerHTML=markup;
+  bindFriendFlightRows(container);
 }
 function renderFriendIncoming() {
-  const items=state.friendRecords?.incomingFlights||[],container=document.getElementById("friendIncomingList");
-  container.innerHTML=items.length?items.map(friendFlightMarkup).join(""):`<div class="friends-empty">${t("noIncoming")}</div>`;
+  if(state.friendRecords?.contentMode==="incoming")renderFriendFlightList();
 }
-function renderFriendStatistics() {
-  renderStats({friend:true});
-}
+function renderFriendStatistics() { renderStats({friend:true}); }
 function friendViewAllowed(mode) {
   if(mode==="incoming")return state.friendRecords?.privacy.incoming!==false;
   if(mode==="statistics")return state.friendRecords?.privacy.statistics!==false;
@@ -2031,58 +2082,93 @@ function applyFriendPrivacy(mode,viewId) {
   document.getElementById(viewId)?.classList.toggle("friend-view-locked",!allowed);
   overlay.hidden=allowed;
 }
-function setFriendViewMenuOpen(open) {
-  document.getElementById("friendViewMenu").hidden=!open;
-  document.getElementById("friendViewMenuButton").setAttribute("aria-expanded",String(open));
-}
 async function openFriendRecords(userId) {
   const profile=state.friends.find(item=>item.user_id===userId);
   if(!profile)return;
   try{
     const archive=await window.flightArchiveData.getFriendArchive(userId);
-    state.friendRecords={profile,records:archive.completedFlights,incomingFlights:archive.incomingFlights,statisticsFlights:archive.statisticsFlights,favourites:archive.favourites,statisticsSummary:archive.statisticsSummary,privacy:archive.privacy,mapVisible:true,listTripLabels:false};
+    state.friendRecords={
+      profile,records:archive.completedFlights,incomingFlights:archive.incomingFlights,
+      statisticsFlights:archive.statisticsFlights,favourites:archive.favourites,
+      statisticsSummary:archive.statisticsSummary,privacy:archive.privacy,
+      mapVisible:true,viewMode:"map",contentMode:"records",listTripLabels:false,
+      filters:{list:{year:"all",scope:"all",search:""},stats:{year:"all",scope:"all",search:""}}
+    };
+    populateFriendFilterYears();syncFriendViewerControls();
     renderFriendFlightList();renderFriendIncoming();renderFriendStatistics();
     showFriendMap();
   }catch(error){showToast(t("saveFailed"),error?.message||String(error));}
 }
 function setFriendMapIdentity() {
-  const profile=state.friendRecords?.profile,records=state.friendRecords?.records||[];
+  const profile=state.friendRecords?.profile,records=friendArchiveFlights();
   if(!profile)return;
   const avatar=document.getElementById("friendMapAvatar");
   avatar.innerHTML=profile.avatar_url?`<img src="${escapeHtml(profile.avatar_url)}" alt="" />`:escapeHtml(friendInitial(profile));
   document.getElementById("friendMapName").textContent=profile.username||profile.display_name||"Flight Archive user";
   document.getElementById("friendMapCount").textContent=`${records.length} ${t("friendMapFlights")}`;
 }
+function syncFriendViewerControls() {
+  if(!state.friendRecords)return;
+  document.querySelectorAll("[data-friend-view]").forEach(button=>button.classList.toggle("active",button.dataset.friendView===state.friendRecords.viewMode));
+  document.querySelectorAll("[data-friend-content]").forEach(button=>button.classList.toggle("active",button.dataset.friendContent===state.friendRecords.contentMode));
+  document.getElementById("friendContentTabs").hidden=state.friendRecords.viewMode==="statistics";
+  const listFilters=state.friendRecords.filters.list,statsFilters=state.friendRecords.filters.stats;
+  document.getElementById("friendListSearch").value=listFilters.search;
+  document.getElementById("friendStatsSearch").value=statsFilters.search;
+  document.getElementById("friendListYearFilter").value=listFilters.year;
+  document.getElementById("friendStatsYearFilter").value=statsFilters.year;
+  const tripToggle=document.getElementById("friendListTripToggle");
+  tripToggle.dataset.i18n=state.friendRecords.listTripLabels?"hideTripLabels":"showTripLabels";
+  tripToggle.textContent=t(state.friendRecords.listTripLabels?"hideTripLabels":"showTripLabels");
+  document.querySelectorAll("[data-friend-list-scope]").forEach(button=>button.classList.toggle("active",button.dataset.friendListScope===listFilters.scope));
+  document.querySelectorAll("[data-friend-stats-scope]").forEach(button=>button.classList.toggle("active",button.dataset.friendStatsScope===statsFilters.scope));
+}
+function populateFriendFilterYears() {
+  if(!state.friendRecords)return;
+  const years=[...new Set([...state.friendRecords.records,...state.friendRecords.incomingFlights,...state.friendRecords.statisticsFlights]
+    .map(f=>String(f.date||"").slice(0,4)).filter(year=>/^\d{4}$/.test(year)))].sort((a,b)=>b.localeCompare(a));
+  ["friendListYearFilter","friendStatsYearFilter"].forEach(id=>{
+    const select=document.getElementById(id),selected=select.value||"all";
+    select.innerHTML=`<option value="all">${t("allYears")}</option>${years.map(year=>`<option value="${year}">${year}</option>`).join("")}`;
+    select.value=years.includes(selected)?selected:"all";
+  });
+}
 function showFriendMap() {
   if(!state.friendRecords)return;
   state.friendRecords.mapVisible=true;
+  state.friendRecords.viewMode="map";
   document.getElementById("appShell").classList.add("friend-map-mode");
   document.getElementById("friendViewerControls").hidden=false;
   setFriendMapIdentity();
   setView("atlas");
-  applyFriendPrivacy("map","atlasView");
-  const first=state.friendRecords.records.find(f=>airports[f.from]);
+  syncFriendViewerControls();setFriendMapIdentity();
+  applyFriendPrivacy(state.friendRecords.contentMode,"atlasView");
+  const first=friendArchiveFlights().find(f=>airports[f.from]);
   if(first){const airport=airports[first.from];rotation={lon:-airport.lon,lat:airport.lat};}
-  setTimeout(resizeGlobe,20);
+  setTimeout(()=>{resizeGlobe();drawGlobe();},20);
 }
 function showFriendList() {
   if(!state.friendRecords)return;
   state.friendRecords.mapVisible=false;
+  state.friendRecords.viewMode="list";
   document.getElementById("appShell").classList.add("friend-map-mode");
   setFriendMapIdentity();
   setView("friendList");
   document.getElementById("friendRecordsPanel").hidden=false;
-  renderFriendFlightList();applyFriendPrivacy("list","friendListView");
-}
-function showFriendIncoming() {
-  if(!state.friendRecords)return;
-  state.friendRecords.mapVisible=false;
-  setView("friendIncoming");renderFriendIncoming();applyFriendPrivacy("incoming","friendIncomingView");
+  syncFriendViewerControls();renderFriendFlightList();applyFriendPrivacy(state.friendRecords.contentMode,"friendListView");
 }
 function showFriendStatistics() {
   if(!state.friendRecords)return;
   state.friendRecords.mapVisible=false;
-  setView("friendStatistics");renderFriendStatistics();applyFriendPrivacy("statistics","friendStatisticsView");
+  state.friendRecords.viewMode="statistics";
+  setView("friendStatistics");syncFriendViewerControls();renderFriendStatistics();applyFriendPrivacy("statistics","friendStatisticsView");
+}
+function setFriendContent(content) {
+  if(!state.friendRecords||!['records','incoming'].includes(content))return;
+  state.friendRecords.contentMode=content;
+  setFriendMapIdentity();syncFriendViewerControls();
+  if(state.friendRecords.viewMode==="map")showFriendMap();
+  else showFriendList();
 }
 function closeFriendRecords() {
   state.friendRecords=null;
@@ -2091,6 +2177,8 @@ function closeFriendRecords() {
   document.getElementById("friendPrivacyOverlay").hidden=true;
   document.querySelectorAll(".view.friend-view-locked").forEach(view=>view.classList.remove("friend-view-locked"));
   document.getElementById("friendRecordsPanel").hidden=true;
+  document.getElementById("friendListFilterPanel").hidden=true;
+  document.getElementById("friendStatsFilterPanel").hidden=true;
   setView("friends");
 }
 
@@ -2428,7 +2516,7 @@ function statHighlightsMarkup(items) {
     </div>`).join("")}</div>`;
 }
 function renderStats({friend=false}={}) {
-  const scopedFlights=friend?(state.friendRecords?.statisticsFlights||[]):filteredFlights(),s=statsSnapshot(scopedFlights);
+  const scopedFlights=friend?filteredFriendFlights("stats"):filteredFlights(),s=statsSnapshot(scopedFlights);
   const favourites=friend?(state.friendRecords?.favourites||{}):savedFavourites;
   const durationSorted=[...scopedFlights].sort((a,b)=>b.durationMinutes-a.durationMinutes);
   const distanceSorted=[...scopedFlights].sort((a,b)=>b.distance-a.distance);
@@ -2649,7 +2737,7 @@ function airportForCityLabel(label) {
   return Object.values(airports).find(airport=>airportCity(airport)===label);
 }
 function openStatsDetail(type,{friend=false}={}) {
-  const scopedFlights=friend?(state.friendRecords?.statisticsFlights||[]):filteredFlights(),s=statsSnapshot(scopedFlights);
+  const scopedFlights=friend?filteredFriendFlights("stats"):filteredFlights(),s=statsSnapshot(scopedFlights);
   const favourites=friend?(state.friendRecords?.favourites||{}):savedFavourites;
   const title={time:t("totalTime"),distance:t("totalDistance"),aircraft:t("aircraftTypes"),airlines:t("airlinesFlown"),airports:t("airportsVisited"),countries:t("countriesRegions"),routes:t("directedRoutes"),cities:t("citiesVisited"),fare:t("totalFare")}[type];
   let summary="",content="";
@@ -3664,21 +3752,44 @@ document.getElementById("friendSearchInput").addEventListener("input",()=>{
   friendSearchTimer=setTimeout(searchFriends,220);
 });
 document.getElementById("friendMapBack").addEventListener("click",closeFriendRecords);
-document.getElementById("friendViewMenuButton").addEventListener("click",event=>{
-  event.stopPropagation();setFriendViewMenuOpen(document.getElementById("friendViewMenu").hidden);
-});
-document.getElementById("friendViewMenu").addEventListener("click",event=>event.stopPropagation());
 document.querySelectorAll("[data-friend-view]").forEach(button=>button.addEventListener("click",()=>{
-  setFriendViewMenuOpen(false);
-  ({map:showFriendMap,list:showFriendList,incoming:showFriendIncoming,statistics:showFriendStatistics}[button.dataset.friendView])();
+  ({map:showFriendMap,list:showFriendList,statistics:showFriendStatistics}[button.dataset.friendView])();
 }));
+document.querySelectorAll("[data-friend-content]").forEach(button=>button.addEventListener("click",()=>setFriendContent(button.dataset.friendContent)));
 document.getElementById("friendListTripToggle").addEventListener("click",event=>{
   state.friendRecords.listTripLabels=!state.friendRecords.listTripLabels;
   event.currentTarget.dataset.i18n=state.friendRecords.listTripLabels?"hideTripLabels":"showTripLabels";
   event.currentTarget.textContent=t(state.friendRecords.listTripLabels?"hideTripLabels":"showTripLabels");
   renderFriendFlightList();
 });
-document.addEventListener("click",event=>{if(!event.target.closest(".friend-view-menu-wrap"))setFriendViewMenuOpen(false);});
+function setFriendFilterPanel(mode,open){
+  const list=mode==="list",panel=document.getElementById(list?"friendListFilterPanel":"friendStatsFilterPanel");
+  const button=document.getElementById(list?"friendListFilterButton":"friendStatsFilterButton");
+  panel.hidden=!open;button.classList.toggle("active",open);button.setAttribute("aria-expanded",String(open));
+  if(open)setTimeout(()=>document.getElementById(list?"friendListSearch":"friendStatsSearch").focus(),0);
+}
+document.getElementById("friendListFilterButton").addEventListener("click",event=>{
+  event.stopPropagation();setFriendFilterPanel("stats",false);setFriendFilterPanel("list",document.getElementById("friendListFilterPanel").hidden);
+});
+document.getElementById("friendStatsFilterButton").addEventListener("click",event=>{
+  event.stopPropagation();setFriendFilterPanel("list",false);setFriendFilterPanel("stats",document.getElementById("friendStatsFilterPanel").hidden);
+});
+["friendListFilterPanel","friendStatsFilterPanel"].forEach(id=>document.getElementById(id).addEventListener("click",event=>event.stopPropagation()));
+document.getElementById("friendListSearch").addEventListener("input",event=>{state.friendRecords.filters.list.search=event.target.value;renderFriendFlightList();});
+document.getElementById("friendStatsSearch").addEventListener("input",event=>{state.friendRecords.filters.stats.search=event.target.value;renderFriendStatistics();});
+document.getElementById("friendListYearFilter").addEventListener("change",event=>{state.friendRecords.filters.list.year=event.target.value;renderFriendFlightList();});
+document.getElementById("friendStatsYearFilter").addEventListener("change",event=>{state.friendRecords.filters.stats.year=event.target.value;renderFriendStatistics();});
+document.querySelectorAll("[data-friend-list-scope]").forEach(button=>button.addEventListener("click",()=>{
+  state.friendRecords.filters.list.scope=button.dataset.friendListScope;syncFriendViewerControls();renderFriendFlightList();
+}));
+document.querySelectorAll("[data-friend-stats-scope]").forEach(button=>button.addEventListener("click",()=>{
+  state.friendRecords.filters.stats.scope=button.dataset.friendStatsScope;syncFriendViewerControls();renderFriendStatistics();
+}));
+document.addEventListener("click",event=>{
+  if(!event.target.closest(".friend-filter-panel")&&!event.target.closest("#friendListFilterButton")&&!event.target.closest("#friendStatsFilterButton")){
+    setFriendFilterPanel("list",false);setFriendFilterPanel("stats",false);
+  }
+});
 document.querySelectorAll("[data-close-modal]").forEach(el=>el.addEventListener("click",closeModals));
 document.querySelectorAll(".modal-backdrop:not(#onboardingModal)").forEach(el=>el.addEventListener("click",e=>{if(e.target===el)closeModals();}));
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!document.getElementById("onboardingModal").classList.contains("open")){closeModals();closeDrawer();setSettingsOpen(false);}});

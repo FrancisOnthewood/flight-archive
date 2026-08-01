@@ -1379,6 +1379,15 @@ body.auth-required .app-shell { visibility: hidden; }
 .friend-viewer-primary > button { min-height: 40px; padding: 0 12px; display: flex; align-items: center; gap: 7px; border: 0; border-radius: 9px; color: #10233f; background: #f0f4f8; cursor: pointer; }
 .friend-viewer-primary > button:hover { background: #e4edf7; }
 .friend-viewer-primary > button svg { width: 17px; }
+.friend-view-tabs,
+.friend-content-tabs { padding: 5px; display: flex; align-items: center; gap: 4px; border: 1px solid rgba(183,202,224,.8); border-radius: 12px; background: rgba(255,255,255,.94); box-shadow: 0 7px 20px rgba(9,22,40,.14); backdrop-filter: blur(12px); }
+.friend-view-tabs[hidden],.friend-content-tabs[hidden] { display: none; }
+.friend-view-tabs button,
+.friend-content-tabs button { min-height: 34px; padding: 0 13px; border: 0; border-radius: 8px; color: #52647a; background: transparent; font-size: 11px; font-weight: 650; cursor: pointer; white-space: nowrap; }
+.friend-view-tabs button:hover,
+.friend-content-tabs button:hover { color: var(--blue); background: #f0f5fb; }
+.friend-view-tabs button.active { color: white; background: var(--blue); }
+.friend-content-tabs button.active { color: var(--blue); background: var(--blue-soft); }
 .friend-view-menu-wrap { position: relative; }
 .friend-view-menu-button { width: 42px; height: 42px; display: grid; place-items: center; border: 1px solid rgba(183,202,224,.8); border-radius: 11px; color: #18304d; background: rgba(255,255,255,.94); box-shadow: 0 7px 20px rgba(9,22,40,.14); cursor: pointer; backdrop-filter: blur(12px); }
 .friend-view-menu-button svg { width: 20px; }
@@ -1415,7 +1424,7 @@ body.auth-required .app-shell { visibility: hidden; }
 .app-shell.friend-map-mode .sidebar, .app-shell.friend-list-mode .sidebar { display: none; }
 .app-shell.friend-map-mode .main-content, .app-shell.friend-list-mode .main-content { margin-left: 0; }
 .friends-empty { padding: 20px; border: 1px dashed var(--line); border-radius: 12px; color: var(--muted); background: #f8fafc; font-size: 12px; text-align: center; }
-.friend-list-view { min-height: 100vh; padding: 104px 46px 48px; background: var(--page); }
+.friend-list-view { min-height: 100vh; padding: 194px 46px 48px; background: var(--page); }
 .friend-records-panel { position: relative; padding: 0; background: transparent; }
 .friend-records-panel h2 { margin: 0; font-size: 25px; }
 .friend-records-panel p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
@@ -1427,6 +1436,14 @@ body.auth-required .app-shell { visibility: hidden; }
 .friend-flight-route i { width: 32px; height: 1px; background: #afbdd0; }
 .friend-flight-row > small { color: var(--muted); font-size: 11px; }
 .friend-flight-row > b { font-size: 12px; font-weight: 600; }
+.friend-list-view .friend-archive-heading { margin: 0 auto 22px; }
+.friend-list-heading { align-items: center; }
+.friend-list-heading .record-header-icon,
+.friend-archive-heading .record-header-icon { flex: 0 0 auto; }
+.friend-filter-panel { max-width: 1240px; margin-left: auto; margin-right: auto; }
+.friend-filter-panel .friend-trip-toggle { min-height: 34px; padding: 0 13px; border: 1px solid #afccf5; border-radius: 9px; color: var(--blue); background: white; font-size: 11px; cursor: pointer; white-space: nowrap; }
+.friend-readonly-flight .flight-row-actions { pointer-events: none; }
+.friend-readonly-flight:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 .privacy-settings { margin-top: 14px; padding-top: 13px; display: grid; gap: 7px; border-top: 1px solid var(--line); }
 .privacy-settings > .settings-label { margin: 0; }
 .privacy-settings > p { margin: 0 0 2px; color: var(--muted); font-size: 9px; line-height: 1.45; }
@@ -1443,13 +1460,14 @@ body.auth-required .app-shell { visibility: hidden; }
   .friend-flight-row { grid-template-columns: 1fr 100px; }
   .friend-flight-route { grid-column: 1 / -1; }
   .friend-list-view { padding: 18px; }
-  .friend-list-view { padding-top: 106px; }
+  .friend-list-view { padding-top: 190px; }
   .friend-viewer-controls { top: 12px; left: 12px; }
   .friend-viewer-primary > button span { display: none; }
   .friend-records-panel { padding: 0; }
   .friend-map-toolbar, .friend-list-toolbar { max-width: calc(100% - 24px); }
   .friend-map-toolbar { top: 12px; left: 12px; }
   .friend-map-identity small { display: none; }
+  .friend-view-tabs button,.friend-content-tabs button { padding: 0 9px; font-size: 10px; }
 }
 .stats-favourite-edit { height: 34px; padding: 0 12px; border: 1px solid #a9cafa; border-radius: 8px; color: var(--blue); background: white; font-size: 11px; font-weight: 600; cursor: pointer; }
 .stats-favourite-edit:hover { color: white; background: var(--blue); }
