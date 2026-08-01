@@ -6,11 +6,15 @@
     <meta name="theme-color" content="#f4f6f8" />
     <title>Flight Archive</title>
     <link rel="icon" href="./logo.svg?v=20260730-v3" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css?v=20260731-independent-city-v4" />
+    <link rel="stylesheet" href="./styles.css?v=20260801-bundles-trips-v1" />
   </head>
   <body>
     <section class="auth-gate" id="authGate" aria-live="polite" hidden>
       <div class="auth-card">
+        <div class="auth-language-switch" aria-label="Language">
+          <button type="button" data-auth-language="zh">中文</button>
+          <button class="active" type="button" data-auth-language="en">EN</button>
+        </div>
         <header class="auth-brand">
           <img src="./logo.svg?v=20260730-v3" alt="" />
           <div>
@@ -29,7 +33,7 @@
         <form class="auth-form" id="authForm">
           <label id="authNameField" hidden>
             <span data-auth-i18n="username">Username</span>
-            <input id="authDisplayName" type="text" autocomplete="username" maxlength="30" pattern="[A-Za-z0-9_.-]{3,30}" />
+            <input id="authDisplayName" type="text" autocomplete="username" />
           </label>
           <label id="authEmailField">
             <span data-auth-i18n="email">Email</span>
@@ -116,6 +120,7 @@
             <button class="active" id="routeMode" data-i18n="routes">Routes</button>
             <button id="airportMode" data-i18n="airports">Airports</button>
           </div>
+          <label class="map-content-toggle"><input id="dayNightToggle" type="checkbox" checked /><span></span><b data-i18n="dayNight">Real-time daylight</b></label>
           <p data-i18n="mapHelp">Drag to rotate, scroll to zoom, and select a route or airport for details.</p>
         </section>
 
@@ -170,7 +175,7 @@
               <div class="settings-editor" id="accountEditor" hidden>
                 <label class="settings-field">
                   <span class="settings-label" data-i18n="username">Username</span>
-                  <input id="profileUsername" type="text" maxlength="30" autocomplete="username" pattern="[A-Za-z0-9_.-]{3,30}" />
+                  <input id="profileUsername" type="text" autocomplete="username" />
                 </label>
                 <label class="avatar-upload">
                   <span data-i18n="chooseAvatar">Choose avatar</span>
@@ -230,13 +235,15 @@
         </div>
 
         <section class="incoming-sidebar" id="incomingSidebar" aria-hidden="true">
-          <button class="incoming-collapse-button" id="incomingCollapseButton" aria-label="Collapse incoming flights" title="Collapse incoming flights">
-            <svg viewBox="0 0 24 24"><path d="m14 7-5 5 5 5"/></svg>
-          </button>
-          <button class="incoming-back" id="incomingBackButton">
-            <svg viewBox="0 0 24 24"><path d="m14.5 6-6 6 6 6"/></svg>
-            <span data-i18n="backToMap">Back to map</span>
-          </button>
+          <div class="incoming-toolbar">
+            <button class="incoming-back" id="incomingBackButton">
+              <svg viewBox="0 0 24 24"><path d="m14.5 6-6 6 6 6"/></svg>
+              <span data-i18n="backToMap">Back to map</span>
+            </button>
+            <button class="incoming-collapse-button" id="incomingCollapseButton" aria-label="Collapse incoming flights" title="Collapse incoming flights">
+              <svg viewBox="0 0 24 24"><path d="m14 7-5 5 5 5"/></svg>
+            </button>
+          </div>
           <header class="incoming-head">
             <span data-i18n="upcomingTravel">Upcoming travel</span>
             <div class="incoming-title-row">
@@ -254,6 +261,11 @@
       <main class="main-content">
         <section class="view atlas-view active" id="atlasView">
           <canvas id="globeCanvas" aria-label="Interactive flight-route globe"></canvas>
+          <div class="friend-map-toolbar" id="friendMapToolbar" hidden>
+            <button type="button" id="friendMapBack"><svg viewBox="0 0 24 24"><path d="m14.5 6-6 6 6 6"/></svg><span data-i18n="backToFriends">Back to friends</span></button>
+            <div class="friend-map-identity"><b id="friendMapAvatar"></b><span><strong id="friendMapName"></strong><small id="friendMapCount"></small></span></div>
+            <button type="button" id="friendMapList"><svg viewBox="0 0 24 24"><path d="M5 6h14M5 12h14M5 18h14"/></svg><span data-i18n="listView">List view</span></button>
+          </div>
           <div class="globe-style-switch" data-i18n-aria="mapStyle">
             <button id="styleLight" data-map-style="light" data-i18n-title="lightGlobe">
               <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.5"/><path d="M4.8 10.5h14.4M7.3 6.8c2.8 2.1 6.6 2.1 9.4 0M7.3 17.2c2.8-2.1 6.6-2.1 9.4 0"/></svg>
@@ -283,6 +295,8 @@
               <div class="flight-total"><strong id="recordTotal">50</strong><span data-i18n="totalFlights">total flights</span></div>
             </div>
             <div class="record-actions">
+              <button class="subtle-button" id="toggleTripLabelsButton" type="button"><span data-i18n="showTripLabels">Show trip labels</span></button>
+              <button class="subtle-button" id="organizeFlightsButton" type="button"><span data-i18n="organizeFlights">Organize</span></button>
               <button class="subtle-button" id="importButton">
                 <svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M5 19h14"/></svg>
                 <span data-i18n="import">Import</span>
@@ -308,6 +322,14 @@
               <button class="filter-chip" data-scope="international" data-i18n="international">International / HK, MO &amp; TW</button>
               <button class="filter-chip" data-scope="domestic" data-i18n="domestic">Domestic</button>
             </div>
+          </div>
+
+          <div class="record-bulk-toolbar" id="recordBulkToolbar" hidden>
+            <strong><span id="selectedFlightCount">0</span> <span data-i18n="selectedFlights">selected flights</span></strong>
+            <span></span>
+            <button class="subtle-button" id="createBundleButton" type="button" data-i18n="createBundle">Create ticket bundle</button>
+            <button class="subtle-button" id="addToTripButton" type="button" data-i18n="addToTrip">Add to trip</button>
+            <button class="subtle-button" id="cancelOrganizeButton" type="button" data-i18n="cancel">Cancel</button>
           </div>
 
           <div class="record-table-head" aria-hidden="true">
@@ -347,6 +369,7 @@
             </label>
             <button class="primary-button" id="friendSearchButton" type="button" data-i18n="search">Search</button>
           </div>
+
           <div class="friends-results" id="friendSearchResults"></div>
           <section class="friends-section">
             <h2 data-i18n="friendRequests">Friend requests</h2>
@@ -388,6 +411,7 @@
           <img id="detailAircraftImage" alt="" />
         </figure>
         <div class="detail-info-grid" id="detailInfoGrid"></div>
+        <div class="detail-trip" id="detailTrip" hidden><span data-i18n="tripLabel">Trip label</span><strong id="detailTripLabel"></strong><small id="detailTripPeriod"></small></div>
         <div class="detail-note"><span data-i18n="notes">Notes</span><p id="detailNote"></p></div>
         <div class="modal-actions">
           <button class="subtle-button danger-button" id="deleteFlightButton" data-i18n="deleteRecord">Delete record</button>
@@ -432,6 +456,10 @@
             <button class="subtle-button" id="completedManualAdd" type="button" data-i18n="manualAdd">Add manually</button>
             <button class="primary-button" id="completedLookupSearch" type="button" data-i18n="searchFlights">Search flights</button>
           </div>
+          <div class="bundle-entry-option">
+            <label><input id="completedBundleToggle" type="checkbox" /><span data-i18n="addAsBundle">Add as a ticket bundle</span></label>
+            <div id="completedBundleFields" hidden><span data-i18n="bundleHelp">These flights share one purchase record.</span><label><b data-i18n="bundleFare">Total purchase price</b><input id="completedBundleFare" type="number" min="0" /></label></div>
+          </div>
           <p class="flight-lookup-status" id="completedLookupStatus"></p>
           <div class="flight-lookup-results" id="completedLookupResults"></div>
         </section>
@@ -441,6 +469,7 @@
           <p id="completedLookupSuccessSummary"></p>
           <div class="flight-added-actions">
             <button class="subtle-button" id="completedLookupDone" type="button" data-i18n="done">Done</button>
+            <button class="subtle-button" id="completedLookupAddAnother" type="button" data-i18n="addAnotherBundleFlight" hidden>Add another flight to this bundle</button>
             <button class="detail-link" id="completedLookupContinue" type="button" data-i18n="continueFlightDetails">Continue adding seat, fare, and other details</button>
           </div>
         </section>
@@ -598,18 +627,39 @@
       </section>
     </div>
 
+    <div class="modal-backdrop" id="bundleModal">
+      <section class="modal compact-action-modal" role="dialog" aria-modal="true">
+        <button class="modal-close" data-close-modal aria-label="Close"><svg viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
+        <header class="modal-header"><span data-i18n="bundle">TICKET BUNDLE</span><h2 data-i18n="createBundle">Create ticket bundle</h2><p data-i18n="bundleHelp">These flights share one purchase record.</p></header>
+        <label class="action-modal-field"><span data-i18n="bundleTotal">Bundle total</span><input id="bundleTotalInput" type="number" min="0" /></label>
+        <div class="modal-actions"><button class="subtle-button" data-close-modal data-i18n="cancel">Cancel</button><button class="primary-button" id="saveBundleButton" type="button" data-i18n="saveBundle">Save bundle</button></div>
+      </section>
+    </div>
+
+    <div class="modal-backdrop" id="tripModal">
+      <section class="modal compact-action-modal" role="dialog" aria-modal="true">
+        <button class="modal-close" data-close-modal aria-label="Close"><svg viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
+        <header class="modal-header"><span data-i18n="tripLabel">TRIP LABEL</span><h2 data-i18n="addToTrip">Add to trip</h2></header>
+        <label class="action-modal-field"><span data-i18n="tripLabel">Trip label</span><input id="tripLabelInput" data-i18n-placeholder="tripNamePlaceholder" placeholder="e.g. 2026 Australia" /></label>
+        <div class="action-modal-row"><label class="action-modal-field"><span data-i18n="tripPeriod">Trip period</span><input id="tripStartInput" type="date" /></label><label class="action-modal-field"><span data-i18n="tripPeriod">Trip period</span><input id="tripEndInput" type="date" /></label></div>
+        <div class="modal-actions"><button class="subtle-button" data-close-modal data-i18n="cancel">Cancel</button><button class="primary-button" id="saveTripButton" type="button" data-i18n="saveTrip">Save trip</button></div>
+      </section>
+    </div>
+
     <datalist id="airportCodeOptions"></datalist>
+    <div class="airport-autocomplete" id="airportAutocomplete" hidden></div>
     <datalist id="favouriteAirlineOptions"></datalist>
     <datalist id="favouriteAircraftOptions"></datalist>
     <datalist id="favouriteRegionOptions"></datalist>
     <datalist id="favouriteCityOptions"></datalist>
     <datalist id="onboardingCityOptions"></datalist>
     <script src="./backend-config.js?v=20260731-feedback-v1"></script>
-    <script src="./auth.js?v=20260731-flight-search-v1"></script>
+    <script src="./auth.js?v=20260801-user-language-v1"></script>
     <script src="./flight-data.js?v=20260731-private-v1"></script>
-    <script src="./data-service.js?v=20260731-flight-search-quota-v1"></script>
+    <script src="./data-service.js?v=20260801-friends-avatar-v1"></script>
     <script src="./global-airports.js?v=20260730-v1"></script>
+    <script src="./search-data.js?v=20260801-v1"></script>
     <script src="./reference-data.js?v=20260731-v1"></script>
-    <script src="./app.js?v=20260731-independent-city-v4"></script>
+    <script src="./app.js?v=20260801-bundles-trips-v1"></script>
   </body>
 </html>

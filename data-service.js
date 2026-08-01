@@ -84,6 +84,23 @@
     if(!value || !activeUserId)throw new Error("No authenticated Flight Archive session.");
     return value;
   };
+  const enrichProfileAvatars=async profiles=>{
+    const items=Array.isArray(profiles)?profiles:[];
+    const ids=[...new Set(items.map(item=>item.user_id).filter(Boolean))];
+    if(!ids.length)return items;
+    const supabase=requireClient();
+    const {data,error}=await supabase.rpc("get_flight_archive_profile_avatars",{profile_user_ids:ids});
+    if(error)return items;
+    const avatarPaths=new Map((data || []).map(row=>[row.user_id,row.avatar_path]));
+    const signedEntries=await Promise.all(ids.map(async id=>{
+      const path=avatarPaths.get(id);
+      if(!path)return [id,null];
+      const {data:signed}=await supabase.storage.from("flight-photos").createSignedUrl(path,3600);
+      return [id,signed?.signedUrl || null];
+    }));
+    const signedUrls=new Map(signedEntries);
+    return items.map(item=>({...item,avatar_url:signedUrls.get(item.user_id)||null}));
+  };
   const notifyError=error=>{
     window.dispatchEvent(new CustomEvent("flightarchive:data-error",{detail:{message:error?.message || String(error)}}));
   };
@@ -156,7 +173,8 @@
         language:settings.language,
         region:settings.region,
         currency:settings.currency,
-        map_style:settings.mapStyle
+        map_style:settings.mapStyle,
+        day_night:settings.dayNight!==false
       });
       if(error)throw error;
     },
@@ -166,7 +184,7 @@
       if(typeof profile.displayName==="string")values.display_name=profile.displayName.trim() || null;
       if(typeof profile.username==="string"){
         const username=profile.username.trim();
-        if(username && !/^[A-Za-z0-9_.-]{3,30}$/.test(username))throw new Error("Username must be 3–30 letters, numbers, dots, hyphens, or underscores.");
+        if(!username)throw new Error("Username cannot be empty.");
         values.username=username || null;
       }
       if(typeof profile.onboardingCompleted==="boolean")values.onboarding_completed=profile.onboardingCompleted;
@@ -237,13 +255,13 @@
       const supabase=requireClient();
       const {data,error}=await supabase.rpc("search_flight_archive_users",{search_text:query});
       if(error)throw error;
-      return data || [];
+      return enrichProfileAvatars(data || []);
     },
     async listFriends(){
       const supabase=requireClient();
       const {data,error}=await supabase.rpc("list_flight_archive_friends");
       if(error)throw error;
-      return data || [];
+      return enrichProfileAvatars(data || []);
     },
     async sendFriendRequest(targetUserId){
       const supabase=requireClient();

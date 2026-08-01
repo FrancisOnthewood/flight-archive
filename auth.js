@@ -27,6 +27,7 @@
   const title=document.getElementById("authTitle");
   const subtitle=document.getElementById("authSubtitle");
   const tabs=document.getElementById("authTabs");
+  const languageButtons=[...document.querySelectorAll("[data-auth-language]")];
 
   const copy={
     en:{
@@ -90,7 +91,8 @@
     unableToPrepare:"Unable to prepare your archive",
     loadingTimeout:"The loading process timed out. Please return to sign in and try again.",
     returnToSignIn:"Return to sign in",
-    serviceStillLoading:"The authentication service is still loading. Please try again in a moment."
+    serviceStillLoading:"The authentication service is still loading. Please try again in a moment.",
+    usernameRequired:"Enter a username."
   });
   Object.assign(copy.zh,{
     preparingBoarding:"正在准备登机",
@@ -100,7 +102,8 @@
     unableToPrepare:"暂时无法准备飞行档案",
     loadingTimeout:"载入时间过长，请返回登录页面后重试。",
     returnToSignIn:"返回登录",
-    serviceStillLoading:"身份验证服务仍在载入，请稍后再试。"
+    serviceStillLoading:"身份验证服务仍在载入，请稍后再试。",
+    usernameRequired:"请输入用户名。"
   });
 
   let language="en";
@@ -110,6 +113,7 @@
   let boardingSlowTimer=null;
   let boardingTimeoutTimer=null;
   const rememberPreferenceKey="flightarchive:remember-session";
+  const languagePreferenceKey="flightarchive:language";
   const rememberEnabled=()=>localStorage.getItem(rememberPreferenceKey)!=="false";
   const setRememberEnabled=enabled=>{
     localStorage.setItem(rememberPreferenceKey,enabled?"true":"false");
@@ -181,6 +185,8 @@
     document.body.classList.add("auth-required");
   };
   const applyCopy=()=>{
+    document.documentElement.lang=language==="zh"?"zh-CN":"en";
+    languageButtons.forEach(button=>button.classList.toggle("active",button.dataset.authLanguage===language));
     document.querySelectorAll("[data-auth-i18n]").forEach(element=>{
       const value=copy[language][element.dataset.authI18n];
       if(value)element.textContent=value;
@@ -273,6 +279,7 @@
     try{
       if(mode==="signup"){
         const username=nameInput.value.trim();
+        if(!username)throw new Error(text("usernameRequired"));
         const {data:usernameAvailable,error:usernameError}=await client.rpc("is_flight_archive_username_available",{candidate:username});
         if(usernameError)throw usernameError;
         if(!usernameAvailable)throw new Error(text("usernameUnavailable"));
@@ -281,7 +288,7 @@
           password:passwordInput.value,
           options:{
             emailRedirectTo:redirectUrl(),
-            data:{username,display_name:username}
+            data:{username,display_name:username,language}
           }
         });
         if(error)throw error;
@@ -342,12 +349,13 @@
     setProfile(profile){renderAccount(profile || {});},
     setLanguage(nextLanguage){
       language=nextLanguage==="zh"?"zh":"en";
+      localStorage.setItem(languagePreferenceKey,language);
       applyCopy();
     }
   };
 
   const start=async()=>{
-    language=document.documentElement.lang.startsWith("zh")?"zh":"en";
+    language=localStorage.getItem(languagePreferenceKey)==="zh"?"zh":"en";
     applyCopy();
     if(!config.enabled)return;
     if(!config.supabaseUrl || !config.publishableKey){
@@ -383,6 +391,12 @@
       setMessage(error?.message || String(error),true);
     }
   };
+
+  languageButtons.forEach(button=>button.addEventListener("click",()=>{
+    language=button.dataset.authLanguage==="zh"?"zh":"en";
+    localStorage.setItem(languagePreferenceKey,language);
+    applyCopy();
+  }));
 
   start();
 })();
