@@ -300,6 +300,8 @@
         },
         completedFlights:(payload.completed_flights || []).map(flightFromRow),
         incomingFlights:(payload.incoming_flights || []).map(flightFromRow),
+        statisticsFlights:(payload.statistics_flights || payload.completed_flights || []).map(flightFromRow),
+        favourites:Object.fromEntries(Object.entries(payload.favourites || {}).map(([key,value])=>[favouriteToApp[key]||key,value])),
         statisticsSummary:payload.statistics_summary || {}
       };
     },

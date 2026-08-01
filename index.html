@@ -6,7 +6,7 @@
     <meta name="theme-color" content="#f4f6f8" />
     <title>Flight Archive</title>
     <link rel="icon" href="./logo.svg?v=20260730-v3" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css?v=20260802-friend-privacy-v1" />
+    <link rel="stylesheet" href="./styles.css?v=20260802-organize-stats-v1" />
   </head>
   <body>
     <section class="auth-gate" id="authGate" aria-live="polite" hidden>
@@ -252,7 +252,7 @@
             <div class="incoming-title-row">
               <h2 data-i18n="navIncoming">Incoming Flights</h2>
               <button class="incoming-organize-button" id="incomingOrganizeButton" data-i18n-title="organizeFlights" aria-label="Organize incoming flights">
-                <svg viewBox="0 0 24 24"><path d="M5 7h14M5 12h14M5 17h14"/><path d="m7 7 1.5 1.5L11 5.5"/></svg>
+                <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="3" height="3" rx=".6"/><rect x="4" y="10.5" width="3" height="3" rx=".6"/><rect x="4" y="16" width="3" height="3" rx=".6"/><path d="M10 6.5h10M10 12h10M10 17.5h10"/></svg>
               </button>
               <button class="incoming-add-button" id="addIncomingButton" data-i18n-title="addIncomingFlight" aria-label="Add incoming flight">
                 <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
@@ -264,6 +264,8 @@
             <strong><span id="selectedIncomingCount">0</span> <span data-i18n="selectedFlights">selected flights</span></strong>
             <button type="button" id="incomingCreateBundleButton" data-i18n="createBundle">Create ticket bundle</button>
             <button type="button" id="incomingAddToTripButton" data-i18n="addToTrip">Add to trip</button>
+            <button type="button" id="incomingEditTripButton" data-i18n="editTrip">Edit trip</button>
+            <button type="button" class="danger-button" id="incomingDeleteSelectedButton" data-i18n="deleteSelected">Delete selected</button>
             <button type="button" id="cancelIncomingOrganizeButton" data-i18n="cancel">Cancel</button>
           </div>
           <div class="incoming-list" id="incomingList"></div>
@@ -364,6 +366,7 @@
             <span></span>
             <button class="subtle-button" id="createBundleButton" type="button" data-i18n="createBundle">Create ticket bundle</button>
             <button class="subtle-button" id="addToTripButton" type="button" data-i18n="addToTrip">Add to trip</button>
+            <button class="subtle-button danger-button" id="deleteSelectedFlightsButton" type="button" data-i18n="deleteSelected">Delete selected</button>
             <button class="subtle-button" id="cancelOrganizeButton" type="button" data-i18n="cancel">Cancel</button>
           </div>
 
@@ -434,7 +437,7 @@
         </section>
 
         <section class="view page-view friend-list-view" id="friendStatisticsView">
-          <div class="friend-archive-heading"><h1 data-i18n="navStats">Statistics</h1></div>
+          <header class="page-header friend-archive-heading"><div><h1 data-i18n="statsTitle">Flight Statistics</h1></div></header>
           <div class="stats-list friend-stats-list" id="friendStatsList"></div>
         </section>
 
@@ -464,6 +467,10 @@
         </figure>
         <div class="detail-info-grid" id="detailInfoGrid"></div>
         <div class="detail-trip" id="detailTrip" hidden><span data-i18n="tripLabel">Trip label</span><strong id="detailTripLabel"></strong><small id="detailTripPeriod"></small></div>
+        <div class="detail-linked-actions" id="detailLinkedActions" hidden>
+          <button class="subtle-button" id="editDetailTripButton" type="button" data-i18n="editTrip">Edit trip</button>
+          <button class="subtle-button" id="editDetailBundleButton" type="button" data-i18n="editBundle">Edit ticket bundle</button>
+        </div>
         <div class="detail-note"><span data-i18n="notes">Notes</span><p id="detailNote"></p></div>
         <div class="modal-actions">
           <button class="subtle-button danger-button" id="deleteFlightButton" data-i18n="deleteRecord">Delete record</button>
@@ -681,7 +688,7 @@
     <div class="modal-backdrop" id="bundleModal">
       <section class="modal compact-action-modal" role="dialog" aria-modal="true">
         <button class="modal-close" data-close-modal aria-label="Close"><svg viewBox="0 0 24 24"><path d="m7 7 10 10M17 7 7 17"/></svg></button>
-        <header class="modal-header"><span data-i18n="bundle">TICKET BUNDLE</span><h2 data-i18n="createBundle">Create ticket bundle</h2><p data-i18n="bundleHelp">These flights share one purchase record.</p></header>
+        <header class="modal-header"><span data-i18n="bundle">TICKET BUNDLE</span><h2 id="bundleModalTitle" data-i18n="createBundle">Create ticket bundle</h2><p data-i18n="bundleHelp">These flights share one purchase record.</p></header>
         <label class="action-modal-field"><span data-i18n="bundleTotal">Bundle total</span><input id="bundleTotalInput" type="number" min="0" /></label>
         <div class="modal-actions"><button class="subtle-button" data-close-modal data-i18n="cancel">Cancel</button><button class="primary-button" id="saveBundleButton" type="button" data-i18n="saveBundle">Save bundle</button></div>
       </section>
@@ -706,10 +713,10 @@
     <script src="./backend-config.js?v=20260731-feedback-v1"></script>
     <script src="./auth.js?v=20260801-user-language-v1"></script>
     <script src="./flight-data.js?v=20260731-private-v1"></script>
-    <script src="./data-service.js?v=20260802-friend-privacy-v1"></script>
+    <script src="./data-service.js?v=20260802-organize-stats-v1"></script>
     <script src="./global-airports.js?v=20260730-v1"></script>
     <script src="./search-data.js?v=20260801-v1"></script>
     <script src="./reference-data.js?v=20260802-miat-v1"></script>
-    <script src="./app.js?v=20260802-friend-privacy-v1"></script>
+    <script src="./app.js?v=20260802-organize-stats-v1"></script>
   </body>
 </html>

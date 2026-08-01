@@ -631,10 +631,13 @@ body.auth-required .app-shell { visibility: hidden; }
 }
 .incoming-organize-button:hover, .incoming-organize-button.active { color: var(--blue); border-color: #a9cafa; background: var(--blue-soft); }
 .incoming-organize-button svg { width: 17px; }
+.incoming-organize-button svg rect { fill: none; stroke: currentColor; stroke-width: 1.6; }
 .incoming-bulk-toolbar { margin: -6px 0 10px; padding: 9px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; border: 1px solid #bfd8f8; border-radius: 10px; background: #f4f8ff; }
 .incoming-bulk-toolbar[hidden] { display: none; }
 .incoming-bulk-toolbar strong { grid-column: 1 / -1; color: var(--blue); font-size: 10px; }
 .incoming-bulk-toolbar button { min-height: 30px; padding: 0 7px; border: 1px solid #c7d9ef; border-radius: 7px; color: #52647b; background: white; font-size: 9px; cursor: pointer; }
+.incoming-bulk-toolbar button.danger-button { color: #b42332; border-color: #e8c7cc; }
+.incoming-bulk-toolbar button:disabled { cursor: default; opacity: .42; }
 .incoming-bulk-toolbar button:last-child { grid-column: 1 / -1; }
 .incoming-list { min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 9px; }
 .incoming-flight {
@@ -1207,6 +1210,7 @@ body.auth-required .app-shell { visibility: hidden; }
 .record-bulk-toolbar[hidden] { display: none; }
 .record-bulk-toolbar > span { flex: 1; }
 .record-bulk-toolbar strong { color: var(--blue); font-size: 11px; }
+.record-bulk-toolbar button:disabled { cursor: default; opacity: .42; }
 .flight-list.selection-mode { padding-left: 0; }
 .flight-row { position: relative; }
 .flight-list.selection-mode .flight-row { padding-left: 50px; cursor: default; }
@@ -1231,6 +1235,8 @@ body.auth-required .app-shell { visibility: hidden; }
 .detail-trip span { grid-row: 1 / 3; align-self: center; color: var(--muted); font-size: 9px; text-transform: uppercase; }
 .detail-trip strong { font-size: 14px; }
 .detail-trip small { color: var(--muted); font-size: 9px; }
+.detail-linked-actions { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; }
+.detail-linked-actions[hidden], .detail-linked-actions button[hidden] { display: none; }
 .form-grid label, .full-field { display: flex; flex-direction: column; gap: 5px; }
 .form-grid label > span, .full-field > span { color: #6e7a8c; font-size: 8px; }
 .form-grid input, .form-grid select, .full-field textarea { width: 100%; border: 1px solid var(--line); border-radius: 7px; outline: 0; color: var(--text); background: white; font-size: 9px; }

@@ -307,6 +307,15 @@ Object.assign(translations.zh,{
   fullAirportSearchHint:"检索完整的本地机场目录"
 });
 
+Object.assign(translations.en,{
+  deleteSelected:"Delete selected",confirmBulkDelete:"Delete {count} selected flights? This cannot be undone.",
+  editBundle:"Edit ticket bundle",updateBundle:"Update bundle",selectOneTrip:"Select flights belonging to one trip to edit it."
+});
+Object.assign(translations.zh,{
+  deleteSelected:"批量删除",confirmBulkDelete:"确定删除选中的 {count} 趟航班吗？此操作无法撤销。",
+  editBundle:"修改套票",updateBundle:"更新套票",selectOneTrip:"请选择属于同一个 Trip 的航班后再修改。"
+});
+
 const savedHubs = [];
 const legacyRegionOptions = [
   { code:"CN", en:"Mainland China", zh:"中国大陆", localeEn:"en-CN", localeZh:"zh-CN" },
@@ -359,7 +368,8 @@ const state = {
   region:savedRegion, currency:savedCurrency, friends:[],friendSearchResults:[],friendRecords:null,
   privacy:{records:true,incoming:true,statistics:true},
   recordSelectionMode:false,selectedFlightIds:new Set(),showTripLabels:false,bundleSession:null,
-  incomingSelectionMode:false,selectedIncomingIds:new Set(),recordBatchScope:"completed",editingTripId:null,editingTripFlightIds:new Set()
+  incomingSelectionMode:false,selectedIncomingIds:new Set(),recordBatchScope:"completed",editingTripId:null,editingTripFlightIds:new Set(),
+  editingBundleId:null,editingBundleFlightIds:new Set(),statsReturnFriend:false
 };
 const flightLookupState={
   completed:{candidates:[],addedId:null},
@@ -1250,7 +1260,7 @@ function genericAircraftMarkup(label) {
 }
 
 function bundleMembers(f,sourceFlights=null) {
-  const source=sourceFlights||(plannedIncomingFlights.includes(f)?plannedIncomingFlights:flights);
+  const source=sourceFlights||ownFlights();
   return f?.fareGroup?source.filter(item=>item.fareGroup===f.fareGroup):[f];
 }
 function bundleTotalForFlight(f,sourceFlights=null) {
@@ -1368,6 +1378,9 @@ function updateRecordBulkToolbar() {
   const toolbar=document.getElementById("recordBulkToolbar");
   toolbar.hidden=!state.recordSelectionMode;
   document.getElementById("selectedFlightCount").textContent=state.selectedFlightIds.size;
+  document.getElementById("createBundleButton").disabled=state.selectedFlightIds.size<2;
+  document.getElementById("addToTripButton").disabled=state.selectedFlightIds.size<1;
+  document.getElementById("deleteSelectedFlightsButton").disabled=state.selectedFlightIds.size<1;
   document.getElementById("organizeFlightsButton").classList.toggle("active",state.recordSelectionMode);
 }
 function setRecordSelectionMode(active) {
@@ -1376,6 +1389,8 @@ function setRecordSelectionMode(active) {
     state.recordBatchScope="completed";
     state.editingTripId=null;
     state.editingTripFlightIds.clear();
+    state.editingBundleId=null;
+    state.editingBundleFlightIds.clear();
   }
   if(!active)state.selectedFlightIds.clear();
   updateRecordBulkToolbar();renderFlights();
@@ -1383,16 +1398,27 @@ function setRecordSelectionMode(active) {
 function selectedFlights() {
   return flights.filter(f=>state.selectedFlightIds.has(String(f.id)));
 }
-function openTripEditor(tripId) {
-  const items=flights.filter(f=>{
+function ownFlights() {
+  return [...new Set([...flights,...plannedIncomingFlights])];
+}
+function flightsForScope(scope) {
+  return scope==="incoming"?incomingFlights():flights;
+}
+function recordStatusForFlight(f) {
+  return plannedIncomingFlights.includes(f)||f.recordStatus==="upcoming"?"upcoming":"completed";
+}
+function openTripEditor(tripId,scope="completed") {
+  const items=ownFlights().filter(f=>{
     const trip=flightTrip(f);
     return trip&&String(trip.id||trip.label)===String(tripId);
   });
   const trip=flightTrip(items[0]);
   if(!trip||!items.length)return;
-  state.recordBatchScope="completed";
+  state.recordBatchScope=scope;
   state.editingTripId=trip.id||tripId;
   state.editingTripFlightIds=new Set(items.map(f=>String(f.id)));
+  state.editingBundleId=null;
+  state.editingBundleFlightIds.clear();
   document.getElementById("tripModalTitle").textContent=t("editTrip");
   document.getElementById("saveTripButton").textContent=t("updateTrip");
   document.getElementById("tripLabelInput").value=trip.label||"";
@@ -1401,20 +1427,21 @@ function openTripEditor(tripId) {
   openModal("tripModal");
 }
 function batchSelectedFlights() {
-  if(state.editingTripId)return flights.filter(f=>state.editingTripFlightIds.has(String(f.id)));
+  if(state.editingTripId)return ownFlights().filter(f=>state.editingTripFlightIds.has(String(f.id)));
+  if(state.editingBundleId)return ownFlights().filter(f=>state.editingBundleFlightIds.has(String(f.id)));
   return state.recordBatchScope==="incoming"
     ? incomingFlights().filter(f=>state.selectedIncomingIds.has(String(f.id)))
     : selectedFlights();
 }
-async function saveFlightBatch(items,recordStatus=state.recordBatchScope==="incoming"?"upcoming":"completed") {
+async function saveFlightBatch(items) {
   if(!window.flightArchiveData?.enabled)return;
-  const saved=await Promise.all(items.map(f=>window.flightArchiveData.saveFlight(f,recordStatus)));
+  const saved=await Promise.all(items.map(f=>window.flightArchiveData.saveFlight(f,recordStatusForFlight(f))));
   saved.forEach((row,index)=>Object.assign(items[index],row));
 }
 async function saveSelectedBundle() {
   const items=batchSelectedFlights(),totalRaw=document.getElementById("bundleTotalInput").value,total=Number(totalRaw);
   if(items.length<2||totalRaw===""||!Number.isFinite(total)||total<0){showToast(t("saveFailed"),t("bundleRequired"));return;}
-  const groupId=crypto.randomUUID();
+  const groupId=state.editingBundleId||crypto.randomUUID();
   items.sort((a,b)=>String(a.date).localeCompare(String(b.date))).forEach((f,index)=>{
     f.fareGroup=groupId;f.fare=index===0?total:null;f.fareRaw=index===0?String(total):null;
   });
@@ -1432,6 +1459,8 @@ async function saveSelectedTrip() {
 function finishBatchEditing() {
   state.editingTripId=null;
   state.editingTripFlightIds.clear();
+  state.editingBundleId=null;
+  state.editingBundleFlightIds.clear();
   if(state.recordBatchScope==="incoming"){
     state.selectedIncomingIds.clear();
     updateIncomingBulkToolbar();
@@ -1446,14 +1475,35 @@ function openBundleForScope(scope) {
   state.recordBatchScope=scope;
   state.editingTripId=null;
   state.editingTripFlightIds.clear();
+  state.editingBundleId=null;
+  state.editingBundleFlightIds.clear();
   if(batchSelectedFlights().length<2)return;
+  document.getElementById("bundleModalTitle").textContent=t("createBundle");
+  document.getElementById("saveBundleButton").textContent=t("saveBundle");
   document.getElementById("bundleTotalInput").value="";
+  openModal("bundleModal");
+}
+function openBundleEditorForFlight(f) {
+  if(!f?.fareGroup)return;
+  const items=ownFlights().filter(item=>String(item.fareGroup)===String(f.fareGroup));
+  if(items.length<2)return;
+  state.recordBatchScope=recordStatusForFlight(f)==="upcoming"?"incoming":"completed";
+  state.editingTripId=null;
+  state.editingTripFlightIds.clear();
+  state.editingBundleId=f.fareGroup;
+  state.editingBundleFlightIds=new Set(items.map(item=>String(item.id)));
+  document.getElementById("bundleModalTitle").textContent=t("editBundle");
+  document.getElementById("saveBundleButton").textContent=t("updateBundle");
+  document.getElementById("bundleTotalInput").value=String(items.reduce((sum,item)=>sum+(Number(item.fare)||0),0));
+  closeModals();
   openModal("bundleModal");
 }
 function openTripForScope(scope) {
   state.recordBatchScope=scope;
   state.editingTripId=null;
   state.editingTripFlightIds.clear();
+  state.editingBundleId=null;
+  state.editingBundleFlightIds.clear();
   const items=batchSelectedFlights();
   if(!items.length)return;
   const dates=items.map(f=>f.date).sort();
@@ -1464,17 +1514,43 @@ function openTripForScope(scope) {
   document.getElementById("tripEndInput").value=dates.at(-1)||"";
   openModal("tripModal");
 }
+function editSelectedIncomingTrip() {
+  const trips=[...new Set(incomingFlights().filter(f=>state.selectedIncomingIds.has(String(f.id))).map(f=>flightTrip(f)?.id||flightTrip(f)?.label).filter(Boolean))];
+  if(trips.length!==1){showToast(t("editTrip"),t("selectOneTrip"));return;}
+  openTripEditor(trips[0],"incoming");
+}
+async function deleteSelectedForScope(scope) {
+  const ids=scope==="incoming"?state.selectedIncomingIds:state.selectedFlightIds;
+  const items=flightsForScope(scope).filter(f=>ids.has(String(f.id)));
+  if(!items.length)return;
+  const message=t("confirmBulkDelete").replace("{count}",String(items.length));
+  if(!window.confirm(message))return;
+  try{
+    if(window.flightArchiveData?.enabled){
+      await Promise.all(items.filter(f=>/^[0-9a-f-]{36}$/i.test(String(f.id))).map(f=>window.flightArchiveData.deleteFlight(f.id)));
+    }
+    items.forEach(f=>{
+      let index=flights.indexOf(f);if(index>=0)flights.splice(index,1);
+      index=plannedIncomingFlights.indexOf(f);if(index>=0)plannedIncomingFlights.splice(index,1);
+    });
+    ids.clear();
+    rebuildRoutes();
+    updateRecordBulkToolbar();updateIncomingBulkToolbar();renderFlights();renderStats();renderIncomingFlights();drawGlobe();
+    showToast(t("recordDeleted"),`${items.length} ${t("selectedFlights")}`);
+  }catch(error){showToast(t("saveFailed"),error?.message||String(error));}
+}
 
-function openFlight(id,{returnStatsType=null}={}) {
-  const friendFlights=state.friendRecords?.records||[];
+function openFlight(id,{returnStatsType=null,returnStatsFriend=false}={}) {
+  const friendFlights=[...(state.friendRecords?.records||[]),...(state.friendRecords?.incomingFlights||[]),...(state.friendRecords?.statisticsFlights||[])];
   const f = [...flights,...plannedIncomingFlights,...friendFlights].find(item => String(item.id) === String(id));
   if (!f) return;
-  const completedFlight=flights.includes(f);
+  const ownFlight=flights.includes(f)||plannedIncomingFlights.includes(f);
   const friendFlight=friendFlights.includes(f);
   state.activeFlightId=f.id;
   state.statsReturnType=returnStatsType;
-  document.getElementById("editFlightButton").hidden=!completedFlight;
-  document.getElementById("deleteFlightButton").hidden=friendFlight;
+  state.statsReturnFriend=Boolean(returnStatsFriend);
+  document.getElementById("editFlightButton").hidden=!ownFlight;
+  document.getElementById("deleteFlightButton").hidden=!ownFlight;
   const statsBackButton=document.getElementById("detailBackToStats");
   statsBackButton.hidden=!returnStatsType;
   if(returnStatsType){
@@ -1499,7 +1575,7 @@ function openFlight(id,{returnStatsType=null}={}) {
   }
   document.getElementById("detailInfoGrid").innerHTML = [
     [t("aircraft"), f.aircraft], [t("registration"), f.registration || "—"], [t("seat"), f.seat],
-    [t("cabin"), displayCabin(f.cabin)], [t("fare"), f.fareGroup?`${formatFare(bundleTotalForFlight(f))} (${t("bundle")})`:formatFare(f.fare)], [t("gate"), f.gate || "—"]
+    [t("cabin"), displayCabin(f.cabin)], [t("fare"), f.fareGroup?`${formatFare(bundleTotalForFlight(f,friendFlight?friendFlights:ownFlights()))} (${t("bundle")})`:formatFare(f.fare)], [t("gate"), f.gate || "—"]
   ].map(([key,value]) => `<div><span>${key}</span><strong>${value}</strong></div>`).join("");
   const trip=flightTrip(f),tripPanel=document.getElementById("detailTrip");
   tripPanel.hidden=!trip;
@@ -1507,6 +1583,12 @@ function openFlight(id,{returnStatsType=null}={}) {
     document.getElementById("detailTripLabel").textContent=trip.label;
     document.getElementById("detailTripPeriod").textContent=`${formatDate(trip.start)} — ${formatDate(trip.end)}`;
   }
+  const linkedActions=document.getElementById("detailLinkedActions");
+  const editTripButton=document.getElementById("editDetailTripButton");
+  const editBundleButton=document.getElementById("editDetailBundleButton");
+  linkedActions.hidden=!ownFlight||(!trip&&!f.fareGroup);
+  editTripButton.hidden=!trip;
+  editBundleButton.hidden=!f.fareGroup;
   openModal("detailModal");
 }
 
@@ -1602,11 +1684,21 @@ function renderIncomingFlights() {
 function updateIncomingBulkToolbar() {
   document.getElementById("incomingBulkToolbar").hidden=!state.incomingSelectionMode;
   document.getElementById("selectedIncomingCount").textContent=state.selectedIncomingIds.size;
+  const selected=incomingFlights().filter(f=>state.selectedIncomingIds.has(String(f.id)));
+  const tripIds=[...new Set(selected.map(f=>flightTrip(f)?.id||flightTrip(f)?.label).filter(Boolean))];
+  document.getElementById("incomingCreateBundleButton").disabled=selected.length<2;
+  document.getElementById("incomingAddToTripButton").disabled=selected.length<1;
+  document.getElementById("incomingEditTripButton").disabled=tripIds.length!==1;
+  document.getElementById("incomingDeleteSelectedButton").disabled=selected.length<1;
   document.getElementById("incomingOrganizeButton").classList.toggle("active",state.incomingSelectionMode);
 }
 function setIncomingSelectionMode(active) {
   state.incomingSelectionMode=Boolean(active);
   state.recordBatchScope="incoming";
+  state.editingTripId=null;
+  state.editingTripFlightIds.clear();
+  state.editingBundleId=null;
+  state.editingBundleFlightIds.clear();
   if(!active)state.selectedIncomingIds.clear();
   updateIncomingBulkToolbar();
   renderIncomingFlights();
@@ -1706,7 +1798,8 @@ function saveIncomingFlight() {
     terminalTo:document.getElementById("incomingTerminalTo").value.trim()||"—",
     seat:document.getElementById("incomingSeat").value.trim()||"—",
     cabin:document.getElementById("incomingCabinSelect").value||t("economy"),
-    fare:fareValue===""?null:Math.max(0,Number(fareValue)),fareCurrency:state.currency,fareRaw:fareValue||null,fareGroup:null,
+    fare:fareValue===""?(existing?.fare??null):Math.max(0,Number(fareValue)),fareCurrency:existing?.fareCurrency||state.currency,
+    fareRaw:fareValue||existing?.fareRaw||null,fareGroup:existing?.fareGroup||null,
     gate:document.getElementById("incomingGate").value.trim()||"—",
     note:document.getElementById("incomingNote").value.trim(),
     scope:effectiveFlightScope({from,to}),
@@ -1923,21 +2016,7 @@ function renderFriendIncoming() {
   container.innerHTML=items.length?items.map(friendFlightMarkup).join(""):`<div class="friends-empty">${t("noIncoming")}</div>`;
 }
 function renderFriendStatistics() {
-  const s=state.friendRecords?.statisticsSummary||{},container=document.getElementById("friendStatsList");
-  const airportCodes=Array.isArray(s.airport_codes)?s.airport_codes:[];
-  const countryCount=new Set(airportCodes.map(code=>airports[code]?.countryCode).filter(Boolean)).size;
-  const cityCount=new Set(airportCodes.map(code=>airportCity(airports[code])).filter(Boolean)).size;
-  const cards=[
-    [t("totalTime"),durationText(Number(s.total_minutes)||0),`${Number(s.flight_count)||0} ${t("flightUnit")}`],
-    [t("totalDistance"),`${formatNumber(Number(s.total_distance)||0)} km`,`${Number(s.route_count)||0} ${t("routeUnit")}`],
-    [t("airlinesFlown"),String(Number(s.airline_count)||0),t("airlineUnit")],
-    [t("aircraftTypes"),String(Number(s.aircraft_count)||0),t("typeUnit")],
-    [t("airportsVisited"),String(airportCodes.length),t("airportUnit")],
-    [t("countriesRegions"),String(countryCount),t("countryUnit")],
-    [t("citiesVisited"),String(cityCount),t("cityUnit")],
-    [t("directedRoutes"),String(Number(s.route_count)||0),t("routeUnit")]
-  ];
-  container.innerHTML=cards.map(([label,value,unit])=>`<article class="stat-block simple friend-stat-card"><span class="stat-label">${escapeHtml(label)}</span><strong class="stat-value">${escapeHtml(value)}</strong><span class="stat-unit">${escapeHtml(unit)}</span></article>`).join("");
+  renderStats({friend:true});
 }
 function friendViewAllowed(mode) {
   if(mode==="incoming")return state.friendRecords?.privacy.incoming!==false;
@@ -1959,7 +2038,7 @@ async function openFriendRecords(userId) {
   if(!profile)return;
   try{
     const archive=await window.flightArchiveData.getFriendArchive(userId);
-    state.friendRecords={profile,records:archive.completedFlights,incomingFlights:archive.incomingFlights,statisticsSummary:archive.statisticsSummary,privacy:archive.privacy,mapVisible:true,listTripLabels:false};
+    state.friendRecords={profile,records:archive.completedFlights,incomingFlights:archive.incomingFlights,statisticsFlights:archive.statisticsFlights,favourites:archive.favourites,statisticsSummary:archive.statisticsSummary,privacy:archive.privacy,mapVisible:true,listTripLabels:false};
     renderFriendFlightList();renderFriendIncoming();renderFriendStatistics();
     showFriendMap();
   }catch(error){showToast(t("saveFailed"),error?.message||String(error));}
@@ -2260,11 +2339,11 @@ function preferenceLabels(type) {
     cities:["mostVisitedCity","favouriteCity"]
   }[type]||null;
 }
-function preferenceDetailMarkup(type,sourceFlights) {
+function preferenceDetailMarkup(type,sourceFlights,favourites=savedFavourites,editable=true) {
   const labels=preferenceLabels(type);
   if(!labels)return "";
   const most=preferenceOptions(type,sourceFlights)[0]||null;
-  const favouriteValue=savedFavourites[type]||"";
+  const favouriteValue=favourites[type]||"";
   const options=favouriteOptions(type);
   const editorValue=type==="cities"?cityInputDisplay(favouriteValue)
     :type==="countries"&&favouriteValue?displayName("region",favouriteValue)
@@ -2276,14 +2355,14 @@ function preferenceDetailMarkup(type,sourceFlights) {
   </div>`;
   return `<section class="stats-preference-panel" data-favourite-card="${type}">
     ${row(t(labels[0]),most?.value||"",most?.label||"—",preferenceIcon(type,most?.value||"",sourceFlights,"stats-preference-logo"))}
-    ${row(t(labels[1]),favouriteValue,favouriteDisplay(type,favouriteValue),preferenceIcon(type,favouriteValue,flights,"stats-preference-logo"),true)}
-    <div class="stats-favourite-editor" hidden>
+    ${row(t(labels[1]),favouriteValue,favouriteDisplay(type,favouriteValue),preferenceIcon(type,favouriteValue,sourceFlights,"stats-preference-logo"),editable)}
+    ${editable?`<div class="stats-favourite-editor" hidden>
       <input data-favourite-input ${type==="cities"?"":`list="statsFavouriteOptions-${type}"`} value="${escapeHtml(editorValue)}" autocomplete="off" />
       <datalist id="statsFavouriteOptions-${type}">
         ${options.map(option=>`<option value="${escapeHtml(type==="countries"?option.label:option.value)}">${escapeHtml(option.label)}</option>`).join("")}
       </datalist>
       <button class="primary-button" type="button" data-save-favourite>${t("saveFavourite")}</button>
-    </div>
+    </div>`:""}
   </section>`;
 }
 function normalizeFavouriteEditorValue(type,value,storedValue="") {
@@ -2346,18 +2425,19 @@ function statHighlightsMarkup(items) {
       </span>
     </div>`).join("")}</div>`;
 }
-function renderStats() {
-  const scopedFlights=filteredFlights(),s=statsSnapshot(scopedFlights);
+function renderStats({friend=false}={}) {
+  const scopedFlights=friend?(state.friendRecords?.statisticsFlights||[]):filteredFlights(),s=statsSnapshot(scopedFlights);
+  const favourites=friend?(state.friendRecords?.favourites||{}):savedFavourites;
   const durationSorted=[...scopedFlights].sort((a,b)=>b.durationMinutes-a.durationMinutes);
   const distanceSorted=[...scopedFlights].sort((a,b)=>b.distance-a.distance);
   const longest=durationSorted[0],shortest=durationSorted.at(-1);
   const farthest=distanceSorted[0],shortestDistance=distanceSorted.at(-1);
   const preferenceHighlights=type=>{
     const labels=preferenceLabels(type),most=preferenceOptions(type,scopedFlights)[0]||null;
-    const favouriteValue=savedFavourites[type]||"";
+    const favouriteValue=favourites[type]||"";
     return [
       {label:t(labels[0]),value:most?.label||"—",icon:preferenceIcon(type,most?.value||"",scopedFlights,"stat-highlight-logo")},
-      {label:t(labels[1]),value:favouriteDisplay(type,favouriteValue),icon:preferenceIcon(type,favouriteValue,flights,"stat-highlight-logo")}
+      {label:t(labels[1]),value:favouriteDisplay(type,favouriteValue),icon:preferenceIcon(type,favouriteValue,scopedFlights,"stat-highlight-logo")}
     ];
   };
   const entries=[
@@ -2377,13 +2457,15 @@ function renderStats() {
     {type:"routes",label:t("directedRoutes"),value:formatNumber(s.directedRoutes.size),unit:t("routeUnit"),highlights:[]},
     {type:"fare",label:t("totalFare"),value:formatFare(s.totalFare),unit:`${s.knownFares.length} ${t("knownFares")}`,highlights:[]}
   ];
-  document.getElementById("statsList").innerHTML=entries.map(item=>`
+  const container=document.getElementById(friend?"friendStatsList":"statsList");
+  if(!container)return;
+  container.innerHTML=entries.map(item=>`
     <button class="stat-block${item.highlights.length?"":" simple"}${["time","distance","airlines"].includes(item.type)?" aligned-stat":""}" data-stat="${item.type}">
       <span class="stat-label">${item.label}</span><i class="stat-arrow">›</i>
       <strong class="stat-value">${item.value}</strong><b class="stat-unit">${item.unit}</b>
       ${statHighlightsMarkup(item.highlights)}
     </button>`).join("");
-  document.querySelectorAll("[data-stat]").forEach(el=>el.addEventListener("click",()=>openStatsDetail(el.dataset.stat)));
+  container.querySelectorAll("[data-stat]").forEach(el=>el.addEventListener("click",()=>openStatsDetail(el.dataset.stat,{friend})));
 }
 function ratioText(value) {
   const digits=value>=100?0:value>=10?1:value>=1?2:3;
@@ -2564,8 +2646,9 @@ function airportForCountryLabel(label) {
 function airportForCityLabel(label) {
   return Object.values(airports).find(airport=>airportCity(airport)===label);
 }
-function openStatsDetail(type) {
-  const scopedFlights=filteredFlights(),s=statsSnapshot(scopedFlights);
+function openStatsDetail(type,{friend=false}={}) {
+  const scopedFlights=friend?(state.friendRecords?.statisticsFlights||[]):filteredFlights(),s=statsSnapshot(scopedFlights);
+  const favourites=friend?(state.friendRecords?.favourites||{}):savedFavourites;
   const title={time:t("totalTime"),distance:t("totalDistance"),aircraft:t("aircraftTypes"),airlines:t("airlinesFlown"),airports:t("airportsVisited"),countries:t("countriesRegions"),routes:t("directedRoutes"),cities:t("citiesVisited"),fare:t("totalFare")}[type];
   let summary="",content="";
   if(!scopedFlights.length){
@@ -2652,13 +2735,13 @@ function openStatsDetail(type) {
       }).join("")}`;
   }
   if(["aircraft","airlines","airports","countries","cities"].includes(type)){
-    content=`${preferenceDetailMarkup(type,scopedFlights)}${content}`;
+    content=`${preferenceDetailMarkup(type,scopedFlights,favourites,!friend)}${content}`;
   }
   document.getElementById("statsDetailTitle").textContent=title;
   document.getElementById("statsDetailSummary").textContent=summary;
   document.getElementById("statsDetailContent").innerHTML=content;
-  document.querySelectorAll("#statsDetailContent [data-flight-id]").forEach(el=>el.addEventListener("click",()=>{closeModals();openFlight(el.dataset.flightId,{returnStatsType:type});}));
-  bindFavouriteEditor(type);
+  document.querySelectorAll("#statsDetailContent [data-flight-id]").forEach(el=>el.addEventListener("click",()=>{closeModals();openFlight(el.dataset.flightId,{returnStatsType:type,returnStatsFriend:friend});}));
+  if(!friend)bindFavouriteEditor(type);
   openModal("statsDetailModal");
   if(type==="countries"){
     countryStatsMapFlights=[...scopedFlights];
@@ -3522,10 +3605,13 @@ document.getElementById("toggleTripLabelsButton").addEventListener("click",()=>{
 });
 document.getElementById("createBundleButton").addEventListener("click",()=>openBundleForScope("completed"));
 document.getElementById("addToTripButton").addEventListener("click",()=>openTripForScope("completed"));
+document.getElementById("deleteSelectedFlightsButton").addEventListener("click",()=>deleteSelectedForScope("completed"));
 document.getElementById("incomingOrganizeButton").addEventListener("click",()=>setIncomingSelectionMode(!state.incomingSelectionMode));
 document.getElementById("cancelIncomingOrganizeButton").addEventListener("click",()=>setIncomingSelectionMode(false));
 document.getElementById("incomingCreateBundleButton").addEventListener("click",()=>openBundleForScope("incoming"));
 document.getElementById("incomingAddToTripButton").addEventListener("click",()=>openTripForScope("incoming"));
+document.getElementById("incomingEditTripButton").addEventListener("click",editSelectedIncomingTrip);
+document.getElementById("incomingDeleteSelectedButton").addEventListener("click",()=>deleteSelectedForScope("incoming"));
 document.getElementById("saveBundleButton").addEventListener("click",saveSelectedBundle);
 document.getElementById("saveTripButton").addEventListener("click",saveSelectedTrip);
 document.getElementById("yearFilter").addEventListener("change",e=>applyFlightFilters(e.target.value));
@@ -3541,11 +3627,27 @@ document.getElementById("importButton").addEventListener("click",()=>{setRecordA
 document.getElementById("detailBackToStats").addEventListener("click",()=>{
   const returnType=state.statsReturnType;
   if(!returnType)return;
+  const returnFriend=state.statsReturnFriend;
   state.statsReturnType=null;
+  state.statsReturnFriend=false;
   closeModals();
-  openStatsDetail(returnType);
+  openStatsDetail(returnType,{friend:returnFriend});
 });
-document.getElementById("editFlightButton").addEventListener("click",()=>{closeModals();prepareEditForm(state.activeFlightId);});
+document.getElementById("editFlightButton").addEventListener("click",()=>{
+  const incoming=plannedIncomingFlights.some(f=>String(f.id)===String(state.activeFlightId));
+  closeModals();
+  if(incoming)prepareIncomingEditForm(state.activeFlightId);else prepareEditForm(state.activeFlightId);
+});
+document.getElementById("editDetailTripButton").addEventListener("click",()=>{
+  const flight=ownFlights().find(f=>String(f.id)===String(state.activeFlightId)),trip=flightTrip(flight);
+  if(!flight||!trip)return;
+  closeModals();
+  openTripEditor(trip.id||trip.label,recordStatusForFlight(flight)==="upcoming"?"incoming":"completed");
+});
+document.getElementById("editDetailBundleButton").addEventListener("click",()=>{
+  const flight=ownFlights().find(f=>String(f.id)===String(state.activeFlightId));
+  if(flight)openBundleEditorForFlight(flight);
+});
 document.getElementById("deleteFlightButton").addEventListener("click",()=>deleteFlightRecord(state.activeFlightId));
 document.getElementById("onboardingContinue").addEventListener("click",acceptRequiredOnboardingPreferences);
 document.getElementById("onboardingSkip").addEventListener("click",()=>completeOnboarding(false));
