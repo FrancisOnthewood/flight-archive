@@ -273,9 +273,9 @@ Object.assign(translations.zh,{
   invalidDestinationCity:"请从所选目的地国家 / 地区的城市列表中选择。"
 });
 translations.en.invalidCityCountry="Choose the city country / region from the list.";
-translations.en.invalidDestinationCity="Choose a city from the selected city country / region.";
+translations.en.invalidDestinationCity="Choose a city from the search results.";
 translations.zh.invalidCityCountry="请从列表中选择城市所在国家 / 地区。";
-translations.zh.invalidDestinationCity="请从所选城市所在国家 / 地区的城市列表中选择。";
+translations.zh.invalidDestinationCity="请从城市搜索结果中选择。";
 translations.en.dayNight="Real-time daylight";
 translations.zh.dayNight="实时晨昏线";
 translations.en.fullAirportSearch="Search all airports";
@@ -283,7 +283,8 @@ translations.zh.fullAirportSearch="进入完整搜索";
 translations.en.majorAirportResults="Major airports";
 translations.zh.majorAirportResults="主要枢纽机场";
 Object.assign(translations.en,{
-  listView:"List view",friendMapFlights:"flights on this map",moreActions:"More actions",
+  listView:"List view",mapView:"Map view",friendMapFlights:"flights on this map",moreActions:"More actions",
+  fullCitySearch:"Search all cities",majorCityResults:"Major cities",citySearchHint:"Search city or country / region",
   showTripLabels:"Show trip labels",hideTripLabels:"Hide trip labels",organizeFlights:"Organize",selectedFlights:"selected flights",
   createBundle:"Create ticket bundle",addToTrip:"Add to trip",bundleHelp:"These flights share one purchase record.",bundleTotal:"Bundle total",
   tripLabel:"Trip label",tripPeriod:"Trip period",tripNamePlaceholder:"e.g. 2026 Australia",otherFlights:"Other flights",saveBundle:"Save bundle",saveTrip:"Save trip",
@@ -292,7 +293,8 @@ Object.assign(translations.en,{
   fullAirportSearchHint:"Search the complete local airport directory"
 });
 Object.assign(translations.zh,{
-  listView:"列表视图",friendMapFlights:"条好友飞行记录",moreActions:"更多操作",
+  listView:"列表视图",mapView:"地图视图",friendMapFlights:"条好友飞行记录",moreActions:"更多操作",
+  fullCitySearch:"进入完整搜索",majorCityResults:"主要城市",citySearchHint:"搜索城市或国家 / 地区",
   showTripLabels:"显示 Trip Label",hideTripLabels:"隐藏 Trip Label",organizeFlights:"批量整理",selectedFlights:"条已选航班",
   createBundle:"创建套票",addToTrip:"加入 Trip",bundleHelp:"这些航班共享同一笔购买记录。",bundleTotal:"套票总价",
   tripLabel:"Trip Label",tripPeriod:"行程时段",tripNamePlaceholder:"例如：2026 Australia",otherFlights:"其他航班",saveBundle:"保存套票",saveTrip:"保存 Trip",
@@ -450,7 +452,7 @@ function aircraftSearchMarkup() {
 }
 function regionSearchMarkup() {
   return [...regionOptions].sort((a,b)=>displayName("region",a.code).localeCompare(displayName("region",b.code),activeLocale()))
-    .map(option=>`<option value="${option.code}">${escapeHtml(displayName("region",option.code))}</option>`).join("");
+    .map(option=>`<option value="${escapeHtml(displayName("region",option.code))}"></option>`).join("");
 }
 function normalizedSearchText(value) {
   return String(value||"").normalize("NFKD").replace(/[\u0300-\u036f]/g,"").trim().toLocaleLowerCase();
@@ -539,31 +541,59 @@ function storedCityParts(value="") {
   const airport=Object.values(airports).find(item=>(item.cityEn||item.city)===value || (item.cityZh||item.city)===value);
   return {country:airport?.countryCode||state.region,city:value};
 }
-function citiesForCountry(countryCode) {
-  const values=new Map();
-  Object.values(airports).filter(airport=>airport.countryCode===countryCode).forEach(airport=>{
-    const key=airport.cityEn||airport.city;
-    if(key)values.set(key,state.lang==="zh"?(airport.cityZh||airport.city||key):key);
+function canonicalCityName(value) {
+  return String(value||"").replace(/\s*\([^)]*\)\s*$/," ").replace(/\s+/g," ").trim();
+}
+const cityIndex=(()=>{
+  const map=new Map();
+  Object.values(airports).forEach(airport=>{
+    const cityEn=canonicalCityName(airport.cityEn||airport.city),countryCode=airport.countryCode;
+    if(!cityEn||!countryCode)return;
+    const key=`${countryCode}|${cityEn}`;
+    const current=map.get(key)||{value:key,countryCode,cityEn,cityZh:"",major:false,airportCodes:[]};
+    if(airport.cityZh)current.cityZh=canonicalCityName(airport.cityZh);
+    current.major=current.major||Boolean(airportSearchData.majorAirports?.has(airport.code));
+    current.airportCodes.push(airport.code);
+    map.set(key,current);
   });
-  return [...values].map(([value,label])=>({value,label})).sort((a,b)=>a.label.localeCompare(b.label,activeLocale()));
+  return [...map.values()];
+})();
+function cityLabel(city) {
+  return state.lang==="zh"?(city.cityZh||city.cityEn):city.cityEn;
 }
-function renderCityOptions(prefix="") {
-  const country=document.getElementById(prefix?`${prefix}FavouriteCityCountry`:"favouriteCityCountryInput");
-  const input=document.getElementById(prefix?`${prefix}FavouriteCity`:"favouriteCityInput");
-  const datalist=document.getElementById(prefix?"onboardingCityOptions":"favouriteCityOptions");
-  if(!country||!input||!datalist)return;
-  const countryCode=normalizeRegionFavourite(country.value);
-  country.dataset.regionCode=countryCode;
-  datalist.innerHTML=citiesForCountry(countryCode).map(city=>`<option value="${escapeHtml(city.value)}">${escapeHtml(city.label)}</option>`).join("");
+function cityDisplay(city) {
+  return `${cityLabel(city)} · ${displayName("region",city.countryCode)}`;
 }
-function updateFavouriteCityOptions(prefix="") {
-  const country=document.getElementById(prefix?`${prefix}FavouriteCityCountry`:"favouriteCityCountryInput");
-  const city=document.getElementById(prefix?`${prefix}FavouriteCity`:"favouriteCityInput");
-  if(!country||!city)return;
-  const normalized=normalizeRegionFavourite(country.value);
-  if(country.value.trim()&&!normalized)return;
-  if((country.dataset.regionCode||"")!==normalized)city.value="";
-  renderCityOptions(prefix);
+function cityMatchScore(city,query) {
+  const q=normalizedSearchText(query);
+  const values=[city.cityEn,city.cityZh,displayName("region",city.countryCode,"en"),displayName("region",city.countryCode,"zh"),cityDisplay(city)].map(normalizedSearchText);
+  if(values.some(value=>value===q))return 0;
+  if(values.some(value=>value.startsWith(q)))return 2;
+  if(values.some(value=>value.includes(q)))return 5;
+  return Infinity;
+}
+function citySearchResults(query,{full=false,limit=16}={}) {
+  const all=cityIndex.map(city=>({city,score:cityMatchScore(city,query)})).filter(item=>Number.isFinite(item.score))
+    .sort((a,b)=>a.score-b.score||cityLabel(a.city).localeCompare(cityLabel(b.city),activeLocale()));
+  const major=all.filter(item=>item.city.major);
+  const exactOutside=all.some(item=>item.score===0&&!item.city.major);
+  return {matches:(full?all:major).slice(0,limit).map(item=>item.city),needsFull:!full&&(exactOutside||all.length>major.length)};
+}
+function cityFromStored(value) {
+  const parts=storedCityParts(value);
+  return cityIndex.find(city=>city.countryCode===parts.country&&city.cityEn===canonicalCityName(parts.city))
+    ||cityIndex.find(city=>city.cityEn===canonicalCityName(parts.city));
+}
+function cityInputDisplay(value) {
+  const city=cityFromStored(value);
+  return city?cityDisplay(city):storedCityParts(value).city;
+}
+function normalizeCityFavourite(value,storedValue="") {
+  if(storedValue&&cityIndex.some(city=>city.value===storedValue))return storedValue;
+  const q=normalizedSearchText(value);
+  if(!q)return "";
+  const exact=cityIndex.filter(city=>[city.cityEn,city.cityZh,cityDisplay(city)].some(label=>normalizedSearchText(label)===q));
+  return exact.length===1?exact[0].value:"";
 }
 function renderFavouriteSettings() {
   const airlineInput=document.getElementById("favouriteAirlineInput");
@@ -571,11 +601,10 @@ function renderFavouriteSettings() {
   airlineInput.value=airlineInputDisplay(savedFavourites.airlines);
   document.getElementById("favouriteAircraftInput").value=savedFavourites.aircraft?.startsWith("OTHER|")?savedFavourites.aircraft.slice(6):(savedFavourites.aircraft||"");
   document.getElementById("favouriteAirportInput").value=savedFavourites.airports || "";
-  const city=storedCityParts(savedFavourites.cities || "");
-  document.getElementById("favouriteCountrySelect").value=savedFavourites.countries || "";
-  document.getElementById("favouriteCityCountryInput").value=city.country || state.region || "";
-  document.getElementById("favouriteCityInput").value=city.city;
-  renderCityOptions();
+  document.getElementById("favouriteCountrySelect").value=savedFavourites.countries?displayName("region",savedFavourites.countries):"";
+  const cityInput=document.getElementById("favouriteCityInput");
+  cityInput.value=cityInputDisplay(savedFavourites.cities||"");
+  cityInput.dataset.cityValue=savedFavourites.cities||"";
   document.getElementById("favouriteAirlineOptions").innerHTML=airlineSearchMarkup();
   document.getElementById("favouriteAircraftOptions").innerHTML=aircraftSearchMarkup();
   document.getElementById("favouriteRegionOptions").innerHTML=regionSearchMarkup();
@@ -591,21 +620,18 @@ function favouriteValuesFrom(prefix="") {
   const airport=normalizeAirportFavourite(airportInput);
   const destinationRegionInput=byId(prefix?"FavouriteCountry":"favouriteCountrySelect").value.trim();
   const destinationRegion=normalizeRegionFavourite(destinationRegionInput);
-  const cityRegionInput=byId(prefix?"FavouriteCityCountry":"favouriteCityCountryInput").value.trim();
-  const cityRegion=normalizeRegionFavourite(cityRegionInput);
-  const city=byId(prefix?"FavouriteCity":"favouriteCityInput").value.trim();
+  const cityInput=byId(prefix?"FavouriteCity":"favouriteCityInput");
+  const city=cityInput.value.trim();
   if(airportInput&&!airport)throw new Error(t("invalidAirportCode"));
   if(destinationRegionInput&&!destinationRegion)throw new Error(t("invalidDestinationRegion"));
-  if(cityRegionInput&&!cityRegion)throw new Error(t("invalidCityCountry"));
-  const availableCities=citiesForCountry(cityRegion);
-  const normalizedCity=availableCities.find(item=>[item.value,item.label].some(label=>label.toLocaleLowerCase()===city.toLocaleLowerCase()))?.value||"";
+  const normalizedCity=normalizeCityFavourite(city,cityInput.dataset.cityValue||"");
   if(city&&!normalizedCity)throw new Error(t("invalidDestinationCity"));
   return {
     airlines:normalizeAirlineFavourite(airlineInput.value),
     aircraft:normalizeAircraftFavourite(aircraftInput.value),
     airports:airport,
     countries:destinationRegion,
-    cities:normalizedCity?`${cityRegion}|${normalizedCity}`:""
+    cities:normalizedCity
   };
 }
 async function saveFavouriteValues(values) {
@@ -628,19 +654,16 @@ function renderOnboardingOptions() {
   document.getElementById("onboardingCurrencySelect").innerHTML=currencyOptions.map(option=>`<option value="${option.code}">${option.code} · ${escapeHtml(displayName("currency",option.code))}</option>`).join("");
   regionSelect.value=regionOptions.some(option=>option.code===regionValue)?regionValue:state.region;
   document.getElementById("onboardingCurrencySelect").value=currencyOptions.some(option=>option.code===currencyValue)?currencyValue:state.currency;
-  const city=storedCityParts(savedFavourites.cities || "");
-  document.getElementById("onboardingFavouriteCountry").value=savedFavourites.countries || "";
-  document.getElementById("onboardingFavouriteCityCountry").value=city.country || state.region || "";
-  document.getElementById("onboardingFavouriteCity").value=city.city;
+  document.getElementById("onboardingFavouriteCountry").value=savedFavourites.countries?displayName("region",savedFavourites.countries):"";
+  const cityInput=document.getElementById("onboardingFavouriteCity");
+  cityInput.value=cityInputDisplay(savedFavourites.cities||"");
+  cityInput.dataset.cityValue=savedFavourites.cities||"";
   document.getElementById("onboardingFavouriteAirline").value=airlineInputDisplay(savedFavourites.airlines);
   document.getElementById("onboardingFavouriteAircraft").value=savedFavourites.aircraft?.startsWith("OTHER|")?savedFavourites.aircraft.slice(6):(savedFavourites.aircraft||"");
-  renderCityOptions("onboarding");
 }
 function renderProfile(profile=currentProfile) {
   currentProfile={...currentProfile,...(profile||{})};
   window.flightArchiveBackend?.setProfile(currentProfile);
-  const usernameInput=document.getElementById("profileUsername");
-  if(usernameInput)usernameInput.value=currentProfile.username || "";
 }
 function renderAvatarPreview(file) {
   const preview=document.getElementById("onboardingAvatarPreview");
@@ -649,16 +672,11 @@ function renderAvatarPreview(file) {
   preview.innerHTML=`<img src="${url}" alt="" />`;
 }
 async function saveProfileSettings() {
-  const username=document.getElementById("profileUsername").value.trim();
   const file=document.getElementById("profileAvatarInput").files[0];
-  if(!username){
-    showToast(t("saveFailed"),t("usernameHelp"));
-    return;
-  }
   try{
-    let profile=await window.flightArchiveData.saveProfile({displayName:username,username,avatarUrl:currentProfile.avatar_url});
+    let profile=currentProfile;
     if(file)profile=await window.flightArchiveData.uploadAvatar(file);
-    renderProfile({...profile,display_name:username,username});
+    renderProfile(profile);
     document.getElementById("profileAvatarInput").value="";
     setAccountEditing(false);
     showToast(t("profileSaved"),t("profileSaved"));
@@ -678,6 +696,10 @@ async function saveSettingsFavourites() {
 function setAccountEditing(editing) {
   document.getElementById("accountEditor").hidden=!editing;
   document.getElementById("editAccountButton").hidden=editing;
+  const passwordEditor=document.getElementById("passwordEditor");
+  const revealButton=document.getElementById("showPasswordEditorButton");
+  passwordEditor.hidden=true;
+  revealButton.hidden=!editing;
   if(!editing){
     renderProfile(currentProfile);
     document.getElementById("profileAvatarInput").value="";
@@ -706,6 +728,8 @@ async function changePassword() {
     await window.flightArchiveData.updatePassword(password);
     document.getElementById("newPasswordInput").value="";
     document.getElementById("confirmPasswordInput").value="";
+    document.getElementById("passwordEditor").hidden=true;
+    document.getElementById("showPasswordEditorButton").hidden=false;
     showToast(t("passwordUpdated"),t("passwordUpdated"));
   }catch(error){
     showToast(t("saveFailed"),error?.message || String(error));
@@ -753,7 +777,7 @@ function applyLanguage(lang) {
   if(flightLookupState.completed.candidates.length)renderFlightLookupCandidates("completed");
   if(flightLookupState.incoming.candidates.length)renderFlightLookupCandidates("incoming");
   if(state.activeView==="friends")loadFriends();
-  if(state.friendRecords?.mapVisible)setFriendMapIdentity();
+  if(state.friendRecords)setFriendMapIdentity();
   updateMapHelp();
   if (state.selectedRoute) openRouteDrawer(state.selectedRoute);
   if (state.selectedAirport) openAirportDrawer(state.selectedAirport);
@@ -1707,17 +1731,22 @@ function bindFriendActions(container=document) {
   }));
   container.querySelectorAll("[data-view-friend]").forEach(button=>button.addEventListener("click",()=>openFriendRecords(button.dataset.viewFriend)));
 }
+let friendSearchRequest=0;
 async function searchFriends() {
   const query=document.getElementById("friendSearchInput").value.trim();
-  if(query.length<2)return;
   const container=document.getElementById("friendSearchResults");
+  const request=++friendSearchRequest;
+  if(!query){container.innerHTML="";state.friendSearchResults=[];return;}
   try{
-    state.friendSearchResults=await window.flightArchiveData.searchUsers(query);
+    const results=await window.flightArchiveData.searchUsers(query);
+    if(request!==friendSearchRequest)return;
+    state.friendSearchResults=results;
     container.innerHTML=state.friendSearchResults.length
       ? state.friendSearchResults.map(profile=>friendCardMarkup(profile,"search")).join("")
       : `<div class="friends-empty">${t("noSearchResults")}</div>`;
     bindFriendActions(container);
   }catch(error){
+    if(request!==friendSearchRequest)return;
     container.innerHTML=`<div class="friends-empty">${escapeHtml(error?.message||String(error))}</div>`;
   }
 }
@@ -1768,11 +1797,15 @@ function setFriendMapIdentity() {
   avatar.innerHTML=profile.avatar_url?`<img src="${escapeHtml(profile.avatar_url)}" alt="" />`:escapeHtml(friendInitial(profile));
   document.getElementById("friendMapName").textContent=profile.username||profile.display_name||"Flight Archive user";
   document.getElementById("friendMapCount").textContent=`${records.length} ${t("friendMapFlights")}`;
+  document.getElementById("friendRecordsAvatar").innerHTML=profile.avatar_url?`<img src="${escapeHtml(profile.avatar_url)}" alt="" />`:escapeHtml(friendInitial(profile));
+  document.getElementById("friendRecordsName").textContent=profile.username||profile.display_name||"Flight Archive user";
+  document.getElementById("friendRecordsUsername").textContent=`@${profile.username||""} · ${records.length} ${t("friendFlights")}`;
 }
 function showFriendMap() {
   if(!state.friendRecords)return;
   state.friendRecords.mapVisible=true;
   document.getElementById("friendRecordsPanel").hidden=true;
+  document.getElementById("appShell").classList.remove("friend-list-mode");
   document.getElementById("appShell").classList.add("friend-map-mode");
   document.getElementById("friendMapToolbar").hidden=false;
   setFriendMapIdentity();
@@ -1785,13 +1818,15 @@ function showFriendList() {
   if(!state.friendRecords)return;
   state.friendRecords.mapVisible=false;
   document.getElementById("appShell").classList.remove("friend-map-mode");
+  document.getElementById("appShell").classList.add("friend-list-mode");
   document.getElementById("friendMapToolbar").hidden=true;
-  setView("friends");
+  setFriendMapIdentity();
+  setView("friendList");
   document.getElementById("friendRecordsPanel").hidden=false;
 }
 function closeFriendRecords() {
   state.friendRecords=null;
-  document.getElementById("appShell").classList.remove("friend-map-mode");
+  document.getElementById("appShell").classList.remove("friend-map-mode","friend-list-mode");
   document.getElementById("friendMapToolbar").hidden=true;
   document.getElementById("friendRecordsPanel").hidden=true;
   setView("friends");
@@ -1944,8 +1979,8 @@ function favouriteOptions(type) {
     value:airport.code,label:`${airport.code} · ${airportCity(airport)} · ${airportName(airport)}`,count:0
   })).sort((a,b)=>a.value.localeCompare(b.value));
   if(type==="cities"){
-    const country=storedCityParts(savedFavourites.cities||"").country || state.region;
-    return citiesForCountry(country).map(city=>({value:`${country}|${city.value}`,label:city.label,count:0}));
+    return cityIndex.map(city=>({value:city.value,label:cityDisplay(city),count:0}))
+      .sort((a,b)=>a.label.localeCompare(b.label,activeLocale()));
   }
   const options=preferenceOptions(type,flights);
   const current=savedFavourites[type];
@@ -2021,8 +2056,9 @@ function preferenceDetailMarkup(type,sourceFlights) {
   const most=preferenceOptions(type,sourceFlights)[0]||null;
   const favouriteValue=savedFavourites[type]||"";
   const options=favouriteOptions(type);
-  const cityParts=storedCityParts(type==="cities"?favouriteValue:"");
-  const editorValue=type==="cities"?cityParts.city:(favouriteValue.startsWith("OTHER|")?favouriteValue.slice(6):favouriteValue);
+  const editorValue=type==="cities"?cityInputDisplay(favouriteValue)
+    :type==="countries"&&favouriteValue?displayName("region",favouriteValue)
+    :(favouriteValue.startsWith("OTHER|")?favouriteValue.slice(6):favouriteValue);
   const row=(label,value,display,icon,editable=false)=>`<div class="stats-preference-row${editable?" favourite-preference":""}">
     ${icon}
     <div class="stats-preference-copy"><span>${label}</span><strong>${escapeHtml(display)}</strong></div>
@@ -2031,17 +2067,16 @@ function preferenceDetailMarkup(type,sourceFlights) {
   return `<section class="stats-preference-panel" data-favourite-card="${type}">
     ${row(t(labels[0]),most?.value||"",most?.label||"—",preferenceIcon(type,most?.value||"",sourceFlights,"stats-preference-logo"))}
     ${row(t(labels[1]),favouriteValue,favouriteDisplay(type,favouriteValue),preferenceIcon(type,favouriteValue,flights,"stats-preference-logo"),true)}
-    <div class="stats-favourite-editor${type==="cities"?" city-favourite-editor":""}" hidden>
-      ${type==="cities"?`<input data-favourite-city-country list="favouriteRegionOptions" value="${escapeHtml(cityParts.country||state.region)}" autocomplete="off" aria-label="${escapeHtml(t("cityCountry"))}" placeholder="${escapeHtml(t("cityCountry"))}" />`:""}
-      <input data-favourite-input list="statsFavouriteOptions-${type}" value="${escapeHtml(editorValue)}" autocomplete="off" />
+    <div class="stats-favourite-editor" hidden>
+      <input data-favourite-input ${type==="cities"?"":`list="statsFavouriteOptions-${type}"`} value="${escapeHtml(editorValue)}" autocomplete="off" />
       <datalist id="statsFavouriteOptions-${type}">
-        ${options.map(option=>`<option value="${escapeHtml(type==="cities"?storedCityParts(option.value).city:option.value)}">${escapeHtml(option.label)}</option>`).join("")}
+        ${options.map(option=>`<option value="${escapeHtml(type==="countries"?option.label:option.value)}">${escapeHtml(option.label)}</option>`).join("")}
       </datalist>
       <button class="primary-button" type="button" data-save-favourite>${t("saveFavourite")}</button>
     </div>
   </section>`;
 }
-function normalizeFavouriteEditorValue(type,value,cityCountryValue="") {
+function normalizeFavouriteEditorValue(type,value,storedValue="") {
   const text=String(value||"").trim();
   if(type==="airlines")return normalizeAirlineFavourite(text);
   if(type==="aircraft")return normalizeAircraftFavourite(text);
@@ -2056,12 +2091,9 @@ function normalizeFavouriteEditorValue(type,value,cityCountryValue="") {
     return code;
   }
   if(type==="cities"){
-    const countryText=String(cityCountryValue||"").trim();
-    const country=normalizeRegionFavourite(countryText);
-    if(countryText&&!country)throw new Error(t("invalidCityCountry"));
-    const option=citiesForCountry(country).find(item=>[item.value,item.label].some(label=>label.toLocaleLowerCase()===text.toLocaleLowerCase()));
-    if(text&&!option)throw new Error(t("invalidDestinationCity"));
-    return option?`${country}|${option.value}`:"";
+    const city=normalizeCityFavourite(text,storedValue);
+    if(text&&!city)throw new Error(t("invalidDestinationCity"));
+    return city;
   }
   return text;
 }
@@ -2069,33 +2101,18 @@ function bindFavouriteEditor(type) {
   const card=document.querySelector(`[data-favourite-card="${type}"]`);
   if(!card)return;
   const editor=card.querySelector(".stats-favourite-editor");
-  const cityCountryInput=card.querySelector("[data-favourite-city-country]");
   const cityInput=card.querySelector("[data-favourite-input]");
-  const refreshCityOptions=()=>{
-    if(!cityCountryInput||type!=="cities")return;
-    const country=normalizeRegionFavourite(cityCountryInput.value);
-    const datalist=card.querySelector(`#statsFavouriteOptions-${type}`);
-    if(datalist)datalist.innerHTML=citiesForCountry(country).map(city=>`<option value="${escapeHtml(city.value)}">${escapeHtml(city.label)}</option>`).join("");
-    cityCountryInput.dataset.regionCode=country;
-  };
-  if(cityCountryInput){
-    refreshCityOptions();
-    const update=()=>{
-      const country=normalizeRegionFavourite(cityCountryInput.value);
-      if(cityCountryInput.value.trim()&&!country)return;
-      if((cityCountryInput.dataset.regionCode||"")!==country)cityInput.value="";
-      refreshCityOptions();
-    };
-    cityCountryInput.addEventListener("input",update);
-    cityCountryInput.addEventListener("change",update);
+  if(type==="cities"){
+    cityInput.dataset.cityValue=savedFavourites.cities||"";
+    installCityAutocomplete(cityInput);
   }
   card.querySelector("[data-edit-favourite]").addEventListener("click",()=>{
     editor.hidden=false;
-    (cityCountryInput||cityInput).focus();
+    cityInput.focus();
   });
   card.querySelector("[data-save-favourite]").addEventListener("click",async()=>{
     try{
-      const value=normalizeFavouriteEditorValue(type,cityInput.value,cityCountryInput?.value||"");
+      const value=normalizeFavouriteEditorValue(type,cityInput.value,cityInput.dataset.cityValue||"");
       if(value)savedFavourites[type]=value;else delete savedFavourites[type];
       if(window.flightArchiveData?.enabled)await window.flightArchiveData.saveFavourite(type,value);
       renderFavouriteSettings();
@@ -2517,11 +2534,10 @@ function openOnboarding(){
   document.getElementById("onboardingFavouriteAirline").value=airlineInputDisplay(savedFavourites.airlines);
   document.getElementById("onboardingFavouriteAircraft").value=savedFavourites.aircraft?.startsWith("OTHER|")?savedFavourites.aircraft.slice(6):(savedFavourites.aircraft||"");
   document.getElementById("onboardingFavouriteAirport").value=savedFavourites.airports || "";
-  const city=storedCityParts(savedFavourites.cities || "");
-  document.getElementById("onboardingFavouriteCountry").value=savedFavourites.countries || "";
-  document.getElementById("onboardingFavouriteCityCountry").value=city.country || state.region || "";
-  document.getElementById("onboardingFavouriteCity").value=city.city;
-  renderCityOptions("onboarding");
+  document.getElementById("onboardingFavouriteCountry").value=savedFavourites.countries?displayName("region",savedFavourites.countries):"";
+  const cityInput=document.getElementById("onboardingFavouriteCity");
+  cityInput.value=cityInputDisplay(savedFavourites.cities||"");
+  cityInput.dataset.cityValue=savedFavourites.cities||"";
   document.getElementById("onboardingAvatarInput").value="";
   ["onboardingSkip","onboardingFinish"].forEach(id=>document.getElementById(id).disabled=false);
   renderOnboardingHubs();
@@ -2578,6 +2594,8 @@ async function completeOnboarding(includeOptional){
 // Globe rendering
 const canvas = document.getElementById("globeCanvas");
 const ctx = canvas.getContext("2d");
+const daylightCanvas=document.createElement("canvas");
+const daylightCtx=daylightCanvas.getContext("2d");
 let cw = 0, ch = 0, globeR = 200, centerX = 0, centerY = 0;
 const firstHubAirport=airports[[...state.hubs][0]]||airports.CAN;
 let rotation = { lon: -firstHubAirport.lon, lat: firstHubAirport.lat };
@@ -2677,6 +2695,12 @@ async function loadGeography() {
     drawGlobe();
     if(document.getElementById("countryStatsMap"))drawCountryStatsMap(countryStatsMapFlights);
   }
+}
+function viewVector(lat,lon) {
+  const phi=rad(lat),lambda=rad(lon+rotation.lon),tilt=rad(rotation.lat);
+  const x=Math.cos(phi)*Math.sin(lambda);
+  const y0=Math.sin(phi),z0=Math.cos(phi)*Math.cos(lambda);
+  return {x,y:y0*Math.cos(tilt)-z0*Math.sin(tilt),z:y0*Math.sin(tilt)+z0*Math.cos(tilt)};
 }
 function unwrapRing(ring) {
   let previous=null,offset=0;
@@ -2822,19 +2846,24 @@ function drawNightLights() {
 }
 function drawDayNightShade(){
   if(state.globeStyle!=="orbit"||!state.dayNight)return;
-  const sun=solarPosition(),sunPoint=project(sun.lat,sun.lon);
-  const dx=sunPoint.x-centerX,dy=sunPoint.y-centerY,length=Math.hypot(dx,dy);
-  if(sunPoint.z>.96)return;
-  if(sunPoint.z<-.96){ctx.fillStyle="rgba(0,7,18,.68)";ctx.fillRect(centerX-globeR,centerY-globeR,globeR*2,globeR*2);return;}
-  const ux=length?dx/length:1,uy=length?dy/length:0;
-  const boundary=Math.max(.04,Math.min(.96,.5-sunPoint.z*.45)),twilight=.055;
-  const shade=ctx.createLinearGradient(centerX-ux*globeR,centerY-uy*globeR,centerX+ux*globeR,centerY+uy*globeR);
-  shade.addColorStop(0,"rgba(0,7,18,.72)");
-  shade.addColorStop(Math.max(0,boundary-twilight),"rgba(0,9,22,.64)");
-  shade.addColorStop(boundary,"rgba(20,39,54,.22)");
-  shade.addColorStop(Math.min(1,boundary+twilight),"rgba(255,176,92,.035)");
-  shade.addColorStop(1,"rgba(0,0,0,0)");
-  ctx.fillStyle=shade;ctx.fillRect(centerX-globeR,centerY-globeR,globeR*2,globeR*2);
+  const sun=solarPosition(),sunView=viewVector(sun.lat,sun.lon);
+  const size=192;
+  if(daylightCanvas.width!==size){daylightCanvas.width=size;daylightCanvas.height=size;}
+  const image=daylightCtx.createImageData(size,size),pixels=image.data;
+  const smoothstep=value=>value*value*(3-2*value);
+  for(let py=0;py<size;py++)for(let px=0;px<size;px++){
+    const sx=(px+.5)/size*2-1,screenY=(py+.5)/size*2-1,r2=sx*sx+screenY*screenY;
+    if(r2>1)continue;
+    const surface={x:sx,y:-screenY,z:Math.sqrt(1-r2)};
+    const light=surface.x*sunView.x+surface.y*sunView.y+surface.z*sunView.z;
+    const transition=smoothstep(Math.max(0,Math.min(1,(light+.12)/.24)));
+    const offset=(py*size+px)*4;
+    pixels[offset]=1;pixels[offset+1]=9;pixels[offset+2]=23;
+    pixels[offset+3]=Math.round(178*(1-transition));
+  }
+  daylightCtx.putImageData(image,0,0);
+  ctx.imageSmoothingEnabled=true;
+  ctx.drawImage(daylightCanvas,centerX-globeR,centerY-globeR,globeR*2,globeR*2);
 }
 function drawSurfaceReflection() {
   if(state.globeStyle!=="orbit")return;
@@ -3093,6 +3122,69 @@ document.addEventListener("pointerdown",event=>{
 });
 window.addEventListener("resize",()=>{if(activeAirportInput&&!airportAutocomplete.hidden)positionAirportAutocomplete(activeAirportInput);});
 
+const cityAutocomplete=document.getElementById("cityAutocomplete");
+let activeCityInput=null;
+function closeCityAutocomplete(){
+  cityAutocomplete.hidden=true;
+  cityAutocomplete.innerHTML="";
+  activeCityInput=null;
+}
+function positionCityAutocomplete(input){
+  const rect=input.getBoundingClientRect();
+  cityAutocomplete.style.left=`${Math.max(8,Math.min(rect.left,window.innerWidth-Math.min(520,rect.width)-8))}px`;
+  cityAutocomplete.style.top=`${Math.min(window.innerHeight-160,rect.bottom+5)}px`;
+  cityAutocomplete.style.width=`${Math.max(300,Math.min(520,rect.width))}px`;
+}
+function renderCityAutocomplete(input){
+  const query=input.value.trim();
+  if(!query){closeCityAutocomplete();return;}
+  activeCityInput=input;
+  const result=citySearchResults(query,{full:input.dataset.fullCitySearch==="true",limit:14});
+  positionCityAutocomplete(input);
+  cityAutocomplete.innerHTML=`
+    ${result.needsFull?`<button class="airport-search-all" type="button" data-city-full-search><strong>${t("fullCitySearch")}</strong><small>${escapeHtml(query)}</small></button>`:""}
+    ${result.matches.map(city=>`<button class="airport-search-result" type="button" data-city-value="${escapeHtml(city.value)}"><b>${escapeHtml(city.countryCode)}</b><span><strong>${escapeHtml(cityLabel(city))}</strong><small>${escapeHtml(displayName("region",city.countryCode))}</small></span></button>`).join("")}
+    ${!result.matches.length&&!result.needsFull?`<p>${t("noSearchResults")}</p>`:""}`;
+  cityAutocomplete.hidden=false;
+  cityAutocomplete.querySelector("[data-city-full-search]")?.addEventListener("mousedown",event=>{
+    event.preventDefault();input.dataset.fullCitySearch="true";renderCityAutocomplete(input);
+  });
+  cityAutocomplete.querySelectorAll("[data-city-value]").forEach(button=>button.addEventListener("mousedown",event=>{
+    event.preventDefault();
+    const city=cityIndex.find(item=>item.value===button.dataset.cityValue);
+    if(!city)return;
+    input.value=cityDisplay(city);
+    input.dataset.cityValue=city.value;
+    input.dataset.fullCitySearch="false";
+    input.dispatchEvent(new Event("change",{bubbles:true}));
+    closeCityAutocomplete();
+  }));
+}
+function installCityAutocomplete(input){
+  if(!input||input.dataset.cityAutocompleteInstalled==="true")return;
+  input.dataset.cityAutocompleteInstalled="true";
+  input.dataset.fullCitySearch="false";
+  input.removeAttribute("list");
+  input.addEventListener("focus",()=>renderCityAutocomplete(input));
+  input.addEventListener("input",()=>{
+    input.dataset.cityValue="";
+    input.dataset.fullCitySearch="false";
+    renderCityAutocomplete(input);
+  });
+  input.addEventListener("keydown",event=>{
+    if(event.key==="Escape"){closeCityAutocomplete();return;}
+    if(event.key==="Enter"&&!cityAutocomplete.hidden&&activeCityInput===input){
+      const first=cityAutocomplete.querySelector("[data-city-value]");
+      if(first){event.preventDefault();event.stopPropagation();first.dispatchEvent(new MouseEvent("mousedown",{bubbles:true}));}
+    }
+  });
+}
+["favouriteCityInput","onboardingFavouriteCity"].forEach(id=>installCityAutocomplete(document.getElementById(id)));
+document.addEventListener("pointerdown",event=>{
+  if(!event.target.closest("#cityAutocomplete")&&event.target!==activeCityInput)closeCityAutocomplete();
+});
+window.addEventListener("resize",()=>{if(activeCityInput&&!cityAutocomplete.hidden)positionCityAutocomplete(activeCityInput);});
+
 document.querySelectorAll(".nav-item[data-view]").forEach(el=>el.addEventListener("click",()=>setView(el.dataset.view)));
 document.querySelectorAll("[data-view-link]").forEach(el=>el.addEventListener("click",e=>{e.preventDefault();setView(el.dataset.viewLink);}));
 document.getElementById("incomingNavButton").addEventListener("click",()=>setIncomingMode(true));
@@ -3132,13 +3224,14 @@ document.addEventListener("click",e=>{if(!e.target.closest(".settings-area"))set
 document.getElementById("editAccountButton").addEventListener("click",()=>setAccountEditing(true));
 document.getElementById("cancelAccountEditButton").addEventListener("click",()=>setAccountEditing(false));
 document.getElementById("saveProfileButton").addEventListener("click",saveProfileSettings);
+document.getElementById("showPasswordEditorButton").addEventListener("click",()=>{
+  document.getElementById("passwordEditor").hidden=false;
+  document.getElementById("showPasswordEditorButton").hidden=true;
+  document.getElementById("newPasswordInput").focus();
+});
 document.getElementById("changePasswordButton").addEventListener("click",changePassword);
 document.getElementById("editFavouritesButton").addEventListener("click",()=>setFavouritesEditing(true));
 document.getElementById("saveFavouritesButton").addEventListener("click",saveSettingsFavourites);
-document.getElementById("favouriteCityCountryInput").addEventListener("input",()=>updateFavouriteCityOptions());
-document.getElementById("favouriteCityCountryInput").addEventListener("change",()=>updateFavouriteCityOptions());
-document.getElementById("onboardingFavouriteCityCountry").addEventListener("input",()=>updateFavouriteCityOptions("onboarding"));
-document.getElementById("onboardingFavouriteCityCountry").addEventListener("change",()=>updateFavouriteCityOptions("onboarding"));
 document.getElementById("profileAvatarInput").addEventListener("change",event=>{
   const file=event.target.files[0];
   if(!file)return;
@@ -3230,9 +3323,15 @@ document.getElementById("onboardingHubSearch").addEventListener("input",event=>{
 document.getElementById("onboardingAvatarInput").addEventListener("change",event=>renderAvatarPreview(event.target.files[0]));
 document.getElementById("friendSearchButton").addEventListener("click",searchFriends);
 document.getElementById("friendSearchInput").addEventListener("keydown",event=>{if(event.key==="Enter"){event.preventDefault();searchFriends();}});
+let friendSearchTimer=null;
+document.getElementById("friendSearchInput").addEventListener("input",()=>{
+  clearTimeout(friendSearchTimer);
+  friendSearchTimer=setTimeout(searchFriends,220);
+});
 document.getElementById("closeFriendRecordsButton").addEventListener("click",closeFriendRecords);
 document.getElementById("friendMapBack").addEventListener("click",closeFriendRecords);
 document.getElementById("friendMapList").addEventListener("click",showFriendList);
+document.getElementById("friendListMap").addEventListener("click",showFriendMap);
 document.querySelectorAll("[data-close-modal]").forEach(el=>el.addEventListener("click",closeModals));
 document.querySelectorAll(".modal-backdrop:not(#onboardingModal)").forEach(el=>el.addEventListener("click",e=>{if(e.target===el)closeModals();}));
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!document.getElementById("onboardingModal").classList.contains("open")){closeModals();closeDrawer();setSettingsOpen(false);}});

@@ -173,15 +173,12 @@
                 <div><strong id="accountDisplayName"></strong><small id="accountEmail"></small></div>
               </div>
               <div class="settings-editor" id="accountEditor" hidden>
-                <label class="settings-field">
-                  <span class="settings-label" data-i18n="username">Username</span>
-                  <input id="profileUsername" type="text" autocomplete="username" />
-                </label>
                 <label class="avatar-upload">
                   <span data-i18n="chooseAvatar">Choose avatar</span>
                   <input id="profileAvatarInput" type="file" accept="image/jpeg,image/png,image/webp" />
                 </label>
-                <div class="password-editor">
+                <button class="password-reveal-button" id="showPasswordEditorButton" type="button" data-i18n="changePassword">Change password</button>
+                <div class="password-editor" id="passwordEditor" hidden>
                   <span class="settings-label" data-i18n="changePassword">Change password</span>
                   <input id="newPasswordInput" type="password" minlength="8" autocomplete="new-password" data-i18n-placeholder="newPasswordPlaceholder" placeholder="At least 8 characters" />
                   <input id="confirmPasswordInput" type="password" minlength="8" autocomplete="new-password" data-i18n-placeholder="confirmPasswordPlaceholder" placeholder="Confirm new password" />
@@ -204,9 +201,8 @@
                 <label class="settings-field"><span data-i18n="airline">Airline</span><input id="favouriteAirlineInput" list="favouriteAirlineOptions" autocomplete="off" placeholder="CX" /></label>
                 <label class="settings-field"><span data-i18n="aircraft">Aircraft</span><input id="favouriteAircraftInput" list="favouriteAircraftOptions" autocomplete="off" placeholder="Airbus A350-900" /></label>
                 <label class="settings-field"><span data-i18n="airport">Airport</span><input id="favouriteAirportInput" list="airportCodeOptions" autocomplete="off" placeholder="HKG" /></label>
-                <label class="settings-field"><span data-i18n="destinationRegion">Destination region</span><input id="favouriteCountrySelect" list="favouriteRegionOptions" autocomplete="off" placeholder="Hong Kong / HK" /></label>
-                <label class="settings-field"><span data-i18n="cityCountry">City country / region</span><input id="favouriteCityCountryInput" list="favouriteRegionOptions" autocomplete="off" placeholder="Hong Kong / HK" /></label>
-                <label class="settings-field"><span data-i18n="destinationCity">Destination city</span><input id="favouriteCityInput" list="favouriteCityOptions" autocomplete="off" placeholder="Hong Kong" /></label>
+                <label class="settings-field"><span data-i18n="destinationRegion">Destination region</span><input id="favouriteCountrySelect" list="favouriteRegionOptions" autocomplete="off" placeholder="Hong Kong" /></label>
+                <label class="settings-field"><span data-i18n="destinationCity">Destination city</span><input id="favouriteCityInput" autocomplete="off" placeholder="Hong Kong" /></label>
                 <button class="settings-save-button" id="saveFavouritesButton" type="button" data-i18n="saveFavourites">Save favourites</button>
               </div>
             </div>
@@ -379,9 +375,15 @@
             <h2 data-i18n="yourFriends">Your friends</h2>
             <div id="friendsList"></div>
           </section>
+        </section>
+
+        <section class="view page-view friend-list-view" id="friendListView">
+          <div class="friend-list-toolbar">
+            <button type="button" id="closeFriendRecordsButton"><svg viewBox="0 0 24 24"><path d="m14.5 6-6 6 6 6"/></svg><span data-i18n="backToFriends">Back to friends</span></button>
+            <div class="friend-map-identity"><b id="friendRecordsAvatar"></b><span><strong id="friendRecordsName"></strong><small id="friendRecordsUsername"></small></span></div>
+            <button type="button" id="friendListMap"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M4.5 10h15M8 5.3c2.4 1.8 5.6 1.8 8 0M8 18.7c2.4-1.8 5.6-1.8 8 0"/></svg><span data-i18n="mapView">Map view</span></button>
+          </div>
           <section class="friend-records-panel" id="friendRecordsPanel" hidden>
-            <button class="subtle-button" id="closeFriendRecordsButton" type="button" data-i18n="backToFriends">Back to friends</button>
-            <header><b id="friendRecordsAvatar"></b><div><h2 id="friendRecordsName"></h2><p id="friendRecordsUsername"></p></div></header>
             <div class="friend-flight-list" id="friendFlightList"></div>
           </section>
         </section>
@@ -615,9 +617,8 @@
             <label><span data-i18n="airline">Airline</span><input id="onboardingFavouriteAirline" list="favouriteAirlineOptions" autocomplete="off" placeholder="CX" /></label>
             <label><span data-i18n="aircraft">Aircraft</span><input id="onboardingFavouriteAircraft" list="favouriteAircraftOptions" autocomplete="off" placeholder="Airbus A350-900" /></label>
             <label><span data-i18n="airport">Airport</span><input id="onboardingFavouriteAirport" list="airportCodeOptions" autocomplete="off" placeholder="HKG" /></label>
-            <label><span data-i18n="destinationRegion">Destination region</span><input id="onboardingFavouriteCountry" list="favouriteRegionOptions" autocomplete="off" placeholder="Hong Kong / HK" /></label>
-            <label><span data-i18n="cityCountry">City country / region</span><input id="onboardingFavouriteCityCountry" list="favouriteRegionOptions" autocomplete="off" placeholder="Hong Kong / HK" /></label>
-            <label><span data-i18n="destinationCity">Destination city</span><input id="onboardingFavouriteCity" list="onboardingCityOptions" autocomplete="off" placeholder="Hong Kong" /></label>
+            <label><span data-i18n="destinationRegion">Destination region</span><input id="onboardingFavouriteCountry" list="favouriteRegionOptions" autocomplete="off" placeholder="Hong Kong" /></label>
+            <label><span data-i18n="destinationCity">Destination city</span><input id="onboardingFavouriteCity" autocomplete="off" placeholder="Hong Kong" /></label>
           </div>
           <div class="modal-actions">
             <button class="subtle-button" id="onboardingSkip" type="button" data-i18n="skipForNow">Skip for now</button>
@@ -648,6 +649,7 @@
 
     <datalist id="airportCodeOptions"></datalist>
     <div class="airport-autocomplete" id="airportAutocomplete" hidden></div>
+    <div class="airport-autocomplete city-autocomplete" id="cityAutocomplete" hidden></div>
     <datalist id="favouriteAirlineOptions"></datalist>
     <datalist id="favouriteAircraftOptions"></datalist>
     <datalist id="favouriteRegionOptions"></datalist>
