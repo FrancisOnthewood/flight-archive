@@ -243,7 +243,7 @@ Object.assign(translations.en,{
   friendFlights:"flight records", accountEdit:"Edit account", usernameHelp:"Username cannot be empty and must be unique.",
   changePassword:"Change password", newPasswordPlaceholder:"At least 8 characters", confirmPasswordPlaceholder:"Confirm new password",
   updatePassword:"Update password", passwordUpdated:"Password updated", passwordsDoNotMatch:"Passwords do not match.",
-  cityCountry:"City country / region", other:"Other", enterOther:"Enter another value", feedbackUnavailable:"Feedback form is being configured.",
+  other:"Other", enterOther:"Enter another value", feedbackUnavailable:"Feedback form is being configured.",
   destinationRegion:"Destination region", destinationCity:"Destination city", invalidDestinationRegion:"Choose a destination region from the list.",
   invalidDestinationCity:"Choose a city from the selected destination region."
 });
@@ -268,13 +268,11 @@ Object.assign(translations.zh,{
   friendFlights:"条飞行记录", accountEdit:"编辑账户", usernameHelp:"用户名不能为空，且不能与已有用户名重复。",
   changePassword:"修改密码", newPasswordPlaceholder:"至少 8 个字符", confirmPasswordPlaceholder:"再次输入新密码",
   updatePassword:"更新密码", passwordUpdated:"密码已更新", passwordsDoNotMatch:"两次输入的密码不一致。",
-  cityCountry:"城市所属国家 / 地区", other:"其他项", enterOther:"输入其他内容", feedbackUnavailable:"意见反馈表正在配置中。",
+  other:"其他项", enterOther:"输入其他内容", feedbackUnavailable:"意见反馈表正在配置中。",
   destinationRegion:"目的地国家 / 地区", destinationCity:"目的地城市", invalidDestinationRegion:"请从列表中选择目的地国家 / 地区。",
   invalidDestinationCity:"请从所选目的地国家 / 地区的城市列表中选择。"
 });
-translations.en.invalidCityCountry="Choose the city country / region from the list.";
 translations.en.invalidDestinationCity="Choose a city from the search results.";
-translations.zh.invalidCityCountry="请从列表中选择城市所在国家 / 地区。";
 translations.zh.invalidDestinationCity="请从城市搜索结果中选择。";
 translations.en.dayNight="Real-time daylight";
 translations.zh.dayNight="实时晨昏线";
