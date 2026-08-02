@@ -327,7 +327,7 @@ const legacyRegionOptions = [
   { code:"CN", en:"Mainland China", zh:"中国大陆", localeEn:"en-CN", localeZh:"zh-CN" },
   { code:"HK", en:"Hong Kong SAR", zh:"中国香港", localeEn:"en-HK", localeZh:"zh-HK" },
   { code:"MO", en:"Macao SAR", zh:"中国澳门", localeEn:"en-MO", localeZh:"zh-MO" },
-  { code:"TW", en:"Taiwan", zh:"中国台湾", localeEn:"en-TW", localeZh:"zh-TW" },
+  { code:"TW", en:"Taiwan, China", zh:"中国台湾", localeEn:"en-TW", localeZh:"zh-TW" },
   { code:"SG", en:"Singapore", zh:"新加坡", localeEn:"en-SG", localeZh:"zh-SG" },
   { code:"JP", en:"Japan", zh:"日本", localeEn:"en-JP", localeZh:"zh-JP" },
   { code:"US", en:"United States", zh:"美国", localeEn:"en-US", localeZh:"zh-US" },
@@ -390,6 +390,7 @@ let countryStatsMapFlights = [];
 const t = key => translations[state.lang][key] || key;
 const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, char => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" })[char]);
 const displayName=(type,code,lang=state.lang)=>{
+  if(type==="region"&&String(code||"").toUpperCase()==="TW")return String(lang||"").toLowerCase().startsWith("zh")?"中国台湾":"Taiwan, China";
   try{return new Intl.DisplayNames([lang==="zh"?"zh-CN":"en"],{type}).of(code) || code;}
   catch{return code;}
 };
