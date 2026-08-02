@@ -61,9 +61,11 @@
     ["B6","JBU","JetBlue","捷蓝航空"],["AS","ASA","Alaska Airlines","阿拉斯加航空"],
     ["NK","NKS","Spirit Airlines","精神航空"],["F9","FFT","Frontier Airlines","边疆航空"],
     ["AC","ACA","Air Canada","加拿大航空"],["WS","WJA","WestJet","西捷航空"],
-    ["AM","AMX","Aeroméxico","墨西哥航空"],["LA","LAN","LATAM Airlines","南美航空"],
+    ["AM","AMX","Aeroméxico","墨西哥航空"],["Y4","VOI","Volaris","沃拉里斯航空"],["LA","LAN","LATAM Airlines","南美航空"],
     ["AV","AVA","Avianca","哥伦比亚航空"],["CM","CMP","Copa Airlines","巴拿马航空"],
-    ["G3","GLO","GOL Linhas Aéreas","高尔航空"],["AD","AZU","Azul Brazilian Airlines","巴西蓝色航空"]
+    ["G3","GLO","GOL Linhas Aéreas","高尔航空"],["AD","AZU","Azul Brazilian Airlines","巴西蓝色航空"],
+    ["H2","SKU","SKY Airline","智利天空航空"],["JA","JAT","JetSMART","捷智航空"],
+    ["WF","WIF","Widerøe","威德罗航空"],["FM","CSH","Shanghai Airlines","上海航空"]
   ].map(([iata,icao,en,zh]) => ({ iata, icao, en, zh }));
 
   const aircraft = {

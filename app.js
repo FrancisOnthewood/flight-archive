@@ -1891,15 +1891,19 @@ function saveIncomingFlight() {
 }
 function setIncomingMode(active) {
   if(active&&state.activeView!=="atlas")setView("atlas");
+  const shell=document.getElementById("appShell");
+  if(active&&!state.incomingMode)shell.dataset.sidebarBeforeIncoming=String(shell.classList.contains("sidebar-collapsed"));
   state.incomingMode=active;
   if(active){
     state.mapMode="route";
     document.getElementById("routeMode").classList.add("active");
     document.getElementById("airportMode").classList.remove("active");
   }
-  const shell=document.getElementById("appShell");
   shell.classList.toggle("incoming-mode",active);
+  if(active)shell.classList.add("sidebar-collapsed");
   if(!active){
+    shell.classList.toggle("sidebar-collapsed",shell.dataset.sidebarBeforeIncoming==="true");
+    delete shell.dataset.sidebarBeforeIncoming;
     shell.classList.remove("incoming-collapsed");
     state.incomingSelectionMode=false;
     state.selectedIncomingIds.clear();
@@ -1975,11 +1979,12 @@ function friendInitial(profile) {
 }
 function friendAvatarMarkup(profile,className="friend-avatar") {
   return profile.avatar_url
-    ? `<b class="${className}"><img src="${escapeHtml(profile.avatar_url)}" alt="" loading="lazy" /></b>`
+    ? `<b class="${className}" data-friend-initial="${escapeHtml(friendInitial(profile))}"><img src="${escapeHtml(profile.avatar_url)}" alt="" loading="lazy" data-avatar-image /></b>`
     : `<b class="${className}">${escapeHtml(friendInitial(profile))}</b>`;
 }
 function friendCardMarkup(profile,mode="friend") {
-  const username=profile.username?`@${profile.username}`:"";
+  const displayName=profile.username||profile.display_name||"Flight Archive user";
+  const secondary=profile.email||"";
   let actions="";
   if(mode==="search"){
     const connected=profile.status==="accepted",pending=profile.status==="pending",disabled=connected||pending;
@@ -1992,13 +1997,22 @@ function friendCardMarkup(profile,mode="friend") {
     actions=`<button class="primary" type="button" data-view-friend="${profile.user_id}">${t("viewFlights")}</button>
       <span class="friend-more"><button class="friend-more-button" type="button" aria-label="${t("moreActions")}">•••</button><span class="friend-more-menu"><button class="danger" type="button" data-remove-friend="${profile.friendship_id}">${t("removeFriend")}</button></span></span>`;
   }
+  const identity=mode==="friend"
+    ? `<button class="friend-profile-link" type="button" data-view-friend="${profile.user_id}">${friendAvatarMarkup(profile)}<span class="friend-copy"><strong>${escapeHtml(displayName)}</strong>${secondary?`<small>${escapeHtml(secondary)}</small>`:""}</span></button>`
+    : `${friendAvatarMarkup(profile)}<span class="friend-copy"><strong>${escapeHtml(displayName)}</strong>${secondary?`<small>${escapeHtml(secondary)}</small>`:""}</span>`;
   return `<article class="friend-card">
-    ${friendAvatarMarkup(profile)}
-    <span class="friend-copy"><strong>${escapeHtml(profile.username||profile.display_name||"Flight Archive user")}</strong><small>${escapeHtml(username)}</small></span>
+    ${identity}
     <span class="friend-actions">${actions}</span>
   </article>`;
 }
+function bindFriendAvatarFallbacks(container=document) {
+  container.querySelectorAll("[data-avatar-image]").forEach(image=>image.addEventListener("error",()=>{
+    const wrapper=image.closest("[data-friend-initial]");
+    if(wrapper)wrapper.textContent=wrapper.dataset.friendInitial||"?";
+  },{once:true}));
+}
 function bindFriendActions(container=document) {
+  bindFriendAvatarFallbacks(container);
   container.querySelectorAll("[data-add-friend]").forEach(button=>button.addEventListener("click",async()=>{
     try{
       await window.flightArchiveData.sendFriendRequest(button.dataset.addFriend);
@@ -2172,6 +2186,7 @@ function setFriendMapIdentity() {
   if(!profile)return;
   const avatar=document.getElementById("friendMapAvatar");
   avatar.innerHTML=profile.avatar_url?`<img src="${escapeHtml(profile.avatar_url)}" alt="" />`:escapeHtml(friendInitial(profile));
+  avatar.querySelector("img")?.addEventListener("error",()=>{avatar.textContent=friendInitial(profile);},{once:true});
   document.getElementById("friendMapName").textContent=profile.username||profile.display_name||"Flight Archive user";
   document.getElementById("friendMapCount").textContent=`${records.length} ${t("friendMapFlights")}`;
 }
@@ -2206,6 +2221,7 @@ function showFriendMap() {
   state.friendRecords.mapVisible=true;
   state.friendRecords.viewMode="map";
   document.getElementById("appShell").classList.add("friend-map-mode");
+  document.getElementById("appShell").classList.remove("friend-list-mode");
   document.getElementById("friendViewerControls").hidden=false;
   setFriendMapIdentity();
   setView("atlas");
@@ -2219,7 +2235,8 @@ function showFriendList() {
   if(!state.friendRecords)return;
   state.friendRecords.mapVisible=false;
   state.friendRecords.viewMode="list";
-  document.getElementById("appShell").classList.add("friend-map-mode");
+  document.getElementById("appShell").classList.remove("friend-map-mode");
+  document.getElementById("appShell").classList.add("friend-list-mode");
   setFriendMapIdentity();
   setView("friendList");
   document.getElementById("friendRecordsPanel").hidden=false;
@@ -2229,6 +2246,8 @@ function showFriendStatistics() {
   if(!state.friendRecords)return;
   state.friendRecords.mapVisible=false;
   state.friendRecords.viewMode="statistics";
+  document.getElementById("appShell").classList.remove("friend-map-mode");
+  document.getElementById("appShell").classList.add("friend-list-mode");
   setView("friendStatistics");syncFriendViewerControls();renderFriendStatistics();applyFriendPrivacy("statistics","friendStatisticsView");
 }
 function setFriendContent(content) {
@@ -2268,6 +2287,7 @@ function updateMapHelp() {
 }
 
 function setView(view) {
+  if(state.incomingMode)setIncomingMode(false);
   state.activeView = view;
   if(view!=="records"){
     setRecordActionsOpen(false);
@@ -2704,7 +2724,8 @@ function countryStatsMapMarkup(sourceFlights) {
 }
 function geoCountryName(airport) {
   const name=airport?.countryEn||airport?.country||"";
-  return {"Hong Kong SAR":"China","Macao SAR":"China"}[name]||name;
+  const byCode={US:"USA"};
+  return byCode[String(airport?.countryCode||"").toUpperCase()]||{"United States":"USA","Hong Kong SAR":"China","Macao SAR":"China"}[name]||name;
 }
 function countryMapProject(lat,lon,viewport) {
   return {

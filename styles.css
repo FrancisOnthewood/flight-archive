@@ -550,13 +550,29 @@ body.auth-required .app-shell { visibility: hidden; }
 .sidebar-collapsed .collapse-button svg { transform: rotate(180deg); }
 
 .incoming-sidebar { min-height: 0; display: none; flex: 1; flex-direction: column; }
-.app-shell.incoming-mode .sidebar { width: 330px; box-shadow: 14px 0 38px rgba(24,35,52,.16); }
-.incoming-mode .sidebar-head,
-.incoming-mode .main-nav,
+.app-shell.incoming-mode .sidebar { width: var(--sidebar-rail-width); padding-left: 15px; padding-right: 15px; box-shadow: none; }
+.incoming-mode .sidebar-head { display: none; }
+.incoming-mode .main-nav { display: flex; }
+.incoming-mode .nav-label,
+.incoming-mode .nav-count,
 .incoming-mode .map-control,
-.incoming-mode .sidebar-spacer,
-.incoming-mode .settings-area { display: none; }
-.incoming-mode .incoming-sidebar { display: flex; }
+.incoming-mode .settings-button span,
+.incoming-mode .sidebar-account-summary span { display: none; }
+.incoming-mode .nav-item,
+.incoming-mode .settings-button,
+.incoming-mode .sidebar-account-summary { justify-content: center; padding-left: 0; padding-right: 0; }
+.incoming-mode .incoming-sidebar {
+  position: fixed;
+  z-index: 31;
+  top: 0;
+  bottom: 0;
+  left: var(--sidebar-rail-width);
+  width: 330px;
+  padding: 24px;
+  display: flex;
+  background: white;
+  box-shadow: 14px 0 38px rgba(24,35,52,.16);
+}
 .incoming-toolbar { min-height: 38px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .incoming-collapse-button {
   position: static;
@@ -573,16 +589,7 @@ body.auth-required .app-shell { visibility: hidden; }
 }
 .incoming-collapse-button:hover { color: var(--blue); border-color: #a9cafa; background: var(--blue-soft); }
 .incoming-collapse-button svg { width: 17px; }
-.incoming-mode .incoming-sidebar { position: relative; padding-top: 0; }
-.app-shell.incoming-mode.incoming-collapsed .sidebar { width: var(--sidebar-rail-width); padding-left: 15px; padding-right: 15px; }
-.incoming-collapsed .incoming-sidebar { padding-top: 0; }
-.incoming-collapsed .incoming-back,
-.incoming-collapsed .incoming-head,
-.incoming-collapsed .incoming-bulk-toolbar,
-.incoming-collapsed .incoming-list { display: none; }
-.incoming-collapsed .incoming-toolbar { justify-content: center; }
-.incoming-collapsed .incoming-collapse-button { position: static; margin: 0 auto; }
-.incoming-collapsed .incoming-collapse-button svg { transform: rotate(180deg); }
+.incoming-mode .incoming-collapse-button { display: none; }
 .incoming-back {
   min-height: 38px;
   padding: 0 11px;
@@ -1352,6 +1359,8 @@ body.auth-required .app-shell { visibility: hidden; }
   cursor: pointer;
 }
 .friend-actions button.primary { color: white; background: var(--blue); border-color: var(--blue); }
+.friend-profile-link { min-width: 0; flex: 1; padding: 0; display: flex; align-items: center; gap: 12px; border: 0; color: inherit; background: transparent; text-align: left; cursor: pointer; }
+.friend-profile-link:hover .friend-copy strong { color: var(--blue); }
 .friend-actions button.danger { color: #c54137; border-color: #edc1bd; }
 .friend-more { position: relative; display: inline-flex; }
 .friend-actions .friend-more-button { width: 36px; padding: 0; color: #627187; font-size: 14px; letter-spacing: 1px; }
@@ -1424,7 +1433,8 @@ body.auth-required .app-shell { visibility: hidden; }
 .app-shell.friend-map-mode .sidebar, .app-shell.friend-list-mode .sidebar { display: none; }
 .app-shell.friend-map-mode .main-content, .app-shell.friend-list-mode .main-content { margin-left: 0; }
 .friends-empty { padding: 20px; border: 1px dashed var(--line); border-radius: 12px; color: var(--muted); background: #f8fafc; font-size: 12px; text-align: center; }
-.friend-list-view { min-height: 100vh; padding: 194px 46px 48px; background: var(--page); }
+.friend-list-view { min-height: 100vh; padding: 24px 46px 48px; background: var(--page); }
+.app-shell.friend-list-mode .friend-viewer-controls { position: sticky; top: 0; left: auto; width: 100%; padding: 16px 46px 10px; justify-items: start; background: linear-gradient(180deg,var(--page) 76%,rgba(243,245,247,0)); }
 .friend-records-panel { position: relative; padding: 0; background: transparent; }
 .friend-records-panel h2 { margin: 0; font-size: 25px; }
 .friend-records-panel p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
@@ -1460,7 +1470,7 @@ body.auth-required .app-shell { visibility: hidden; }
   .friend-flight-row { grid-template-columns: 1fr 100px; }
   .friend-flight-route { grid-column: 1 / -1; }
   .friend-list-view { padding: 18px; }
-  .friend-list-view { padding-top: 190px; }
+  .app-shell.friend-list-mode .friend-viewer-controls { padding: 12px 12px 8px; }
   .friend-viewer-controls { top: 12px; left: 12px; }
   .friend-viewer-primary > button span { display: none; }
   .friend-records-panel { padding: 0; }
@@ -1681,7 +1691,8 @@ body.auth-required .app-shell { visibility: hidden; }
 }
 @media (max-width: 780px) {
   .app-shell { --sidebar-panel-width: 78px; --sidebar-page-offset: 0px; }
-  .app-shell.incoming-mode .sidebar { width: min(310px,85vw); }
+  .app-shell.incoming-mode .sidebar { width: var(--sidebar-rail-width); }
+  .incoming-mode .incoming-sidebar { width: min(310px,calc(100vw - var(--sidebar-rail-width))); padding: 18px; }
   .sidebar { padding-left: 15px; padding-right: 15px; }
   .brand-copy, .nav-label, .nav-count, .map-control, .settings-button span { display: none; }
   .sidebar-head, .nav-item { justify-content: center; }

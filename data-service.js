@@ -18,6 +18,30 @@
     if(value<60)return `${value}min`;
     return `${Math.floor(value/60)}h ${value%60}m`;
   };
+  const decodeAvatar=async file=>{
+    if("createImageBitmap" in window)return createImageBitmap(file);
+    const url=URL.createObjectURL(file);
+    try{
+      const image=new Image();
+      image.src=url;
+      await image.decode();
+      return image;
+    }finally{URL.revokeObjectURL(url);}
+  };
+  const compressAvatar=async file=>{
+    const source=await decodeAvatar(file);
+    const sourceWidth=source.width||source.naturalWidth;
+    const sourceHeight=source.height||source.naturalHeight;
+    const crop=Math.min(sourceWidth,sourceHeight);
+    const canvas=document.createElement("canvas");
+    canvas.width=256;canvas.height=256;
+    const context=canvas.getContext("2d",{alpha:false});
+    context.fillStyle="#ffffff";context.fillRect(0,0,256,256);
+    context.drawImage(source,(sourceWidth-crop)/2,(sourceHeight-crop)/2,crop,crop,0,0,256,256);
+    source.close?.();
+    const blob=await new Promise((resolve,reject)=>canvas.toBlob(value=>value?resolve(value):reject(new Error("Unable to compress avatar.")),"image/webp",.7));
+    return blob;
+  };
   const flightFromRow=row=>({
     id:row.id,
     from:row.departure_airport,
@@ -89,9 +113,12 @@
     const ids=[...new Set(items.map(item=>item.user_id).filter(Boolean))];
     if(!ids.length)return items;
     const supabase=requireClient();
-    const {data,error}=await supabase.rpc("get_flight_archive_profile_avatars",{profile_user_ids:ids});
-    if(error)return items;
-    const avatarPaths=new Map((data || []).map(row=>[row.user_id,row.avatar_path]));
+    const avatarPaths=new Map(items.filter(item=>item.user_id&&item.avatar_path).map(item=>[item.user_id,item.avatar_path]));
+    const missingIds=ids.filter(id=>!avatarPaths.has(id));
+    if(missingIds.length){
+      const {data,error}=await supabase.rpc("get_flight_archive_profile_avatars",{profile_user_ids:missingIds});
+      if(!error)(data||[]).forEach(row=>avatarPaths.set(row.user_id,row.avatar_path));
+    }
     const signedEntries=await Promise.all(ids.map(async id=>{
       const path=avatarPaths.get(id);
       if(!path)return [id,null];
@@ -211,11 +238,14 @@
       const supabase=requireClient();
       if(!file?.type?.startsWith("image/"))throw new Error("Choose an image file.");
       if(file.size>5*1024*1024)throw new Error("Avatar images must be 5 MB or smaller.");
-      const storagePath=`${activeUserId}/profile/avatar`;
-      const {error:uploadError}=await supabase.storage.from("flight-photos").upload(storagePath,file,{
-        upsert:true,
-        contentType:file.type,
-        cacheControl:"3600"
+      const compressed=await compressAvatar(file);
+      const {data:currentProfile}=await supabase.from("profiles").select("avatar_path").maybeSingle();
+      const previousPath=currentProfile?.avatar_path||null;
+      const storagePath=`${activeUserId}/profile/avatar-${Date.now()}.webp`;
+      const {error:uploadError}=await supabase.storage.from("flight-photos").upload(storagePath,compressed,{
+        upsert:false,
+        contentType:"image/webp",
+        cacheControl:"86400"
       });
       if(uploadError)throw uploadError;
       const {data:profile,error:profileError}=await supabase.from("profiles").upsert({
@@ -225,6 +255,7 @@
       if(profileError)throw profileError;
       const {data:signedAvatar,error:signedError}=await supabase.storage.from("flight-photos").createSignedUrl(storagePath,3600);
       if(signedError)throw signedError;
+      if(previousPath&&previousPath!==storagePath)await supabase.storage.from("flight-photos").remove([previousPath]);
       return {...profile,avatar_url:signedAvatar?.signedUrl || null};
     },
     async replaceHubs(codes){
